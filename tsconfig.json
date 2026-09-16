@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@irtaki/domain": ["./packages/domain/src/index.ts"],
+      "@irtaki/resource": ["./packages/resource/src/index.ts"]
     }
   },
   "include": [

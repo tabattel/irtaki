@@ -1,1 +1,63 @@
-export type { Resource, ResourceId } from "./resource/resource";
+export type {
+  Resource,
+  ResourceId,
+  ResourceIdentity,
+  ResourceType,
+} from "./resource/resource";
+
+export { createResourceId } from "./resource/resource";
+
+export type { ResourceScope } from "./scope/resource-scope";
+
+export type { ResourceManifest } from "./manifest/resource-manifest";
+
+export {
+  createResourceCatalog,
+  type ResourceCatalog,
+} from "./manifest/resource-catalog";
+
+export {
+  createResourceResolver,
+  type ResourceResolver,
+} from "./resolution/resource-resolver";
+
+export type { ResourceProvider } from "./provider/resource-provider";
+
+export {
+  createResourceCache,
+  type ResourceCache,
+} from "./cache/resource-cache";
+
+export {
+  createResourceDelivery,
+  type ResourceDelivery,
+} from "./delivery/resource-delivery";
+
+export {
+  createOfflinePackCatalog,
+  type OfflinePack,
+  type OfflinePackCatalog,
+  type OfflinePackStatus,
+} from "./offline/offline-pack";
+
+export {
+  createQuranpediaSource,
+  type QuranpediaSource,
+} from "./provider/quranpedia/quranpedia-source";
+
+export {
+  createQuranpediaFile,
+  type QuranpediaFile,
+} from "./provider/quranpedia/quranpedia-file";
+
+export {
+  createQuranpediaCatalog,
+  type QuranpediaCatalog,
+} from "./provider/quranpedia/quranpedia-catalog";
+
+export { mapResourceToQuranpediaFile } from "./provider/quranpedia/quranpedia-resource-map";
+
+export {
+  mapQuranpediaMushafToDomain,
+  type QuranpediaMushafRecord,
+} from "./mapping/quranpedia-domain-mapper";
