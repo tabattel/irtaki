@@ -61,3 +61,23 @@ export {
   mapQuranpediaMushafToDomain,
   type QuranpediaMushafRecord,
 } from "./mapping/quranpedia-domain-mapper";
+
+export {
+  createQuranpediaMushafsIndexLoader,
+  type QuranpediaMushafIndexRecord,
+  type QuranpediaMushafsIndex,
+  type QuranpediaMushafsIndexLoader,
+} from "./provider/quranpedia/quranpedia-mushafs-index";
+
+export {
+  createQuranpediaMushafs,
+  type QuranpediaMushafs,
+  type QuranpediaMushafsOptions,
+} from "./provider/quranpedia/quranpedia-mushafs";
+
+export {
+  QURANPEDIA_RIWAYAT,
+  createQuranpediaRiwayaCatalog,
+  type QuranpediaRiwaya,
+  type QuranpediaRiwayaCatalog,
+} from "./provider/quranpedia/quranpedia-riwayat";
