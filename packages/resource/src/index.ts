@@ -81,3 +81,15 @@ export {
   type QuranpediaRiwaya,
   type QuranpediaRiwayaCatalog,
 } from "./provider/quranpedia/quranpedia-riwayat";
+
+export {
+  createQuranpediaQiraatLoader,
+  type QuranpediaQiraa,
+  type QuranpediaRawi,
+  type QuranpediaRewaya,
+  type QuranpediaQiraatReading,
+  type QuranpediaQiraatWord,
+  type QuranpediaQiraatAyah,
+  type QuranpediaQiraatDocument,
+  type QuranpediaQiraatLoader,
+} from "./provider/quranpedia/quranpedia-qiraat";
