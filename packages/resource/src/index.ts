@@ -93,3 +93,14 @@ export {
   type QuranpediaQiraatDocument,
   type QuranpediaQiraatLoader,
 } from "./provider/quranpedia/quranpedia-qiraat";
+
+export {
+  createQuranpediaRecitersLoader,
+  type QuranpediaReciterRawi,
+  type QuranpediaRecitationType,
+  type QuranpediaRecitationClassification,
+  type QuranpediaReciter,
+  type QuranpediaReciterGroup,
+  type QuranpediaRecitersDocument,
+  type QuranpediaRecitersLoader,
+} from "./provider/quranpedia/quranpedia-reciters";
