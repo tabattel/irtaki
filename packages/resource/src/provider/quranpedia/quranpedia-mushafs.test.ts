@@ -56,9 +56,7 @@ describe("QuranpediaMushafs", () => {
           schema: `/v1/mushafs/${filePath.includes("mushafs-4") ? 4 : 1}`,
           data: {
             id: filePath.includes("mushafs-4") ? 4 : 1,
-            name: filePath.includes("mushafs-4")
-              ? "مصحف ورش"
-              : "مصحف حفص",
+            name: filePath.includes("mushafs-4") ? "مصحف ورش" : "مصحف حفص",
             rawi: {},
             surahs: [],
           },
@@ -67,8 +65,7 @@ describe("QuranpediaMushafs", () => {
     };
 
     const indexLoader = {
-      read: (filePath: string) =>
-        reader.read<QuranpediaMushafsIndex>(filePath),
+      read: (filePath: string) => reader.read<QuranpediaMushafsIndex>(filePath),
     };
 
     const options: QuranpediaMushafsOptions = {
@@ -116,8 +113,7 @@ describe("QuranpediaMushafs", () => {
     };
 
     const indexLoader = {
-      read: (filePath: string) =>
-        reader.read<QuranpediaMushafsIndex>(filePath),
+      read: (filePath: string) => reader.read<QuranpediaMushafsIndex>(filePath),
     };
 
     const mushafs = createQuranpediaMushafs({
@@ -153,8 +149,7 @@ describe("QuranpediaMushafs", () => {
     };
 
     const indexLoader = {
-      read: (filePath: string) =>
-        reader.read<QuranpediaMushafsIndex>(filePath),
+      read: (filePath: string) => reader.read<QuranpediaMushafsIndex>(filePath),
     };
 
     const mushafs = createQuranpediaMushafs({
@@ -169,5 +164,108 @@ describe("QuranpediaMushafs", () => {
     await expect(mushafs.load(999)).rejects.toThrow(
       "Quranpedia mushaf not found: 999",
     );
+  });
+  it("loads all mushafs from the Quranpedia index", async () => {
+    const reader: JsonGzipReader = {
+      async read<T>(filePath: string): Promise<T> {
+        if (filePath.endsWith("mushafs-index.json.gz")) {
+          return {
+            license: {},
+            schema: "/v1/mushafs",
+            data: [
+              {
+                id: 2,
+                name: "مصحف حفص",
+                rawi: {},
+              },
+              {
+                id: 4,
+                name: "مصحف ورش",
+                rawi: {},
+              },
+            ],
+          } as T;
+        }
+
+        const id = filePath.includes("mushafs-2") ? 2 : 4;
+
+        return {
+          license: {},
+          schema: `/v1/mushafs/${id}`,
+          data: {
+            id,
+            name: id === 2 ? "مصحف حفص" : "مصحف ورش",
+            rawi: {},
+            surahs: [],
+          },
+        } as T;
+      },
+    };
+
+    const indexLoader = {
+      read: (filePath: string) => reader.read<QuranpediaMushafsIndex>(filePath),
+    };
+
+    const mushafs = createQuranpediaMushafs({
+      rootPath: "/quranpedia/raw",
+      reader,
+      indexLoader,
+      riwayaCatalog: {
+        list: () => [],
+      },
+    });
+
+    const result = await mushafs.loadAll();
+
+    expect(result).toHaveLength(2);
+    expect(result.map((mushaf) => mushaf.data.id)).toEqual([2, 4]);
+  });
+
+  it("returns the riwaya catalog", async () => {
+    const riwayat = [
+      {
+        id: "asim-hafs",
+        qiraaId: 5,
+        qiraaName: "عاصم",
+        riwayaName: "حفص",
+        mushafId: 2,
+        available: true,
+      },
+      {
+        id: "ibn-amir-hisham",
+        qiraaId: 4,
+        qiraaName: "ابن عامر",
+        riwayaName: "هشام",
+        available: false,
+      },
+    ] as const;
+
+    const reader: JsonGzipReader = {
+      async read<T>(): Promise<T> {
+        return {
+          license: {},
+          schema: "/v1/mushafs",
+          data: [],
+        } as T;
+      },
+    };
+
+    const indexLoader = {
+      read: (filePath: string) => reader.read<QuranpediaMushafsIndex>(filePath),
+    };
+
+    const mushafs = createQuranpediaMushafs({
+      rootPath: "/quranpedia/raw",
+      reader,
+      indexLoader,
+      riwayaCatalog: {
+        list: () => riwayat,
+      },
+    });
+
+    const result = await mushafs.riwayat();
+
+    expect(result).toEqual(riwayat);
+    expect(result).toHaveLength(2);
   });
 });
