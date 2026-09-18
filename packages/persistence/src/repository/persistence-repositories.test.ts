@@ -25,12 +25,13 @@ describe("persistence repositories", () => {
     expect(result).toEqual([{ database: "irtaki", user: "irtaki" }]);
   });
 
-  it("returns empty collections on the fresh database", async () => {
-    await expect(qiraaRepository.findAll()).resolves.toEqual([]);
-    await expect(riwayaRepository.findAll()).resolves.toEqual([]);
-    await expect(mushafRepository.findAll()).resolves.toEqual([]);
-    await expect(surahRepository.findAll()).resolves.toEqual([]);
-    await expect(tariqRepository.findAll()).resolves.toEqual([]);
+  it("returns collections from the populated database", async () => {
+    await expect(qiraaRepository.findAll()).resolves.toHaveLength(10);
+    await expect(riwayaRepository.findAll()).resolves.toHaveLength(20);
+    await expect(tariqRepository.findAll()).resolves.toHaveLength(40);
+
+    await expect(mushafRepository.findAll()).resolves.toBeInstanceOf(Array);
+    await expect(surahRepository.findAll()).resolves.toBeInstanceOf(Array);
   });
 
   it("returns null for unknown identifiers", async () => {

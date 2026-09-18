@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@irtaki/persistence':
+        specifier: workspace:*
+        version: link:packages/persistence
       next:
         specifier: 16.3.5
         version: 16.3.5(@babel/core@7.29.7)(@types/node@24.13.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -80,6 +83,9 @@ importers:
       '@prisma/client':
         specifier: ^7.10.0
         version: 7.10.0(prisma@7.10.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(magicast@0.5.5)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@5.9.3))(typescript@5.9.3)
+      dotenv:
+        specifier: ^18.0.0
+        version: 18.0.0
       pg:
         specifier: ^8.23.0
         version: 8.23.0
@@ -1752,6 +1758,11 @@ packages:
   dotenv@17.4.2:
     resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
     engines: {node: '>=12'}
+
+  dotenv@18.0.0:
+    resolution: {integrity: sha512-16YSUvsKtKbwrTbESvtTSZzzJUug6jdFdqiBFg9Q6Bk1JY9r0hAtrtTiWxdI9YrsgOTmkjZRdgU0n3LnwGpECw==}
+    engines: {node: '>=12'}
+    hasBin: true
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -4950,6 +4961,8 @@ snapshots:
   dom-accessibility-api@0.5.16: {}
 
   dotenv@17.4.2: {}
+
+  dotenv@18.0.0: {}
 
   dunder-proto@1.0.1:
     dependencies:

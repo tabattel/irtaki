@@ -59,7 +59,6 @@ export { mapResourceToQuranpediaFile } from "./provider/quranpedia/quranpedia-re
 
 export {
   mapQuranpediaMushafToDomain,
-  type QuranpediaMushafRecord,
 } from "./mapping/quranpedia-domain-mapper";
 
 export {
