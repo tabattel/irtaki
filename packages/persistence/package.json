@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@irtaki/domain": "workspace:*",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "pg": "^8.23.0"
@@ -11,5 +12,9 @@
   "devDependencies": {
     "prisma": "7.10.0",
     "tsx": "^4.23.13"
+  },
+  "scripts": {
+    "build": "tsc",
+    "import:quran-domain": "tsx src/import/run-quran-domain-import.ts"
   }
 }

@@ -1,15 +1,37 @@
 import { Riwaya } from "./riwaya";
+import { Tariq } from "../tariq/tariq";
+
+function createRiwaya(props: {
+  id: number;
+  shortName: string;
+  fullName: string;
+  qiraaId: number;
+}): Riwaya {
+  return new Riwaya({
+    ...props,
+    tariqs: [
+      new Tariq({
+        id: props.id * 10 + 1,
+        name: `${props.shortName} 1`,
+      }),
+      new Tariq({
+        id: props.id * 10 + 2,
+        name: `${props.shortName} 2`,
+      }),
+    ],
+  });
+}
 
 export const RIWAYAT: readonly Riwaya[] = [
   // نافع
-  new Riwaya({
+  createRiwaya({
     id: 1,
     shortName: "قالون",
     fullName: "قالون عن نافع",
     qiraaId: 1,
   }),
 
-  new Riwaya({
+  createRiwaya({
     id: 2,
     shortName: "ورش",
     fullName: "ورش عن نافع",
@@ -17,14 +39,14 @@ export const RIWAYAT: readonly Riwaya[] = [
   }),
 
   // ابن كثير
-  new Riwaya({
+  createRiwaya({
     id: 3,
     shortName: "البزي",
     fullName: "البزي عن ابن كثير",
     qiraaId: 2,
   }),
 
-  new Riwaya({
+  createRiwaya({
     id: 4,
     shortName: "قنبل",
     fullName: "قنبل عن ابن كثير",
@@ -32,14 +54,14 @@ export const RIWAYAT: readonly Riwaya[] = [
   }),
 
   // أبو عمرو
-  new Riwaya({
+  createRiwaya({
     id: 5,
     shortName: "الدوري",
     fullName: "الدوري عن أبي عمرو",
     qiraaId: 3,
   }),
 
-  new Riwaya({
+  createRiwaya({
     id: 6,
     shortName: "السوسي",
     fullName: "السوسي عن أبي عمرو",
@@ -47,14 +69,14 @@ export const RIWAYAT: readonly Riwaya[] = [
   }),
 
   // ابن عامر
-  new Riwaya({
+  createRiwaya({
     id: 7,
     shortName: "هشام",
     fullName: "هشام عن ابن عامر",
     qiraaId: 4,
   }),
 
-  new Riwaya({
+  createRiwaya({
     id: 8,
     shortName: "ابن ذكوان",
     fullName: "ابن ذكوان عن ابن عامر",
@@ -62,14 +84,14 @@ export const RIWAYAT: readonly Riwaya[] = [
   }),
 
   // عاصم
-  new Riwaya({
+  createRiwaya({
     id: 9,
     shortName: "شعبة",
     fullName: "شعبة عن عاصم",
     qiraaId: 5,
   }),
 
-  new Riwaya({
+  createRiwaya({
     id: 10,
     shortName: "حفص",
     fullName: "حفص عن عاصم",
@@ -77,14 +99,14 @@ export const RIWAYAT: readonly Riwaya[] = [
   }),
 
   // حمزة
-  new Riwaya({
+  createRiwaya({
     id: 11,
     shortName: "خلف",
     fullName: "خلف عن حمزة",
     qiraaId: 6,
   }),
 
-  new Riwaya({
+  createRiwaya({
     id: 12,
     shortName: "خلاد",
     fullName: "خلاد عن حمزة",
@@ -92,14 +114,14 @@ export const RIWAYAT: readonly Riwaya[] = [
   }),
 
   // الكسائي
-  new Riwaya({
+  createRiwaya({
     id: 13,
     shortName: "أبو الحارث",
     fullName: "أبو الحارث عن الكسائي",
     qiraaId: 7,
   }),
 
-  new Riwaya({
+  createRiwaya({
     id: 14,
     shortName: "الدوري",
     fullName: "الدوري عن الكسائي",
@@ -107,14 +129,14 @@ export const RIWAYAT: readonly Riwaya[] = [
   }),
 
   // أبو جعفر
-  new Riwaya({
+  createRiwaya({
     id: 15,
     shortName: "ابن وردان",
     fullName: "ابن وردان عن أبي جعفر",
     qiraaId: 8,
   }),
 
-  new Riwaya({
+  createRiwaya({
     id: 16,
     shortName: "ابن جماز",
     fullName: "ابن جماز عن أبي جعفر",
@@ -122,14 +144,14 @@ export const RIWAYAT: readonly Riwaya[] = [
   }),
 
   // يعقوب
-  new Riwaya({
+  createRiwaya({
     id: 17,
     shortName: "رويس",
     fullName: "رويس عن يعقوب",
     qiraaId: 9,
   }),
 
-  new Riwaya({
+  createRiwaya({
     id: 18,
     shortName: "روح",
     fullName: "روح عن يعقوب",
@@ -137,14 +159,14 @@ export const RIWAYAT: readonly Riwaya[] = [
   }),
 
   // خلف العاشر
-  new Riwaya({
+  createRiwaya({
     id: 19,
     shortName: "إسحاق",
     fullName: "إسحاق الوراق عن خلف",
     qiraaId: 10,
   }),
 
-  new Riwaya({
+  createRiwaya({
     id: 20,
     shortName: "إدريس",
     fullName: "إدريس الحداد عن خلف",
