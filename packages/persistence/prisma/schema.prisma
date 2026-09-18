@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum QiraaRegion {
+  madinah
+  makkah
+  basrah
+  damascus
+  kufa
+}
+
+enum SurahRevelationType {
+  meccan
+  medinan
+}
+
+model Qiraa {
+  id        Int         @id
+  shortName String
+  fullName  String
+  region    QiraaRegion
+
+  riwayat Riwaya[]
+}
+
+model Riwaya {
+  id        Int    @id
+  shortName String
+  fullName  String
+  qiraaId   Int
+
+  qiraa   Qiraa    @relation(fields: [qiraaId], references: [id])
+  tariqs  Tariq[]
+  mushafs Mushaf[]
+
+  @@index([qiraaId])
+}
+
+model Tariq {
+  id       Int    @id
+  name     String
+  riwayaId Int
+
+  riwaya Riwaya @relation(fields: [riwayaId], references: [id])
+
+  @@index([riwayaId])
+}
+
+model Mushaf {
+  id          Int     @id
+  name        String
+  description String?
+  bismillah   String?
+  riwayaId    Int
+
+  riwaya Riwaya @relation(fields: [riwayaId], references: [id])
+
+  @@index([riwayaId])
+}
+
+model Surah {
+  id              Int                 @id
+  number          Int                 @unique
+  name            String
+  codedName       String?
+  translatedName  String?
+  numberOfAyahs   Int
+  firstPage       Int
+  lastPage        Int
+  firstJuz        Int
+  revelationType  SurahRevelationType
+  revelationOrder Int
+
+  ayahs Ayah[]
+}
+
+model Ayah {
+  id           Int    @id
+  number       Int
+  surahNumber  Int
+  text         String
+  pageNumber   Int
+  juz          Int
+  hizb         Int
+  manzil       Int
+  ruku         Int
+  marker       String
+  numberInHafs Int[]
+
+  surah Surah @relation(fields: [surahNumber], references: [number])
+
+  @@unique([surahNumber, number])
+  @@index([surahNumber])
+  @@index([pageNumber])
+  @@index([juz])
+}
