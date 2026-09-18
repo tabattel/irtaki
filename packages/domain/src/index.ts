@@ -17,3 +17,9 @@ export {
 } from "./quran/qiraa/qiraa";
 
 export { QIRAAT } from "./quran/qiraa/qiraa-catalog";
+
+export {
+  Surah,
+  type SurahProps,
+  type SurahRevelationType,
+} from "./quran/surah/surah";
