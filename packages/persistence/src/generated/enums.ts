@@ -26,3 +26,11 @@ export const SurahRevelationType = {
 } as const
 
 export type SurahRevelationType = (typeof SurahRevelationType)[keyof typeof SurahRevelationType]
+
+
+export const AccountProvider = {
+  credentials: 'credentials',
+  google: 'google'
+} as const
+
+export type AccountProvider = (typeof AccountProvider)[keyof typeof AccountProvider]

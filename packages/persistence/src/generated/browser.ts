@@ -47,3 +47,23 @@ export type Surah = Prisma.SurahModel
  * 
  */
 export type Ayah = Prisma.AyahModel
+/**
+ * Model User
+ * 
+ */
+export type User = Prisma.UserModel
+/**
+ * Model Account
+ * 
+ */
+export type Account = Prisma.AccountModel
+/**
+ * Model Session
+ * 
+ */
+export type Session = Prisma.SessionModel
+/**
+ * Model ChildProfile
+ * 
+ */
+export type ChildProfile = Prisma.ChildProfileModel

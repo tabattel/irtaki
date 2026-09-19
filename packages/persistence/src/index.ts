@@ -8,3 +8,7 @@ export { AyahRepository } from "./repository/ayah-repository";
 export { TariqRepository } from "./repository/tariq-repository";
 
 export { importQuranDomain } from "./import/quran-domain-importer";
+
+export { UserRepository } from "./repository/auth/user-repository";
+export { AccountRepository } from "./repository/auth/account-repository";
+export { SessionRepository } from "./repository/auth/session-repository";

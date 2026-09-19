@@ -7,37 +7,22 @@ datasource db {
   provider = "postgresql"
 }
 
-enum QiraaRegion {
-  madinah
-  makkah
-  basrah
-  damascus
-  kufa
-}
-
-enum SurahRevelationType {
-  meccan
-  medinan
-}
-
 model Qiraa {
   id        Int         @id
   shortName String
   fullName  String
   region    QiraaRegion
-
-  riwayat Riwaya[]
+  riwayat   Riwaya[]
 }
 
 model Riwaya {
-  id        Int    @id
+  id        Int      @id
   shortName String
   fullName  String
   qiraaId   Int
-
-  qiraa   Qiraa    @relation(fields: [qiraaId], references: [id])
-  tariqs  Tariq[]
-  mushafs Mushaf[]
+  mushafs   Mushaf[]
+  qiraa     Qiraa    @relation(fields: [qiraaId], references: [id])
+  tariqs    Tariq[]
 
   @@index([qiraaId])
 }
@@ -46,8 +31,7 @@ model Tariq {
   id       Int    @id
   name     String
   riwayaId Int
-
-  riwaya Riwaya @relation(fields: [riwayaId], references: [id])
+  riwaya   Riwaya @relation(fields: [riwayaId], references: [id])
 
   @@index([riwayaId])
 }
@@ -58,8 +42,7 @@ model Mushaf {
   description String?
   bismillah   String?
   riwayaId    Int
-
-  riwaya Riwaya @relation(fields: [riwayaId], references: [id])
+  riwaya      Riwaya  @relation(fields: [riwayaId], references: [id])
 
   @@index([riwayaId])
 }
@@ -76,8 +59,7 @@ model Surah {
   firstJuz        Int
   revelationType  SurahRevelationType
   revelationOrder Int
-
-  ayahs Ayah[]
+  ayahs           Ayah[]
 }
 
 model Ayah {
@@ -92,11 +74,77 @@ model Ayah {
   ruku         Int
   marker       String
   numberInHafs Int[]
-
-  surah Surah @relation(fields: [surahNumber], references: [number])
+  surah        Surah  @relation(fields: [surahNumber], references: [number])
 
   @@unique([surahNumber, number])
   @@index([surahNumber])
   @@index([pageNumber])
   @@index([juz])
+}
+
+model User {
+  id              String         @id @default(cuid())
+  email           String         @unique
+  name            String?
+  emailVerifiedAt DateTime?
+  image           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  accounts        Account[]
+  childProfiles   ChildProfile[]
+  sessions        Session[]
+}
+
+model Account {
+  id                String          @id @default(cuid())
+  userId            String
+  provider          AccountProvider
+  providerAccountId String
+  passwordHash      String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ChildProfile {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum QiraaRegion {
+  madinah
+  makkah
+  basrah
+  damascus
+  kufa
+}
+
+enum SurahRevelationType {
+  meccan
+  medinan
+}
+
+enum AccountProvider {
+  credentials
+  google
 }
