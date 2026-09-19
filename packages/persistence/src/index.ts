@@ -5,6 +5,7 @@ export { RiwayaRepository } from "./repository/riwaya-repository";
 export { MushafRepository } from "./repository/mushaf-repository";
 export { SurahRepository } from "./repository/surah-repository";
 export { AyahRepository } from "./repository/ayah-repository";
+export { AnnotationRepository } from "./repository/annotation-repository";
 export { TariqRepository } from "./repository/tariq-repository";
 
 export { importQuranDomain } from "./import/quran-domain-importer";

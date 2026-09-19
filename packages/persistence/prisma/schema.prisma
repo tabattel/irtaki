@@ -63,7 +63,7 @@ model Surah {
 }
 
 model Ayah {
-  id           Int    @id
+  id           Int          @id
   number       Int
   surahNumber  Int
   text         String
@@ -74,12 +74,29 @@ model Ayah {
   ruku         Int
   marker       String
   numberInHafs Int[]
-  surah        Surah  @relation(fields: [surahNumber], references: [number])
+  surah        Surah        @relation(fields: [surahNumber], references: [number])
+  annotations  Annotation[]
 
   @@unique([surahNumber, number])
   @@index([surahNumber])
   @@index([pageNumber])
   @@index([juz])
+}
+
+model Annotation {
+  id        String   @id @default(cuid())
+  userId    String
+  ayahId    Int
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ayah Ayah @relation(fields: [ayahId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([ayahId])
+  @@index([userId, ayahId])
 }
 
 model User {
@@ -93,6 +110,7 @@ model User {
   accounts        Account[]
   childProfiles   ChildProfile[]
   sessions        Session[]
+  annotations     Annotation[]
 }
 
 model Account {
