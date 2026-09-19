@@ -12,3 +12,4 @@ export { importQuranDomain } from "./import/quran-domain-importer";
 export { UserRepository } from "./repository/auth/user-repository";
 export { AccountRepository } from "./repository/auth/account-repository";
 export { SessionRepository } from "./repository/auth/session-repository";
+export { ChildProfileRepository } from "./repository/auth/child-profile-repository";

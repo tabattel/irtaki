@@ -36,4 +36,30 @@ export class AccountRepository {
       },
     });
   }
+
+  async findGoogleByAccountId(
+    providerAccountId: string,
+  ): Promise<AccountRecord | null> {
+    return prisma.account.findUnique({
+      where: {
+        provider_providerAccountId: {
+          provider: "google",
+          providerAccountId,
+        },
+      },
+    });
+  }
+
+  async createGoogleAccount(input: {
+    userId: string;
+    providerAccountId: string;
+  }): Promise<AccountRecord> {
+    return prisma.account.create({
+      data: {
+        userId: input.userId,
+        provider: "google",
+        providerAccountId: input.providerAccountId,
+      },
+    });
+  }
 }

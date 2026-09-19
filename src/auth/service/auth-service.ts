@@ -117,4 +117,19 @@ export class AuthService {
       session: result.session,
     };
   }
+  async getAuthenticatedUser(
+    userId: string,
+  ): Promise<AuthenticatedUser | null> {
+    const user = await this.userRepository.findById(userId);
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    };
+  }
 }

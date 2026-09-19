@@ -14,6 +14,8 @@ describe("AuthService", () => {
       accountRepository: {
         createCredentialsAccount: vi.fn(),
         findCredentialsByEmail: vi.fn(),
+        findGoogleByAccountId: vi.fn(),
+        createGoogleAccount: vi.fn(),
       },
       passwordHasher: {
         hash: vi.fn(),
@@ -248,5 +250,46 @@ describe("AuthService", () => {
     ).rejects.toThrow("INVALID_CREDENTIALS");
 
     expect(dependencies.sessionService.createSession).not.toHaveBeenCalled();
+  });
+  it("returns the authenticated user", async () => {
+    const dependencies = createDependencies();
+
+    dependencies.userRepository.findById.mockResolvedValue({
+      id: "user-1",
+      email: "user@example.com",
+      name: "User",
+      emailVerifiedAt: null,
+      image: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const service = createService(dependencies);
+
+    const result = await service.getAuthenticatedUser("user-1");
+
+    expect(result).toEqual({
+      id: "user-1",
+      email: "user@example.com",
+      name: "User",
+    });
+
+    expect(dependencies.userRepository.findById).toHaveBeenCalledWith("user-1");
+  });
+
+  it("returns null when the authenticated user does not exist", async () => {
+    const dependencies = createDependencies();
+
+    dependencies.userRepository.findById.mockResolvedValue(null);
+
+    const service = createService(dependencies);
+
+    const result = await service.getAuthenticatedUser("unknown-user");
+
+    expect(result).toBeNull();
+
+    expect(dependencies.userRepository.findById).toHaveBeenCalledWith(
+      "unknown-user",
+    );
   });
 });
