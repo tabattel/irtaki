@@ -145,6 +145,7 @@ model User {
   childProfiles   ChildProfile[]
   sessions        Session[]
   annotations     Annotation[]
+  learners        Learner[]
 }
 
 model Account {
@@ -179,6 +180,7 @@ model ChildProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  learner   Learner?
 
   @@index([userId])
 }
@@ -199,4 +201,186 @@ enum SurahRevelationType {
 enum AccountProvider {
   credentials
   google
+}
+
+model Learner {
+  id              String        @id @default(cuid())
+  userId          String
+  childProfileId  String?       @unique
+  name            String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  childProfile    ChildProfile? @relation(fields: [childProfileId], references: [id], onDelete: Cascade)
+  goals           Goal[]
+  activities      Activity[]
+  progress        ProgressRecord[]
+
+  @@index([userId])
+}
+
+model Goal {
+  id                   String            @id @default(cuid())
+  learnerId            String
+  parentGoalId         String?
+  title                String
+  description          String?
+  action               GoalAction
+  quantity             Decimal           @db.Decimal(10, 2)
+  unit                 ProgressUnit
+  frequencyCount       Int
+  frequencyPeriod      FrequencyPeriod
+  intervalDays         Int?
+  weekday              Weekday?
+  startDate            DateTime
+  endDate              DateTime?
+  status               GoalStatus        @default(active)
+  notificationEnabled  Boolean           @default(false)
+  notificationTime     String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  learner              Learner           @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  parentGoal            Goal?             @relation("GoalHierarchy", fields: [parentGoalId], references: [id], onDelete: SetNull)
+  subGoals             Goal[]            @relation("GoalHierarchy")
+  target               GoalTarget?
+  activities            Activity[]
+  progress              ProgressRecord[]
+
+  @@index([learnerId])
+  @@index([parentGoalId])
+  @@index([status])
+  @@index([startDate, endDate])
+}
+
+model GoalTarget {
+  id          String          @id @default(cuid())
+  goalId      String          @unique
+  scope       GoalTargetScope
+  startValue  String?
+  endValue    String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  goal        Goal            @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([scope])
+}
+
+model Activity {
+  id          String          @id @default(cuid())
+  learnerId   String
+  goalId      String?
+  action      GoalAction
+  startedAt   DateTime
+  endedAt     DateTime?
+  durationSec Int?
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  learner     Learner         @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  goal        Goal?           @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  result      ActivityResult?
+  progress    ProgressRecord[]
+
+  @@index([learnerId])
+  @@index([goalId])
+  @@index([startedAt])
+}
+
+model ActivityResult {
+  id          String               @id @default(cuid())
+  activityId  String               @unique
+  status      ActivityResultStatus
+  quantity    Decimal              @db.Decimal(10, 2)
+  unit        ProgressUnit
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  activity    Activity             @relation(fields: [activityId], references: [id], onDelete: Cascade)
+}
+
+model ProgressRecord {
+  id          String          @id @default(cuid())
+  learnerId   String
+  goalId      String?
+  activityId  String?
+  recordedAt  DateTime        @default(now())
+  quantity    Decimal         @db.Decimal(10, 2)
+  unit        ProgressUnit
+  createdAt   DateTime        @default(now())
+
+  learner     Learner         @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  goal        Goal?           @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  activity    Activity?       @relation(fields: [activityId], references: [id], onDelete: SetNull)
+
+  @@index([learnerId, recordedAt])
+  @@index([goalId, recordedAt])
+  @@index([activityId])
+}
+
+enum GoalAction {
+  read
+  listen
+  recite
+  memorize
+  revise
+  tajwid
+  tadabbur
+  talkin
+  tathbit
+}
+
+enum ProgressUnit {
+  quran
+  surah
+  ayah
+  page
+  juz
+  hizb
+}
+
+enum FrequencyPeriod {
+  day
+  week
+  month
+}
+
+enum Weekday {
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+  saturday
+  sunday
+}
+
+enum GoalStatus {
+  draft
+  active
+  paused
+  completed
+  cancelled
+  archived
+}
+
+enum GoalTargetScope {
+  quran
+  surah
+  juz
+  hizb
+  page
+  page_range
+  ayah
+  ayah_range
+}
+
+enum ActivityResultStatus {
+  completed
+  partial
+  failed
+  skipped
 }
