@@ -403,6 +403,9 @@ export const ModelName = {
   Mushaf: 'Mushaf',
   Surah: 'Surah',
   Ayah: 'Ayah',
+  Reciter: 'Reciter',
+  AudioTrack: 'AudioTrack',
+  Annotation: 'Annotation',
   User: 'User',
   Account: 'Account',
   Session: 'Session',
@@ -422,7 +425,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "qiraa" | "riwaya" | "tariq" | "mushaf" | "surah" | "ayah" | "user" | "account" | "session" | "childProfile"
+    modelProps: "qiraa" | "riwaya" | "tariq" | "mushaf" | "surah" | "ayah" | "reciter" | "audioTrack" | "annotation" | "user" | "account" | "session" | "childProfile"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -870,6 +873,228 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Reciter: {
+      payload: Prisma.$ReciterPayload<ExtArgs>
+      fields: Prisma.ReciterFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ReciterFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReciterPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ReciterFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReciterPayload>
+        }
+        findFirst: {
+          args: Prisma.ReciterFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReciterPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ReciterFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReciterPayload>
+        }
+        findMany: {
+          args: Prisma.ReciterFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReciterPayload>[]
+        }
+        create: {
+          args: Prisma.ReciterCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReciterPayload>
+        }
+        createMany: {
+          args: Prisma.ReciterCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ReciterCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReciterPayload>[]
+        }
+        delete: {
+          args: Prisma.ReciterDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReciterPayload>
+        }
+        update: {
+          args: Prisma.ReciterUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReciterPayload>
+        }
+        deleteMany: {
+          args: Prisma.ReciterDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ReciterUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ReciterUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReciterPayload>[]
+        }
+        upsert: {
+          args: Prisma.ReciterUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReciterPayload>
+        }
+        aggregate: {
+          args: Prisma.ReciterAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateReciter>
+        }
+        groupBy: {
+          args: Prisma.ReciterGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ReciterGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ReciterCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ReciterCountAggregateOutputType> | number
+        }
+      }
+    }
+    AudioTrack: {
+      payload: Prisma.$AudioTrackPayload<ExtArgs>
+      fields: Prisma.AudioTrackFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AudioTrackFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AudioTrackPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AudioTrackFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AudioTrackPayload>
+        }
+        findFirst: {
+          args: Prisma.AudioTrackFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AudioTrackPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AudioTrackFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AudioTrackPayload>
+        }
+        findMany: {
+          args: Prisma.AudioTrackFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AudioTrackPayload>[]
+        }
+        create: {
+          args: Prisma.AudioTrackCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AudioTrackPayload>
+        }
+        createMany: {
+          args: Prisma.AudioTrackCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AudioTrackCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AudioTrackPayload>[]
+        }
+        delete: {
+          args: Prisma.AudioTrackDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AudioTrackPayload>
+        }
+        update: {
+          args: Prisma.AudioTrackUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AudioTrackPayload>
+        }
+        deleteMany: {
+          args: Prisma.AudioTrackDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AudioTrackUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AudioTrackUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AudioTrackPayload>[]
+        }
+        upsert: {
+          args: Prisma.AudioTrackUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AudioTrackPayload>
+        }
+        aggregate: {
+          args: Prisma.AudioTrackAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAudioTrack>
+        }
+        groupBy: {
+          args: Prisma.AudioTrackGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AudioTrackGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AudioTrackCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AudioTrackCountAggregateOutputType> | number
+        }
+      }
+    }
+    Annotation: {
+      payload: Prisma.$AnnotationPayload<ExtArgs>
+      fields: Prisma.AnnotationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AnnotationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnnotationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AnnotationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnnotationPayload>
+        }
+        findFirst: {
+          args: Prisma.AnnotationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnnotationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AnnotationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnnotationPayload>
+        }
+        findMany: {
+          args: Prisma.AnnotationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnnotationPayload>[]
+        }
+        create: {
+          args: Prisma.AnnotationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnnotationPayload>
+        }
+        createMany: {
+          args: Prisma.AnnotationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AnnotationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnnotationPayload>[]
+        }
+        delete: {
+          args: Prisma.AnnotationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnnotationPayload>
+        }
+        update: {
+          args: Prisma.AnnotationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnnotationPayload>
+        }
+        deleteMany: {
+          args: Prisma.AnnotationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AnnotationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AnnotationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnnotationPayload>[]
+        }
+        upsert: {
+          args: Prisma.AnnotationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AnnotationPayload>
+        }
+        aggregate: {
+          args: Prisma.AnnotationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAnnotation>
+        }
+        groupBy: {
+          args: Prisma.AnnotationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AnnotationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AnnotationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AnnotationCountAggregateOutputType> | number
+        }
+      }
+    }
     User: {
       payload: Prisma.$UserPayload<ExtArgs>
       fields: Prisma.UserFieldRefs
@@ -1279,6 +1504,41 @@ export const AyahScalarFieldEnum = {
 export type AyahScalarFieldEnum = (typeof AyahScalarFieldEnum)[keyof typeof AyahScalarFieldEnum]
 
 
+export const ReciterScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  arabicName: 'arabicName',
+  riwayaId: 'riwayaId'
+} as const
+
+export type ReciterScalarFieldEnum = (typeof ReciterScalarFieldEnum)[keyof typeof ReciterScalarFieldEnum]
+
+
+export const AudioTrackScalarFieldEnum = {
+  id: 'id',
+  ayahId: 'ayahId',
+  reciterId: 'reciterId',
+  format: 'format',
+  durationMs: 'durationMs',
+  sourceKey: 'sourceKey',
+  createdAt: 'createdAt'
+} as const
+
+export type AudioTrackScalarFieldEnum = (typeof AudioTrackScalarFieldEnum)[keyof typeof AudioTrackScalarFieldEnum]
+
+
+export const AnnotationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  ayahId: 'ayahId',
+  content: 'content',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AnnotationScalarFieldEnum = (typeof AnnotationScalarFieldEnum)[keyof typeof AnnotationScalarFieldEnum]
+
+
 export const UserScalarFieldEnum = {
   id: 'id',
   email: 'email',
@@ -1410,6 +1670,20 @@ export type EnumSurahRevelationTypeFieldRefInput<$PrismaModel> = FieldRefInputTy
  * Reference to a field of type 'SurahRevelationType[]'
  */
 export type ListEnumSurahRevelationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SurahRevelationType[]'>
+    
+
+
+/**
+ * Reference to a field of type 'AudioFormat'
+ */
+export type EnumAudioFormatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AudioFormat'>
+    
+
+
+/**
+ * Reference to a field of type 'AudioFormat[]'
+ */
+export type ListEnumAudioFormatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AudioFormat[]'>
     
 
 
@@ -1611,6 +1885,9 @@ export type GlobalOmitConfig = {
   mushaf?: Prisma.MushafOmit
   surah?: Prisma.SurahOmit
   ayah?: Prisma.AyahOmit
+  reciter?: Prisma.ReciterOmit
+  audioTrack?: Prisma.AudioTrackOmit
+  annotation?: Prisma.AnnotationOmit
   user?: Prisma.UserOmit
   account?: Prisma.AccountOmit
   session?: Prisma.SessionOmit

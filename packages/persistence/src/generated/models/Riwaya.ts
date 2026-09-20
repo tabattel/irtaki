@@ -212,9 +212,10 @@ export type RiwayaWhereInput = {
   shortName?: Prisma.StringFilter<"Riwaya"> | string
   fullName?: Prisma.StringFilter<"Riwaya"> | string
   qiraaId?: Prisma.IntFilter<"Riwaya"> | number
+  mushafs?: Prisma.MushafListRelationFilter
   qiraa?: Prisma.XOR<Prisma.QiraaScalarRelationFilter, Prisma.QiraaWhereInput>
   tariqs?: Prisma.TariqListRelationFilter
-  mushafs?: Prisma.MushafListRelationFilter
+  reciters?: Prisma.ReciterListRelationFilter
 }
 
 export type RiwayaOrderByWithRelationInput = {
@@ -222,9 +223,10 @@ export type RiwayaOrderByWithRelationInput = {
   shortName?: Prisma.SortOrder
   fullName?: Prisma.SortOrder
   qiraaId?: Prisma.SortOrder
+  mushafs?: Prisma.MushafOrderByRelationAggregateInput
   qiraa?: Prisma.QiraaOrderByWithRelationInput
   tariqs?: Prisma.TariqOrderByRelationAggregateInput
-  mushafs?: Prisma.MushafOrderByRelationAggregateInput
+  reciters?: Prisma.ReciterOrderByRelationAggregateInput
 }
 
 export type RiwayaWhereUniqueInput = Prisma.AtLeast<{
@@ -235,9 +237,10 @@ export type RiwayaWhereUniqueInput = Prisma.AtLeast<{
   shortName?: Prisma.StringFilter<"Riwaya"> | string
   fullName?: Prisma.StringFilter<"Riwaya"> | string
   qiraaId?: Prisma.IntFilter<"Riwaya"> | number
+  mushafs?: Prisma.MushafListRelationFilter
   qiraa?: Prisma.XOR<Prisma.QiraaScalarRelationFilter, Prisma.QiraaWhereInput>
   tariqs?: Prisma.TariqListRelationFilter
-  mushafs?: Prisma.MushafListRelationFilter
+  reciters?: Prisma.ReciterListRelationFilter
 }, "id">
 
 export type RiwayaOrderByWithAggregationInput = {
@@ -266,9 +269,10 @@ export type RiwayaCreateInput = {
   id: number
   shortName: string
   fullName: string
+  mushafs?: Prisma.MushafCreateNestedManyWithoutRiwayaInput
   qiraa: Prisma.QiraaCreateNestedOneWithoutRiwayatInput
   tariqs?: Prisma.TariqCreateNestedManyWithoutRiwayaInput
-  mushafs?: Prisma.MushafCreateNestedManyWithoutRiwayaInput
+  reciters?: Prisma.ReciterCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUncheckedCreateInput = {
@@ -276,17 +280,19 @@ export type RiwayaUncheckedCreateInput = {
   shortName: string
   fullName: string
   qiraaId: number
-  tariqs?: Prisma.TariqUncheckedCreateNestedManyWithoutRiwayaInput
   mushafs?: Prisma.MushafUncheckedCreateNestedManyWithoutRiwayaInput
+  tariqs?: Prisma.TariqUncheckedCreateNestedManyWithoutRiwayaInput
+  reciters?: Prisma.ReciterUncheckedCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   shortName?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  mushafs?: Prisma.MushafUpdateManyWithoutRiwayaNestedInput
   qiraa?: Prisma.QiraaUpdateOneRequiredWithoutRiwayatNestedInput
   tariqs?: Prisma.TariqUpdateManyWithoutRiwayaNestedInput
-  mushafs?: Prisma.MushafUpdateManyWithoutRiwayaNestedInput
+  reciters?: Prisma.ReciterUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateInput = {
@@ -294,8 +300,9 @@ export type RiwayaUncheckedUpdateInput = {
   shortName?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   qiraaId?: Prisma.IntFieldUpdateOperationsInput | number
-  tariqs?: Prisma.TariqUncheckedUpdateManyWithoutRiwayaNestedInput
   mushafs?: Prisma.MushafUncheckedUpdateManyWithoutRiwayaNestedInput
+  tariqs?: Prisma.TariqUncheckedUpdateManyWithoutRiwayaNestedInput
+  reciters?: Prisma.ReciterUncheckedUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaCreateManyInput = {
@@ -434,20 +441,36 @@ export type RiwayaUpdateOneRequiredWithoutMushafsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.RiwayaUpdateToOneWithWhereWithoutMushafsInput, Prisma.RiwayaUpdateWithoutMushafsInput>, Prisma.RiwayaUncheckedUpdateWithoutMushafsInput>
 }
 
+export type RiwayaCreateNestedOneWithoutRecitersInput = {
+  create?: Prisma.XOR<Prisma.RiwayaCreateWithoutRecitersInput, Prisma.RiwayaUncheckedCreateWithoutRecitersInput>
+  connectOrCreate?: Prisma.RiwayaCreateOrConnectWithoutRecitersInput
+  connect?: Prisma.RiwayaWhereUniqueInput
+}
+
+export type RiwayaUpdateOneRequiredWithoutRecitersNestedInput = {
+  create?: Prisma.XOR<Prisma.RiwayaCreateWithoutRecitersInput, Prisma.RiwayaUncheckedCreateWithoutRecitersInput>
+  connectOrCreate?: Prisma.RiwayaCreateOrConnectWithoutRecitersInput
+  upsert?: Prisma.RiwayaUpsertWithoutRecitersInput
+  connect?: Prisma.RiwayaWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.RiwayaUpdateToOneWithWhereWithoutRecitersInput, Prisma.RiwayaUpdateWithoutRecitersInput>, Prisma.RiwayaUncheckedUpdateWithoutRecitersInput>
+}
+
 export type RiwayaCreateWithoutQiraaInput = {
   id: number
   shortName: string
   fullName: string
-  tariqs?: Prisma.TariqCreateNestedManyWithoutRiwayaInput
   mushafs?: Prisma.MushafCreateNestedManyWithoutRiwayaInput
+  tariqs?: Prisma.TariqCreateNestedManyWithoutRiwayaInput
+  reciters?: Prisma.ReciterCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUncheckedCreateWithoutQiraaInput = {
   id: number
   shortName: string
   fullName: string
-  tariqs?: Prisma.TariqUncheckedCreateNestedManyWithoutRiwayaInput
   mushafs?: Prisma.MushafUncheckedCreateNestedManyWithoutRiwayaInput
+  tariqs?: Prisma.TariqUncheckedCreateNestedManyWithoutRiwayaInput
+  reciters?: Prisma.ReciterUncheckedCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaCreateOrConnectWithoutQiraaInput = {
@@ -490,8 +513,9 @@ export type RiwayaCreateWithoutTariqsInput = {
   id: number
   shortName: string
   fullName: string
-  qiraa: Prisma.QiraaCreateNestedOneWithoutRiwayatInput
   mushafs?: Prisma.MushafCreateNestedManyWithoutRiwayaInput
+  qiraa: Prisma.QiraaCreateNestedOneWithoutRiwayatInput
+  reciters?: Prisma.ReciterCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUncheckedCreateWithoutTariqsInput = {
@@ -500,6 +524,7 @@ export type RiwayaUncheckedCreateWithoutTariqsInput = {
   fullName: string
   qiraaId: number
   mushafs?: Prisma.MushafUncheckedCreateNestedManyWithoutRiwayaInput
+  reciters?: Prisma.ReciterUncheckedCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaCreateOrConnectWithoutTariqsInput = {
@@ -522,8 +547,9 @@ export type RiwayaUpdateWithoutTariqsInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   shortName?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
-  qiraa?: Prisma.QiraaUpdateOneRequiredWithoutRiwayatNestedInput
   mushafs?: Prisma.MushafUpdateManyWithoutRiwayaNestedInput
+  qiraa?: Prisma.QiraaUpdateOneRequiredWithoutRiwayatNestedInput
+  reciters?: Prisma.ReciterUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateWithoutTariqsInput = {
@@ -532,6 +558,7 @@ export type RiwayaUncheckedUpdateWithoutTariqsInput = {
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   qiraaId?: Prisma.IntFieldUpdateOperationsInput | number
   mushafs?: Prisma.MushafUncheckedUpdateManyWithoutRiwayaNestedInput
+  reciters?: Prisma.ReciterUncheckedUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaCreateWithoutMushafsInput = {
@@ -540,6 +567,7 @@ export type RiwayaCreateWithoutMushafsInput = {
   fullName: string
   qiraa: Prisma.QiraaCreateNestedOneWithoutRiwayatInput
   tariqs?: Prisma.TariqCreateNestedManyWithoutRiwayaInput
+  reciters?: Prisma.ReciterCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUncheckedCreateWithoutMushafsInput = {
@@ -548,6 +576,7 @@ export type RiwayaUncheckedCreateWithoutMushafsInput = {
   fullName: string
   qiraaId: number
   tariqs?: Prisma.TariqUncheckedCreateNestedManyWithoutRiwayaInput
+  reciters?: Prisma.ReciterUncheckedCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaCreateOrConnectWithoutMushafsInput = {
@@ -572,6 +601,7 @@ export type RiwayaUpdateWithoutMushafsInput = {
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   qiraa?: Prisma.QiraaUpdateOneRequiredWithoutRiwayatNestedInput
   tariqs?: Prisma.TariqUpdateManyWithoutRiwayaNestedInput
+  reciters?: Prisma.ReciterUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateWithoutMushafsInput = {
@@ -579,6 +609,59 @@ export type RiwayaUncheckedUpdateWithoutMushafsInput = {
   shortName?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
   qiraaId?: Prisma.IntFieldUpdateOperationsInput | number
+  tariqs?: Prisma.TariqUncheckedUpdateManyWithoutRiwayaNestedInput
+  reciters?: Prisma.ReciterUncheckedUpdateManyWithoutRiwayaNestedInput
+}
+
+export type RiwayaCreateWithoutRecitersInput = {
+  id: number
+  shortName: string
+  fullName: string
+  mushafs?: Prisma.MushafCreateNestedManyWithoutRiwayaInput
+  qiraa: Prisma.QiraaCreateNestedOneWithoutRiwayatInput
+  tariqs?: Prisma.TariqCreateNestedManyWithoutRiwayaInput
+}
+
+export type RiwayaUncheckedCreateWithoutRecitersInput = {
+  id: number
+  shortName: string
+  fullName: string
+  qiraaId: number
+  mushafs?: Prisma.MushafUncheckedCreateNestedManyWithoutRiwayaInput
+  tariqs?: Prisma.TariqUncheckedCreateNestedManyWithoutRiwayaInput
+}
+
+export type RiwayaCreateOrConnectWithoutRecitersInput = {
+  where: Prisma.RiwayaWhereUniqueInput
+  create: Prisma.XOR<Prisma.RiwayaCreateWithoutRecitersInput, Prisma.RiwayaUncheckedCreateWithoutRecitersInput>
+}
+
+export type RiwayaUpsertWithoutRecitersInput = {
+  update: Prisma.XOR<Prisma.RiwayaUpdateWithoutRecitersInput, Prisma.RiwayaUncheckedUpdateWithoutRecitersInput>
+  create: Prisma.XOR<Prisma.RiwayaCreateWithoutRecitersInput, Prisma.RiwayaUncheckedCreateWithoutRecitersInput>
+  where?: Prisma.RiwayaWhereInput
+}
+
+export type RiwayaUpdateToOneWithWhereWithoutRecitersInput = {
+  where?: Prisma.RiwayaWhereInput
+  data: Prisma.XOR<Prisma.RiwayaUpdateWithoutRecitersInput, Prisma.RiwayaUncheckedUpdateWithoutRecitersInput>
+}
+
+export type RiwayaUpdateWithoutRecitersInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  shortName?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  mushafs?: Prisma.MushafUpdateManyWithoutRiwayaNestedInput
+  qiraa?: Prisma.QiraaUpdateOneRequiredWithoutRiwayatNestedInput
+  tariqs?: Prisma.TariqUpdateManyWithoutRiwayaNestedInput
+}
+
+export type RiwayaUncheckedUpdateWithoutRecitersInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  shortName?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  qiraaId?: Prisma.IntFieldUpdateOperationsInput | number
+  mushafs?: Prisma.MushafUncheckedUpdateManyWithoutRiwayaNestedInput
   tariqs?: Prisma.TariqUncheckedUpdateManyWithoutRiwayaNestedInput
 }
 
@@ -592,16 +675,18 @@ export type RiwayaUpdateWithoutQiraaInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   shortName?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
-  tariqs?: Prisma.TariqUpdateManyWithoutRiwayaNestedInput
   mushafs?: Prisma.MushafUpdateManyWithoutRiwayaNestedInput
+  tariqs?: Prisma.TariqUpdateManyWithoutRiwayaNestedInput
+  reciters?: Prisma.ReciterUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateWithoutQiraaInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   shortName?: Prisma.StringFieldUpdateOperationsInput | string
   fullName?: Prisma.StringFieldUpdateOperationsInput | string
-  tariqs?: Prisma.TariqUncheckedUpdateManyWithoutRiwayaNestedInput
   mushafs?: Prisma.MushafUncheckedUpdateManyWithoutRiwayaNestedInput
+  tariqs?: Prisma.TariqUncheckedUpdateManyWithoutRiwayaNestedInput
+  reciters?: Prisma.ReciterUncheckedUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateManyWithoutQiraaInput = {
@@ -616,13 +701,15 @@ export type RiwayaUncheckedUpdateManyWithoutQiraaInput = {
  */
 
 export type RiwayaCountOutputType = {
-  tariqs: number
   mushafs: number
+  tariqs: number
+  reciters: number
 }
 
 export type RiwayaCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  tariqs?: boolean | RiwayaCountOutputTypeCountTariqsArgs
   mushafs?: boolean | RiwayaCountOutputTypeCountMushafsArgs
+  tariqs?: boolean | RiwayaCountOutputTypeCountTariqsArgs
+  reciters?: boolean | RiwayaCountOutputTypeCountRecitersArgs
 }
 
 /**
@@ -638,6 +725,13 @@ export type RiwayaCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Exten
 /**
  * RiwayaCountOutputType without action
  */
+export type RiwayaCountOutputTypeCountMushafsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MushafWhereInput
+}
+
+/**
+ * RiwayaCountOutputType without action
+ */
 export type RiwayaCountOutputTypeCountTariqsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.TariqWhereInput
 }
@@ -645,8 +739,8 @@ export type RiwayaCountOutputTypeCountTariqsArgs<ExtArgs extends runtime.Types.E
 /**
  * RiwayaCountOutputType without action
  */
-export type RiwayaCountOutputTypeCountMushafsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.MushafWhereInput
+export type RiwayaCountOutputTypeCountRecitersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ReciterWhereInput
 }
 
 
@@ -655,9 +749,10 @@ export type RiwayaSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   shortName?: boolean
   fullName?: boolean
   qiraaId?: boolean
+  mushafs?: boolean | Prisma.Riwaya$mushafsArgs<ExtArgs>
   qiraa?: boolean | Prisma.QiraaDefaultArgs<ExtArgs>
   tariqs?: boolean | Prisma.Riwaya$tariqsArgs<ExtArgs>
-  mushafs?: boolean | Prisma.Riwaya$mushafsArgs<ExtArgs>
+  reciters?: boolean | Prisma.Riwaya$recitersArgs<ExtArgs>
   _count?: boolean | Prisma.RiwayaCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["riwaya"]>
 
@@ -686,9 +781,10 @@ export type RiwayaSelectScalar = {
 
 export type RiwayaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "shortName" | "fullName" | "qiraaId", ExtArgs["result"]["riwaya"]>
 export type RiwayaInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  mushafs?: boolean | Prisma.Riwaya$mushafsArgs<ExtArgs>
   qiraa?: boolean | Prisma.QiraaDefaultArgs<ExtArgs>
   tariqs?: boolean | Prisma.Riwaya$tariqsArgs<ExtArgs>
-  mushafs?: boolean | Prisma.Riwaya$mushafsArgs<ExtArgs>
+  reciters?: boolean | Prisma.Riwaya$recitersArgs<ExtArgs>
   _count?: boolean | Prisma.RiwayaCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type RiwayaIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -701,9 +797,10 @@ export type RiwayaIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
 export type $RiwayaPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Riwaya"
   objects: {
+    mushafs: Prisma.$MushafPayload<ExtArgs>[]
     qiraa: Prisma.$QiraaPayload<ExtArgs>
     tariqs: Prisma.$TariqPayload<ExtArgs>[]
-    mushafs: Prisma.$MushafPayload<ExtArgs>[]
+    reciters: Prisma.$ReciterPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -1104,9 +1201,10 @@ readonly fields: RiwayaFieldRefs;
  */
 export interface Prisma__RiwayaClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  mushafs<T extends Prisma.Riwaya$mushafsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Riwaya$mushafsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MushafPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   qiraa<T extends Prisma.QiraaDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.QiraaDefaultArgs<ExtArgs>>): Prisma.Prisma__QiraaClient<runtime.Types.Result.GetResult<Prisma.$QiraaPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   tariqs<T extends Prisma.Riwaya$tariqsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Riwaya$tariqsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TariqPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  mushafs<T extends Prisma.Riwaya$mushafsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Riwaya$mushafsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MushafPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  reciters<T extends Prisma.Riwaya$recitersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Riwaya$recitersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReciterPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1541,6 +1639,30 @@ export type RiwayaDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Intern
 }
 
 /**
+ * Riwaya.mushafs
+ */
+export type Riwaya$mushafsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Mushaf
+   */
+  select?: Prisma.MushafSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Mushaf
+   */
+  omit?: Prisma.MushafOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MushafInclude<ExtArgs> | null
+  where?: Prisma.MushafWhereInput
+  orderBy?: Prisma.MushafOrderByWithRelationInput | Prisma.MushafOrderByWithRelationInput[]
+  cursor?: Prisma.MushafWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MushafScalarFieldEnum | Prisma.MushafScalarFieldEnum[]
+}
+
+/**
  * Riwaya.tariqs
  */
 export type Riwaya$tariqsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1565,27 +1687,27 @@ export type Riwaya$tariqsArgs<ExtArgs extends runtime.Types.Extensions.InternalA
 }
 
 /**
- * Riwaya.mushafs
+ * Riwaya.reciters
  */
-export type Riwaya$mushafsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Riwaya$recitersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Mushaf
+   * Select specific fields to fetch from the Reciter
    */
-  select?: Prisma.MushafSelect<ExtArgs> | null
+  select?: Prisma.ReciterSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Mushaf
+   * Omit specific fields from the Reciter
    */
-  omit?: Prisma.MushafOmit<ExtArgs> | null
+  omit?: Prisma.ReciterOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.MushafInclude<ExtArgs> | null
-  where?: Prisma.MushafWhereInput
-  orderBy?: Prisma.MushafOrderByWithRelationInput | Prisma.MushafOrderByWithRelationInput[]
-  cursor?: Prisma.MushafWhereUniqueInput
+  include?: Prisma.ReciterInclude<ExtArgs> | null
+  where?: Prisma.ReciterWhereInput
+  orderBy?: Prisma.ReciterOrderByWithRelationInput | Prisma.ReciterOrderByWithRelationInput[]
+  cursor?: Prisma.ReciterWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.MushafScalarFieldEnum | Prisma.MushafScalarFieldEnum[]
+  distinct?: Prisma.ReciterScalarFieldEnum | Prisma.ReciterScalarFieldEnum[]
 }
 
 /**

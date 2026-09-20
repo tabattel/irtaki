@@ -72,6 +72,21 @@ export type Surah = Prisma.SurahModel
  */
 export type Ayah = Prisma.AyahModel
 /**
+ * Model Reciter
+ * 
+ */
+export type Reciter = Prisma.ReciterModel
+/**
+ * Model AudioTrack
+ * 
+ */
+export type AudioTrack = Prisma.AudioTrackModel
+/**
+ * Model Annotation
+ * 
+ */
+export type Annotation = Prisma.AnnotationModel
+/**
  * Model User
  * 
  */

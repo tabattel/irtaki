@@ -16,13 +16,14 @@ model Qiraa {
 }
 
 model Riwaya {
-  id        Int      @id
+  id        Int       @id
   shortName String
   fullName  String
   qiraaId   Int
   mushafs   Mushaf[]
-  qiraa     Qiraa    @relation(fields: [qiraaId], references: [id])
+  qiraa     Qiraa     @relation(fields: [qiraaId], references: [id])
   tariqs    Tariq[]
+  reciters  Reciter[]
 
   @@index([qiraaId])
 }
@@ -76,11 +77,44 @@ model Ayah {
   numberInHafs Int[]
   surah        Surah        @relation(fields: [surahNumber], references: [number])
   annotations  Annotation[]
+  audioTracks  AudioTrack[]
 
   @@unique([surahNumber, number])
   @@index([surahNumber])
   @@index([pageNumber])
   @@index([juz])
+}
+
+model Reciter {
+  id         String       @id
+  name       String
+  arabicName String
+  riwayaId   Int
+  riwaya     Riwaya       @relation(fields: [riwayaId], references: [id])
+  tracks     AudioTrack[]
+
+  @@index([riwayaId])
+}
+
+model AudioTrack {
+  id         String      @id @default(cuid())
+  ayahId     Int
+  reciterId  String
+  format     AudioFormat
+  durationMs Int?
+  sourceKey  String
+  createdAt  DateTime    @default(now())
+
+  ayah    Ayah    @relation(fields: [ayahId], references: [id], onDelete: Cascade)
+  reciter Reciter @relation(fields: [reciterId], references: [id], onDelete: Cascade)
+
+  @@unique([ayahId, reciterId, format])
+  @@index([ayahId])
+  @@index([reciterId])
+}
+
+enum AudioFormat {
+  opus
 }
 
 model Annotation {

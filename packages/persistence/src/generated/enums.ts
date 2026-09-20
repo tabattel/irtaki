@@ -9,6 +9,13 @@
 * 🟢 You can import this file directly.
 */
 
+export const AudioFormat = {
+  opus: 'opus'
+} as const
+
+export type AudioFormat = (typeof AudioFormat)[keyof typeof AudioFormat]
+
+
 export const QiraaRegion = {
   madinah: 'madinah',
   makkah: 'makkah',

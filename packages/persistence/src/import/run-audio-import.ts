@@ -3,10 +3,12 @@ import dotenv from "dotenv";
 dotenv.config({ path: "../../.env" });
 
 const { prisma } = await import("../client/prisma");
-const { importQuranDomain } = await import("./quran-domain-importer");
+const { importAudioReciters, importAudioTracks } =
+  await import("./audio-importer");
 
 try {
-  await importQuranDomain();
+  await importAudioReciters();
+  await importAudioTracks();
 } finally {
   await prisma.$disconnect();
 }

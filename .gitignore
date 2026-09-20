@@ -43,3 +43,12 @@ next-env.d.ts
 # workspace dependencies and build outputs
 **/node_modules/
 **/dist/
+# local audio/data sources (stored outside Git)
+/storage/audio/
+/olddata/
+
+# local AI/agent tooling
+**/.agents/
+**/.claude/
+**/.windsurf/
+**/skills-lock.json

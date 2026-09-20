@@ -57,6 +57,9 @@ export const ModelName = {
   Mushaf: 'Mushaf',
   Surah: 'Surah',
   Ayah: 'Ayah',
+  Reciter: 'Reciter',
+  AudioTrack: 'AudioTrack',
+  Annotation: 'Annotation',
   User: 'User',
   Account: 'Account',
   Session: 'Session',
@@ -151,6 +154,41 @@ export const AyahScalarFieldEnum = {
 } as const
 
 export type AyahScalarFieldEnum = (typeof AyahScalarFieldEnum)[keyof typeof AyahScalarFieldEnum]
+
+
+export const ReciterScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  arabicName: 'arabicName',
+  riwayaId: 'riwayaId'
+} as const
+
+export type ReciterScalarFieldEnum = (typeof ReciterScalarFieldEnum)[keyof typeof ReciterScalarFieldEnum]
+
+
+export const AudioTrackScalarFieldEnum = {
+  id: 'id',
+  ayahId: 'ayahId',
+  reciterId: 'reciterId',
+  format: 'format',
+  durationMs: 'durationMs',
+  sourceKey: 'sourceKey',
+  createdAt: 'createdAt'
+} as const
+
+export type AudioTrackScalarFieldEnum = (typeof AudioTrackScalarFieldEnum)[keyof typeof AudioTrackScalarFieldEnum]
+
+
+export const AnnotationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  ayahId: 'ayahId',
+  content: 'content',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AnnotationScalarFieldEnum = (typeof AnnotationScalarFieldEnum)[keyof typeof AnnotationScalarFieldEnum]
 
 
 export const UserScalarFieldEnum = {
