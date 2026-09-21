@@ -21,4 +21,10 @@ export class AyahRepository {
       orderBy: [{ surahNumber: "asc" }, { number: "asc" }],
     });
   }
+
+  findAllForSearch(): Promise<Ayah[]> {
+    return prisma.ayah.findMany({
+      orderBy: { id: "asc" },
+    });
+  }
 }
