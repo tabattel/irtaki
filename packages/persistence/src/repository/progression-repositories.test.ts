@@ -79,6 +79,63 @@ describe("progression repositories", () => {
     expect(goal.unit).toBe("page");
   });
 
+  it("supports nisf and roboa progression units and target scopes", async () => {
+    const testUser = await prisma.user.create({
+      data: {
+        email: `progression-units-${Date.now()}@irtaki.test`,
+        name: "Progression Units Test",
+      },
+    });
+
+    const testLearner = await learnerRepository.create({
+      userId: testUser.id,
+      name: "Progression Units Learner",
+    });
+
+    const nisfGoal = await goalRepository.create({
+      learnerId: testLearner.id,
+      title: "Mémoriser un nisf",
+      action: "memorize",
+      quantity: 1,
+      unit: "nisf",
+      frequencyCount: 1,
+      frequencyPeriod: "week",
+      startDate: new Date("2026-09-20T00:00:00.000Z"),
+      status: "active",
+    });
+
+    const roboaGoal = await goalRepository.create({
+      learnerId: testLearner.id,
+      title: "Mémoriser un roboa",
+      action: "memorize",
+      quantity: 1,
+      unit: "roboa",
+      frequencyCount: 1,
+      frequencyPeriod: "week",
+      startDate: new Date("2026-09-20T00:00:00.000Z"),
+      status: "active",
+    });
+
+    const nisfTarget = await goalTargetRepository.create({
+      goalId: nisfGoal.id,
+      scope: "nisf",
+    });
+
+    const roboaTarget = await goalTargetRepository.create({
+      goalId: roboaGoal.id,
+      scope: "roboa",
+    });
+
+    expect(nisfGoal.unit).toBe("nisf");
+    expect(roboaGoal.unit).toBe("roboa");
+    expect(nisfTarget.scope).toBe("nisf");
+    expect(roboaTarget.scope).toBe("roboa");
+
+    await prisma.user.delete({
+      where: { id: testUser.id },
+    });
+  });
+
   it("creates and retrieves a goal target", async () => {
     const target = await goalTargetRepository.create({
       goalId,

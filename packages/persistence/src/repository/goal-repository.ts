@@ -19,12 +19,7 @@ export class GoalRepository {
       | "tathbit";
     quantity: string | number;
     unit:
-      | "quran"
-      | "surah"
-      | "ayah"
-      | "page"
-      | "juz"
-      | "hizb";
+      "quran" | "surah" | "ayah" | "page" | "juz" | "hizb" | "nisf" | "roboa";
     frequencyCount: number;
     frequencyPeriod: "day" | "week" | "month";
     intervalDays?: number;
@@ -39,12 +34,7 @@ export class GoalRepository {
     startDate: Date;
     endDate?: Date;
     status?:
-      | "draft"
-      | "active"
-      | "paused"
-      | "completed"
-      | "cancelled"
-      | "archived";
+      "draft" | "active" | "paused" | "completed" | "cancelled" | "archived";
     notificationEnabled?: boolean;
     notificationTime?: string;
   }): Promise<Goal> {
@@ -70,10 +60,7 @@ export class GoalRepository {
     });
   }
 
-  async findById(
-    id: string,
-    learnerId: string,
-  ): Promise<Goal | null> {
+  async findById(id: string, learnerId: string): Promise<Goal | null> {
     return prisma.goal.findFirst({
       where: {
         id,
@@ -87,10 +74,7 @@ export class GoalRepository {
       where: {
         learnerId,
       },
-      orderBy: [
-        { startDate: "asc" },
-        { createdAt: "asc" },
-      ],
+      orderBy: [{ startDate: "asc" }, { createdAt: "asc" }],
     });
   }
 
@@ -100,10 +84,7 @@ export class GoalRepository {
         learnerId,
         parentGoalId: null,
       },
-      orderBy: [
-        { startDate: "asc" },
-        { createdAt: "asc" },
-      ],
+      orderBy: [{ startDate: "asc" }, { createdAt: "asc" }],
     });
   }
 
@@ -112,10 +93,7 @@ export class GoalRepository {
       where: {
         parentGoalId,
       },
-      orderBy: [
-        { startDate: "asc" },
-        { createdAt: "asc" },
-      ],
+      orderBy: [{ startDate: "asc" }, { createdAt: "asc" }],
     });
   }
 
@@ -136,13 +114,7 @@ export class GoalRepository {
         | "talkin"
         | "tathbit";
       quantity?: string | number;
-      unit?:
-        | "quran"
-        | "surah"
-        | "ayah"
-        | "page"
-        | "juz"
-        | "hizb";
+      unit?: "quran" | "surah" | "ayah" | "page" | "juz" | "hizb";
       frequencyCount?: number;
       frequencyPeriod?: "day" | "week" | "month";
       intervalDays?: number | null;
@@ -158,34 +130,31 @@ export class GoalRepository {
       startDate?: Date;
       endDate?: Date | null;
       status?:
-        | "draft"
-        | "active"
-        | "paused"
-        | "completed"
-        | "cancelled"
-        | "archived";
+        "draft" | "active" | "paused" | "completed" | "cancelled" | "archived";
       notificationEnabled?: boolean;
       notificationTime?: string | null;
     },
   ): Promise<Goal> {
-    return prisma.goal.updateMany({
-      where: {
-        id,
-        learnerId,
-      },
-      data: input,
-    }).then(async (result) => {
-      if (result.count === 0) {
-        throw new Error("Goal not found");
-      }
-
-      return prisma.goal.findFirstOrThrow({
+    return prisma.goal
+      .updateMany({
         where: {
           id,
           learnerId,
         },
+        data: input,
+      })
+      .then(async (result) => {
+        if (result.count === 0) {
+          throw new Error("Goal not found");
+        }
+
+        return prisma.goal.findFirstOrThrow({
+          where: {
+            id,
+            learnerId,
+          },
+        });
       });
-    });
   }
 
   async delete(id: string, learnerId: string): Promise<void> {

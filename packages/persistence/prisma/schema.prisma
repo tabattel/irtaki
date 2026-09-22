@@ -340,6 +340,8 @@ enum ProgressUnit {
   page
   juz
   hizb
+  nisf
+  roboa
 }
 
 enum FrequencyPeriod {
@@ -372,6 +374,8 @@ enum GoalTargetScope {
   surah
   juz
   hizb
+  nisf
+  roboa
   page
   page_range
   ayah

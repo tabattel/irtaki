@@ -9,12 +9,7 @@ export class ProgressRecordRepository {
     recordedAt?: Date;
     quantity: string | number;
     unit:
-      | "quran"
-      | "surah"
-      | "ayah"
-      | "page"
-      | "juz"
-      | "hizb";
+      "quran" | "surah" | "ayah" | "page" | "juz" | "hizb" | "nisf" | "roboa";
   }): Promise<ProgressRecord> {
     return prisma.progressRecord.create({
       data: {
@@ -40,17 +35,12 @@ export class ProgressRecordRepository {
     });
   }
 
-  async findManyByLearnerId(
-    learnerId: string,
-  ): Promise<ProgressRecord[]> {
+  async findManyByLearnerId(learnerId: string): Promise<ProgressRecord[]> {
     return prisma.progressRecord.findMany({
       where: {
         learnerId,
       },
-      orderBy: [
-        { recordedAt: "desc" },
-        { id: "desc" },
-      ],
+      orderBy: [{ recordedAt: "desc" }, { id: "desc" }],
     });
   }
 
@@ -63,10 +53,7 @@ export class ProgressRecordRepository {
         goalId,
         learnerId,
       },
-      orderBy: [
-        { recordedAt: "desc" },
-        { id: "desc" },
-      ],
+      orderBy: [{ recordedAt: "desc" }, { id: "desc" }],
     });
   }
 
@@ -79,10 +66,7 @@ export class ProgressRecordRepository {
         activityId,
         learnerId,
       },
-      orderBy: [
-        { recordedAt: "desc" },
-        { id: "desc" },
-      ],
+      orderBy: [{ recordedAt: "desc" }, { id: "desc" }],
     });
   }
 }

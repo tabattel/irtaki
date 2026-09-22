@@ -7,12 +7,7 @@ export class ActivityResultRepository {
     status: "completed" | "partial" | "failed" | "skipped";
     quantity: string | number;
     unit:
-      | "quran"
-      | "surah"
-      | "ayah"
-      | "page"
-      | "juz"
-      | "hizb";
+      "quran" | "surah" | "ayah" | "page" | "juz" | "hizb" | "nisf" | "roboa";
   }): Promise<ActivityResult> {
     return prisma.activityResult.create({
       data: {
@@ -24,9 +19,7 @@ export class ActivityResultRepository {
     });
   }
 
-  async findByActivityId(
-    activityId: string,
-  ): Promise<ActivityResult | null> {
+  async findByActivityId(activityId: string): Promise<ActivityResult | null> {
     return prisma.activityResult.findUnique({
       where: {
         activityId,
@@ -37,19 +30,10 @@ export class ActivityResultRepository {
   async update(
     activityId: string,
     input: {
-      status?:
-        | "completed"
-        | "partial"
-        | "failed"
-        | "skipped";
+      status?: "completed" | "partial" | "failed" | "skipped";
       quantity?: string | number;
       unit?:
-        | "quran"
-        | "surah"
-        | "ayah"
-        | "page"
-        | "juz"
-        | "hizb";
+        "quran" | "surah" | "ayah" | "page" | "juz" | "hizb" | "nisf" | "roboa";
     },
   ): Promise<ActivityResult> {
     return prisma.activityResult.update({
