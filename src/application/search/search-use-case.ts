@@ -38,6 +38,7 @@ export class SearchUseCase {
         surahNumber: ayah.surahNumber,
         surahName: surahNames.get(ayah.surahNumber) ?? "",
         ayahNumber: ayah.number,
+        pageNumber: ayah.pageNumber,
         text: ayah.text,
       })),
       ...surahs.map((surah) => ({

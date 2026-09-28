@@ -81,6 +81,10 @@ export function searchDocuments(
     surahNumber: item.document.surahNumber,
     surahName: item.document.surahName,
     ayahNumber: item.document.ayahNumber,
+    ayahId:
+      item.document.source === "ayah" ? item.document.id : undefined,
+    pageNumber: item.document.pageNumber,
+    text: item.document.text,
     occurrence: item.occurrence,
     context: item.context.context,
     before: item.context.before,

@@ -26,6 +26,7 @@ export interface SearchDocument {
   surahNumber: number;
   surahName: string;
   ayahNumber?: number;
+  pageNumber?: number;
   text: string;
 }
 
@@ -35,6 +36,9 @@ export interface SearchResult {
   surahNumber: number;
   surahName: string;
   ayahNumber?: number;
+  ayahId?: number;
+  pageNumber?: number;
+  text: string;
   occurrence: SearchOccurrence;
   context: string;
   before: string;

@@ -11,6 +11,13 @@ export async function GET(request: Request) {
   const query = url.searchParams.get("q") ?? "";
   const modeParam = url.searchParams.get("mode") ?? "partial";
 
+  console.log("[SEARCH API]", {
+    href: request.url,
+    rawSearch: url.search,
+    query,
+    modeParam,
+  });
+
   if (modeParam !== "exact" && modeParam !== "partial") {
     return NextResponse.json(
       {

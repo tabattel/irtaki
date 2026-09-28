@@ -45,3 +45,11 @@ export async function getAyahsBySurah(surahNumber: number): Promise<AyahDto[]> {
 
   return response.data;
 }
+
+export async function getAyahsByPage(pageNumber: number): Promise<AyahDto[]> {
+  const response = await apiGet<CollectionResponse<AyahDto>>(
+    `/api/ayahs/page/${pageNumber}`,
+  );
+
+  return response.data;
+}
