@@ -20,6 +20,7 @@ export default function MushafPageRoute() {
 
       <MushafPage
         mushafId={2}
+        riwayaId={10}
         pageNumber={pageNumber}
         selectedAyahId={
           Number.isInteger(selectedAyahId) ? selectedAyahId : undefined

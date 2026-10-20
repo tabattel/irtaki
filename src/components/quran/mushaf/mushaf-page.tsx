@@ -15,6 +15,7 @@ import { MushafLine } from "./mushaf-line";
 
 type MushafPageProps = {
   mushafId: number;
+  riwayaId: number;
   pageNumber: number;
   selectedAyahId?: number;
 };
@@ -29,17 +30,53 @@ type WordSelection = {
 };
 
 type MenuState = null | {
-  type: "ayah" | "word" | "selection" | "app-main" | "app-secondary";
+  type: "ayah" | "word" | "selection" | "app-secondary";
   ayahId?: number;
 };
 
+type SecondaryMode =
+  | "listening"
+  | "recitation"
+  | "memorization"
+  | "review"
+  | "tadabbur"
+  | "progress";
+
+const SECONDARY_MODES: Array<{
+  id: SecondaryMode;
+  label: string;
+  icon: string;
+}> = [
+  { id: "listening", label: "الاستماع", icon: "🎧" },
+  { id: "recitation", label: "التلاوة", icon: "🎙️" },
+  { id: "memorization", label: "الحفظ", icon: "🧠" },
+  { id: "review", label: "المراجعة", icon: "🔄" },
+  { id: "tadabbur", label: "التدبر", icon: "👓" },
+  { id: "progress", label: "المتابعة", icon: "📊" },
+];
+
 const TOTAL_PAGES = 604;
 const LONG_PRESS_MS = 550;
+
+const AUDIO_RECITER_STORAGE_KEY = "irtaki.audio.reciter";
+const AUDIO_CONTINUATION_STORAGE_KEY = "irtaki.audio.continuation";
+const AUDIO_RATE_STORAGE_KEY = "irtaki.audio.playback-rate";
+const AUDIO_AUTOPLAY_NEXT_STORAGE_KEY = "irtaki.audio.autoplay-next";
+
+type AudioContinuation = {
+  reciterId: string;
+  surahNumber: number;
+  ayahNumber: number;
+  endSurahNumber: number;
+  endAyahNumber: number;
+  playbackRate: number;
+};
 const MOVE_THRESHOLD = 20;
 const SWIPE_THRESHOLD = 50;
 
 export function MushafPage({
   mushafId,
+  riwayaId,
   pageNumber,
   selectedAyahId: externalSelectedAyahId,
 }: MushafPageProps) {
@@ -62,6 +99,35 @@ export function MushafPage({
   );
 
   const [menu, setMenu] = useState<MenuState>(null);
+  const [secondaryMode, setSecondaryMode] =
+    useState<SecondaryMode>("listening");
+  const [modePickerOpen, setModePickerOpen] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [repeatEnabled, setRepeatEnabled] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [reciterPickerOpen, setReciterPickerOpen] = useState(false);
+  const [selectedReciter, setSelectedReciter] = useState(() => {
+    if (typeof window === "undefined") {
+      return "hafs-afassi";
+    }
+
+    return (
+      window.localStorage.getItem(AUDIO_RECITER_STORAGE_KEY) ?? "hafs-afassi"
+    );
+  });
+  const [audioStartSurah, setAudioStartSurah] = useState("");
+  const [audioStartAyah, setAudioStartAyah] = useState("");
+  const [audioEndSurah, setAudioEndSurah] = useState("114");
+  const [audioEndAyah, setAudioEndAyah] = useState("6");
+  const audioRangeUserModifiedRef = useRef(false);
+  const [ayahRepeatCount, setAyahRepeatCount] = useState("1");
+  const [selectionRepeatCount, setSelectionRepeatCount] = useState("1");
+  const [silenceBeforeAyah, setSilenceBeforeAyah] = useState("0");
+  const [silenceAfterAyah, setSilenceAfterAyah] = useState("0");
+  const [silenceBeforeSelection, setSilenceBeforeSelection] = useState("0");
+  const [silenceAfterSelection, setSilenceAfterSelection] = useState("0");
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [secondaryMessage, setSecondaryMessage] = useState<string | null>(null);
 
   const interactionRef = useRef<{
     mode: InteractionMode;
@@ -77,9 +143,12 @@ export function MushafPage({
     startY: 0,
   });
 
-  useEffect(() => {
-    setSelectedAyahId(externalSelectedAyahId);
-  }, [externalSelectedAyahId]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioSourceKeyRef = useRef<string | null>(null);
+  const audioContinuationHandledRef = useRef(false);
+  const audioShouldContinueRef = useRef(false);
+  const audioPlaybackCancelledRef = useRef(false);
+  const selectionRepeatRemainingRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,6 +168,7 @@ export function MushafPage({
           setAyahs(ayahData);
           setLayout(layoutData);
           setSurahs(surahData);
+          setSelectedAyahId(externalSelectedAyahId);
           setSelectedWords(new Set());
           setMenu(null);
         }
@@ -129,7 +199,7 @@ export function MushafPage({
       return;
     }
 
-    router.push(`/coran/page/${nextPage}`);
+    router.push(`/coran/${riwayaId}/page/${nextPage}`);
   }
 
   useEffect(() => {
@@ -453,8 +523,8 @@ export function MushafPage({
       /*
        * VERTICAL
        *
-       * haut = menu secondaire de l'application IRTAKI
-       * bas  = menu principal de l'application IRTAKI
+       * haut = menu secondaire du Mushaf
+       * bas  = géré globalement par AppShell
        *
        * IMPORTANT :
        * le menu vertical est indépendant de la sélection
@@ -464,9 +534,13 @@ export function MushafPage({
        * ultérieurement.
        */
       else {
-        setMenu({
-          type: dy < 0 ? "app-secondary" : "app-main",
-        });
+        if (dy < 0) {
+          setMenu({
+            type: "app-secondary",
+          });
+        } else {
+          setMenu(null);
+        }
       }
     }
 
@@ -488,6 +562,608 @@ export function MushafPage({
     state.pointerId = -1;
     state.currentKey = undefined;
   }
+
+  function showSecondaryMessage(message: string) {
+    setSecondaryMessage(message);
+
+    window.setTimeout(() => {
+      setSecondaryMessage((current) => (current === message ? null : current));
+    }, 1600);
+  }
+
+  useEffect(() => {
+    window.localStorage.setItem(AUDIO_RECITER_STORAGE_KEY, selectedReciter);
+  }, [selectedReciter]);
+
+  useEffect(() => {
+    const stored = Number(window.localStorage.getItem(AUDIO_RATE_STORAGE_KEY));
+
+    if (Number.isFinite(stored) && stored >= 0.25 && stored <= 4) {
+      setPlaybackRate(stored);
+    }
+  }, []);
+
+  function getCurrentAudioAyah() {
+    if (ayahs.length === 0) {
+      return undefined;
+    }
+
+    if (selectedAyahId !== undefined) {
+      const selected = ayahs.find((ayah) => ayah.id === selectedAyahId);
+
+      if (selected) {
+        return selected;
+      }
+    }
+
+    return ayahs[0];
+  }
+
+  function getAudioUrl(
+    reciterId: string,
+    surahNumber: number,
+    ayahNumber: number,
+  ) {
+    return `/api/audio/${reciterId}/${surahNumber}/${ayahNumber}`;
+  }
+
+  function readAudioContinuation(): AudioContinuation | undefined {
+    const raw = window.sessionStorage.getItem(AUDIO_CONTINUATION_STORAGE_KEY);
+
+    if (!raw) {
+      return undefined;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<AudioContinuation>;
+
+      if (
+        typeof parsed.reciterId !== "string" ||
+        typeof parsed.surahNumber !== "number" ||
+        typeof parsed.ayahNumber !== "number" ||
+        typeof parsed.endSurahNumber !== "number" ||
+        typeof parsed.endAyahNumber !== "number" ||
+        typeof parsed.playbackRate !== "number"
+      ) {
+        return undefined;
+      }
+
+      return {
+        reciterId: parsed.reciterId,
+        surahNumber: parsed.surahNumber,
+        ayahNumber: parsed.ayahNumber,
+        endSurahNumber: parsed.endSurahNumber,
+        endAyahNumber: parsed.endAyahNumber,
+        playbackRate: parsed.playbackRate,
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  function writeAudioContinuation(continuation: AudioContinuation) {
+    window.sessionStorage.setItem(
+      AUDIO_CONTINUATION_STORAGE_KEY,
+      JSON.stringify(continuation),
+    );
+  }
+
+  function clearAudioContinuation() {
+    window.sessionStorage.removeItem(AUDIO_CONTINUATION_STORAGE_KEY);
+  }
+
+  function isAudioEndReached(
+    ayah: { surahNumber: number; number: number },
+    continuation: AudioContinuation,
+  ) {
+    if (ayah.surahNumber > continuation.endSurahNumber) {
+      return true;
+    }
+
+    if (
+      ayah.surahNumber === continuation.endSurahNumber &&
+      ayah.number >= continuation.endAyahNumber
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  async function playCurrentAyah() {
+    const audio = audioRef.current;
+    const currentAyah = getCurrentAudioAyah();
+
+    if (!audio || !currentAyah) {
+      showSecondaryMessage("لا توجد آية للاستماع");
+      return;
+    }
+
+    const sourceKey = [
+      selectedReciter,
+      currentAyah.surahNumber,
+      currentAyah.number,
+    ].join(":");
+
+    if (audioSourceKeyRef.current !== sourceKey) {
+      audio.src = getAudioUrl(
+        selectedReciter,
+        currentAyah.surahNumber,
+        currentAyah.number,
+      );
+      audioSourceKeyRef.current = sourceKey;
+      audio.load();
+    }
+
+    audio.playbackRate = playbackRate;
+
+    try {
+      await audio.play();
+      setIsPlaying(true);
+      showSecondaryMessage("تشغيل");
+    } catch {
+      setIsPlaying(false);
+      showSecondaryMessage("تعذر تشغيل الصوت");
+    }
+  }
+
+  function pausePlayback() {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    window.sessionStorage.removeItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY);
+    audio.pause();
+    setIsPlaying(false);
+    showSecondaryMessage("إيقاف");
+  }
+
+  function togglePlayback() {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    if (!audio.paused) {
+      pausePlayback();
+      return;
+    }
+
+    void playCurrentAyah();
+  }
+
+  function toggleRepeat() {
+    setRepeatEnabled((enabled) => {
+      const next = !enabled;
+      showSecondaryMessage(next ? "التكرار مفعّل" : "التكرار متوقف");
+      return next;
+    });
+  }
+
+  function cyclePlaybackRate() {
+    const rates = [1, 1.25, 1.5, 2, 0.75];
+    const currentIndex = rates.indexOf(playbackRate);
+    const nextRate = rates[(currentIndex + 1) % rates.length];
+
+    setPlaybackRate(nextRate);
+
+    if (audioRef.current) {
+      window.localStorage.setItem(AUDIO_RATE_STORAGE_KEY, String(nextRate));
+      audioRef.current.playbackRate = nextRate;
+    }
+
+    showSecondaryMessage(`السرعة ${nextRate}×`);
+  }
+
+  function navigateAyah(delta: number) {
+    clearAudioContinuation();
+
+    if (ayahs.length === 0) {
+      return;
+    }
+
+    const currentIndex = selectedAyahId
+      ? ayahs.findIndex((ayah) => ayah.id === selectedAyahId)
+      : -1;
+
+    const nextIndex =
+      currentIndex === -1
+        ? delta > 0
+          ? 0
+          : ayahs.length - 1
+        : currentIndex + delta;
+
+    if (nextIndex >= 0 && nextIndex < ayahs.length) {
+      setSelectedAyahId(ayahs[nextIndex].id);
+      showSecondaryMessage(delta > 0 ? "الآية التالية" : "الآية السابقة");
+      return;
+    }
+
+    navigatePage(delta);
+  }
+
+  function validateAndStartAudio() {
+    const startSurah = Number(audioStartSurah);
+    const startAyah = Number(audioStartAyah);
+    const endSurah = Number(audioEndSurah);
+    const endAyah = Number(audioEndAyah);
+
+    if (
+      !Number.isInteger(startSurah) ||
+      startSurah < 1 ||
+      startSurah > 114 ||
+      !Number.isInteger(startAyah) ||
+      startAyah < 1 ||
+      !Number.isInteger(endSurah) ||
+      endSurah < 1 ||
+      endSurah > 114 ||
+      !Number.isInteger(endAyah) ||
+      endAyah < 1
+    ) {
+      showSecondaryMessage("الرجاء التحقق من البداية والنهاية");
+      return;
+    }
+
+    if (
+      startSurah > endSurah ||
+      (startSurah === endSurah && startAyah > endAyah)
+    ) {
+      showSecondaryMessage("البداية يجب أن تسبق النهاية");
+      return;
+    }
+
+    const startSurahData = surahs.find((surah) => surah.number === startSurah);
+
+    const endSurahData = surahs.find((surah) => surah.number === endSurah);
+
+    if (!startSurahData || !endSurahData) {
+      showSecondaryMessage("تعذر العثور على السورة");
+      return;
+    }
+
+    if (
+      startAyah > startSurahData.numberOfAyahs ||
+      endAyah > endSurahData.numberOfAyahs
+    ) {
+      showSecondaryMessage("رقم الآية غير صحيح");
+      return;
+    }
+
+    const continuation: AudioContinuation = {
+      reciterId: selectedReciter,
+      surahNumber: startSurah,
+      ayahNumber: startAyah,
+      endSurahNumber: endSurah,
+      endAyahNumber: endAyah,
+      playbackRate,
+    };
+
+    writeAudioContinuation(continuation);
+    setMoreMenuOpen(false);
+    setReciterPickerOpen(false);
+    setModePickerOpen(false);
+    setIsPlaying(true);
+
+    if (startSurahData.firstPage === pageNumber) {
+      const targetAyah = ayahs.find(
+        (ayah) => ayah.surahNumber === startSurah && ayah.number === startAyah,
+      );
+
+      if (targetAyah) {
+        setSelectedAyahId(targetAyah.id);
+        window.setTimeout(() => {
+          void playCurrentAyah();
+        }, 0);
+        return;
+      }
+    }
+
+    router.push(`/coran/${riwayaId}/page/${startSurahData.firstPage}`);
+  }
+
+  function selectSecondaryMode(mode: SecondaryMode) {
+    setSecondaryMode(mode);
+    setModePickerOpen(false);
+    setReciterPickerOpen(false);
+    showSecondaryMessage(
+      SECONDARY_MODES.find((item) => item.id === mode)?.label ?? "",
+    );
+  }
+
+  useEffect(() => {
+    if (audioRangeUserModifiedRef.current || ayahs.length === 0) {
+      return;
+    }
+
+    const firstAyah = ayahs[0];
+
+    setAudioStartSurah(String(firstAyah.surahNumber));
+    setAudioStartAyah(String(firstAyah.number));
+    setAudioEndSurah("114");
+    setAudioEndAyah("6");
+  }, [ayahs]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    audio.defaultPlaybackRate = playbackRate;
+    audio.playbackRate = playbackRate;
+  }, [playbackRate]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    function handleEnded() {
+      const currentAyah = getCurrentAudioAyah();
+      console.log("[AUDIO] ended", {
+        page: pageNumber,
+        ayah: currentAyah && [currentAyah.surahNumber, currentAyah.number],
+        idx: currentAyah ? ayahs.findIndex((a) => a.id === currentAyah.id) : -1,
+        total: ayahs.length,
+        repeatEnabled,
+        continuation: readAudioContinuation(),
+      }); // DEBUG-AUDIO
+
+      if (!currentAyah) {
+        setIsPlaying(false);
+        return;
+      }
+
+      if (repeatEnabled) {
+        const currentAudio = audioRef.current;
+
+        if (!currentAudio) {
+          return;
+        }
+
+        currentAudio.currentTime = 0;
+        void currentAudio.play().catch(() => {
+          setIsPlaying(false);
+        });
+        return;
+      }
+
+      const continuation = readAudioContinuation();
+
+      if (continuation) {
+        if (isAudioEndReached(currentAyah, continuation)) {
+          clearAudioContinuation();
+          setIsPlaying(false);
+          showSecondaryMessage("انتهى الاستماع");
+          return;
+        }
+
+        const currentIndex = ayahs.findIndex(
+          (ayah) => ayah.id === currentAyah.id,
+        );
+
+        const nextAyah = ayahs[currentIndex + 1];
+
+        if (nextAyah) {
+          writeAudioContinuation({
+            ...continuation,
+            surahNumber: nextAyah.surahNumber,
+            ayahNumber: nextAyah.number,
+          });
+
+          audioShouldContinueRef.current = true;
+          setSelectedAyahId(nextAyah.id);
+          return;
+        }
+
+        if (pageNumber < TOTAL_PAGES) {
+          const nextPage = pageNumber + 1;
+          console.log("[AUDIO] fetch next page", nextPage); // DEBUG-AUDIO
+
+          void getAyahsByPage(nextPage)
+            .then((nextPageAyahs) => {
+              const firstAyah = nextPageAyahs[0];
+
+              if (!firstAyah) {
+                clearAudioContinuation();
+                setIsPlaying(false);
+                showSecondaryMessage("تعذر تحميل الآية التالية");
+                return;
+              }
+
+              writeAudioContinuation({
+                ...continuation,
+                surahNumber: firstAyah.surahNumber,
+                ayahNumber: firstAyah.number,
+              });
+
+              console.log(
+                "[AUDIO] router.push",
+                nextPage,
+                firstAyah.surahNumber,
+                firstAyah.number,
+              ); // DEBUG-AUDIO
+              audioShouldContinueRef.current = true;
+              router.push(`/coran/${riwayaId}/page/${nextPage}`);
+            })
+            .catch((e) => {
+              console.log("[AUDIO] fetch next FAILED", e); // DEBUG-AUDIO
+              setIsPlaying(false);
+              showSecondaryMessage("تعذر تحميل الصفحة التالية");
+            });
+
+          return;
+        }
+
+        clearAudioContinuation();
+        setIsPlaying(false);
+        showSecondaryMessage("انتهى الاستماع");
+        return;
+      }
+
+      const currentIndex = ayahs.findIndex(
+        (ayah) => ayah.id === currentAyah.id,
+      );
+      const nextAyah = ayahs[currentIndex + 1];
+
+      if (nextAyah) {
+        audioShouldContinueRef.current = true;
+        setSelectedAyahId(nextAyah.id);
+        return;
+      }
+
+      if (pageNumber < TOTAL_PAGES) {
+        audioShouldContinueRef.current = true;
+        window.sessionStorage.setItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY, "1");
+        router.push(`/coran/${riwayaId}/page/${pageNumber + 1}`);
+        return;
+      }
+
+      setIsPlaying(false);
+      showSecondaryMessage("انتهى الاستماع");
+    }
+
+    function handleError() {
+      console.log(
+        "[AUDIO] error event",
+        audio?.error?.code,
+        audio?.error?.message,
+        audio?.src,
+      ); // DEBUG-AUDIO
+      setIsPlaying(false);
+      showSecondaryMessage("تعذر تحميل الصوت");
+    }
+
+    console.log(
+      "[AUDIO] listeners attached, page",
+      pageNumber,
+      "ayahs",
+      ayahs.length,
+    ); // DEBUG-AUDIO
+    audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("error", handleError);
+
+    return () => {
+      audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("error", handleError);
+    };
+  }, [repeatEnabled, ayahs, pageNumber, riwayaId, selectedAyahId]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    const continuation = readAudioContinuation();
+
+    const continuationAyah =
+      continuation?.reciterId === selectedReciter
+        ? ayahs.find(
+            (ayah) =>
+              ayah.surahNumber === continuation.surahNumber &&
+              ayah.number === continuation.ayahNumber,
+          )
+        : undefined;
+
+    // Priorité à l'ayah de continuation, même si la sélection React
+    // n'a pas encore été mise à jour après le changement de page.
+    const currentAyah = continuationAyah ?? getCurrentAudioAyah();
+
+    if (!audio || !currentAyah) {
+      return;
+    }
+
+    const sourceKey = [
+      selectedReciter,
+      currentAyah.surahNumber,
+      currentAyah.number,
+    ].join(":");
+
+    const isContinuationTarget = continuationAyah !== undefined;
+
+    console.log("[AUDIO] source effect", {
+      sourceKey,
+      same: audioSourceKeyRef.current === sourceKey,
+      paused: audio.paused,
+      isContinuationTarget,
+      shouldContinue: audioShouldContinueRef.current,
+    }); // DEBUG-AUDIO
+    if (audioSourceKeyRef.current === sourceKey) {
+      if (isContinuationTarget && audio.paused) {
+        audio.playbackRate = playbackRate;
+        void audio.play().then(
+          () => setIsPlaying(true),
+          () => {
+            setIsPlaying(false);
+            showSecondaryMessage("تعذر تشغيل الصوت");
+          },
+        );
+      }
+      return;
+    }
+
+    const autoplayNext =
+      window.sessionStorage.getItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY) === "1";
+
+    window.sessionStorage.removeItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY);
+
+    const shouldResume =
+      audioShouldContinueRef.current ||
+      autoplayNext ||
+      !audio.paused ||
+      isContinuationTarget;
+
+    audioShouldContinueRef.current = false;
+    audio.pause();
+    audio.src = getAudioUrl(
+      selectedReciter,
+      currentAyah.surahNumber,
+      currentAyah.number,
+    );
+    audioSourceKeyRef.current = sourceKey;
+    audio.defaultPlaybackRate = playbackRate;
+    audio.playbackRate = playbackRate;
+    audio.load();
+
+    if (shouldResume) {
+      void audio.play().then(
+        () => setIsPlaying(true),
+        (err) => {
+          console.log("[AUDIO] play() rejected", err?.name, err?.message); // DEBUG-AUDIO
+          setIsPlaying(false);
+          showSecondaryMessage("تعذر تشغيل الصوت");
+        },
+      );
+    }
+  }, [selectedAyahId, selectedReciter, pageNumber, ayahs, playbackRate]);
+
+  useEffect(() => {
+    if (ayahs.length === 0) {
+      return;
+    }
+
+    const continuation = readAudioContinuation();
+
+    if (!continuation) {
+      return;
+    }
+
+    const targetAyah = ayahs.find(
+      (ayah) =>
+        ayah.surahNumber === continuation.surahNumber &&
+        ayah.number === continuation.ayahNumber,
+    );
+
+    if (!targetAyah) {
+      return;
+    }
+
+    audioShouldContinueRef.current = true;
+    setSelectedAyahId(targetAyah.id);
+  }, [ayahs, pageNumber]);
 
   if (pageNumber < 1 || pageNumber > TOTAL_PAGES) {
     return (
@@ -532,6 +1208,7 @@ export function MushafPage({
       onPointerCancel={handlePointerCancel}
       onDoubleClick={handleDoubleClick}
     >
+      <audio ref={audioRef} preload="metadata" className="hidden" />
       <header className="mb-6 flex items-center justify-between text-sm text-[var(--muted)]">
         <span>مصحف حفص</span>
         <span>
@@ -560,13 +1237,11 @@ export function MushafPage({
             "shadow-lg",
             menu.type === "ayah"
               ? "top-4"
-              : menu.type === "app-main"
-                ? "top-4"
-                : menu.type === "app-secondary"
+              : menu.type === "app-secondary"
+                ? "bottom-4"
+                : menu.type === "word"
                   ? "bottom-4"
-                  : menu.type === "word"
-                    ? "bottom-4"
-                    : "bottom-4",
+                  : "bottom-4",
           ].join(" ")}
           dir="rtl"
           role="dialog"
@@ -577,9 +1252,7 @@ export function MushafPage({
                 ? "قائمة الكلمة"
                 : menu.type === "selection"
                   ? "قائمة التحديد"
-                  : menu.type === "app-main"
-                    ? "القائمة الرئيسية للتطبيق"
-                    : "القائمة الثانوية للتطبيق"
+                  : "القائمة الثانوية للتطبيق"
           }
         >
           {menu.type === "ayah" && (
@@ -619,20 +1292,570 @@ export function MushafPage({
             </div>
           )}
 
-          {menu.type === "app-main" && (
-            <div className="flex flex-col gap-2">
-              <div className="font-semibold">القائمة الرئيسية للتطبيق</div>
-              <div className="text-sm text-[var(--muted)]">
-                قائمة التطبيق الرئيسية — سيتم تجهيز المحتوى لاحقًا.
-              </div>
-            </div>
-          )}
-
           {menu.type === "app-secondary" && (
-            <div className="flex flex-col gap-2">
-              <div className="font-semibold">القائمة الثانوية للتطبيق</div>
-              <div className="text-sm text-[var(--muted)]">
-                قائمة التطبيق الثانوية — سيتم تجهيز المحتوى لاحقًا.
+            <div className="flex max-w-[min(100vw-2rem,56rem)] flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                  aria-expanded={modePickerOpen}
+                  aria-haspopup="menu"
+                  onClick={() => {
+                    setModePickerOpen((open) => !open);
+                    setReciterPickerOpen(false);
+                  }}
+                >
+                  {
+                    SECONDARY_MODES.find((mode) => mode.id === secondaryMode)
+                      ?.icon
+                  }{" "}
+                  {
+                    SECONDARY_MODES.find((mode) => mode.id === secondaryMode)
+                      ?.label
+                  }
+                </button>
+
+                {secondaryMode === "listening" && (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="السابق"
+                      onClick={() => navigateAyah(-1)}
+                    >
+                      ⏮
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label={isPlaying ? "إيقاف" : "تشغيل"}
+                      aria-pressed={isPlaying}
+                      onClick={togglePlayback}
+                    >
+                      {isPlaying ? "⏸" : "▶"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="التالي"
+                      onClick={() => navigateAyah(1)}
+                    >
+                      ⏭
+                    </button>
+
+                    <button
+                      type="button"
+                      className={
+                        repeatEnabled
+                          ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-[var(--background)]"
+                          : "rounded-lg border px-3 py-2"
+                      }
+                      aria-label="التكرار"
+                      aria-pressed={repeatEnabled}
+                      onClick={toggleRepeat}
+                    >
+                      🔁
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2 text-sm"
+                      aria-label="سرعة التشغيل"
+                      onClick={cyclePlaybackRate}
+                    >
+                      {playbackRate}×
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2 text-sm"
+                      aria-label="اختيار القارئ"
+                      aria-expanded={reciterPickerOpen}
+                      onClick={() => {
+                        setReciterPickerOpen((open) => !open);
+                        setModePickerOpen(false);
+                      }}
+                    >
+                      🎙️ القارئ
+                    </button>
+                  </>
+                )}
+
+                {secondaryMode === "recitation" && (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="التسجيل"
+                      onClick={() => showSecondaryMessage("التسجيل")}
+                    >
+                      🎙️
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="تشغيل المرجع"
+                      onClick={togglePlayback}
+                    >
+                      {isPlaying ? "⏸" : "▶"}
+                    </button>
+                  </>
+                )}
+
+                {secondaryMode === "memorization" && (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="إظهار وإخفاء"
+                      onClick={() => showSecondaryMessage("إظهار وإخفاء")}
+                    >
+                      👁
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="السابق"
+                      onClick={() => navigateAyah(-1)}
+                    >
+                      ⏮
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="التالي"
+                      onClick={() => navigateAyah(1)}
+                    >
+                      ⏭
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="استماع"
+                      onClick={togglePlayback}
+                    >
+                      {isPlaying ? "⏸" : "▶"}
+                    </button>
+                  </>
+                )}
+
+                {secondaryMode === "review" && (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="مستوى المراجعة"
+                      onClick={() => showSecondaryMessage("مستوى المراجعة")}
+                    >
+                      ⭐
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="تمييز"
+                      onClick={() => showSecondaryMessage("تمييز")}
+                    >
+                      🖍️
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="إظهار وإخفاء"
+                      onClick={() => showSecondaryMessage("إظهار وإخفاء")}
+                    >
+                      👁
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="استماع"
+                      onClick={togglePlayback}
+                    >
+                      {isPlaying ? "⏸" : "▶"}
+                    </button>
+                  </>
+                )}
+
+                {secondaryMode === "tadabbur" && (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="تمييز"
+                      onClick={() => showSecondaryMessage("تمييز")}
+                    >
+                      🖍️
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="اللون"
+                      onClick={() => showSecondaryMessage("اختيار اللون")}
+                    >
+                      🎨
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="ملاحظة"
+                      onClick={() => showSecondaryMessage("إضافة ملاحظة")}
+                    >
+                      📝
+                    </button>
+                  </>
+                )}
+
+                {secondaryMode === "progress" && (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="الأهداف"
+                      onClick={() => showSecondaryMessage("الأهداف")}
+                    >
+                      🎯
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="الأنشطة"
+                      onClick={() => showSecondaryMessage("الأنشطة")}
+                    >
+                      📋
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="السجل"
+                      onClick={() => showSecondaryMessage("السجل")}
+                    >
+                      🕘
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2"
+                      aria-label="التقدم"
+                      onClick={() => showSecondaryMessage("التقدم")}
+                    >
+                      📈
+                    </button>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  className={
+                    moreMenuOpen
+                      ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-[var(--background)]"
+                      : "rounded-lg border px-3 py-2"
+                  }
+                  aria-label="المزيد من الخيارات"
+                  aria-expanded={moreMenuOpen}
+                  aria-haspopup="menu"
+                  onClick={() => {
+                    setMoreMenuOpen((open) => !open);
+                    setModePickerOpen(false);
+                    setReciterPickerOpen(false);
+                  }}
+                >
+                  ⋮
+                </button>
+              </div>
+
+              {moreMenuOpen && secondaryMode === "listening" && (
+                <div
+                  className="flex min-w-[min(92vw,42rem)] flex-col gap-4 border-t border-[var(--border)] pt-4"
+                  role="menu"
+                  aria-label="إعدادات الاستماع"
+                >
+                  <div className="text-center text-sm font-semibold">
+                    إعدادات الاستماع
+                  </div>
+
+                  <button
+                    type="button"
+                    className="rounded-lg border bg-[var(--foreground)] px-4 py-3 font-semibold text-[var(--background)]"
+                    onClick={validateAndStartAudio}
+                  >
+                    ▶ اعتماد الإعدادات وبدء القراءة
+                  </button>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <fieldset className="rounded-lg border p-3">
+                      <legend className="px-1 text-sm font-semibold">
+                        البداية
+                      </legend>
+
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <label className="flex flex-col gap-1 text-xs">
+                          السورة
+                          <input
+                            type="number"
+                            min="1"
+                            max="114"
+                            value={audioStartSurah}
+                            onChange={(event) => {
+                              audioRangeUserModifiedRef.current = true;
+                              setAudioStartSurah(event.target.value);
+                            }}
+                            className="rounded-lg border bg-transparent px-3 py-2 text-sm"
+                          />
+                        </label>
+
+                        <label className="flex flex-col gap-1 text-xs">
+                          الآية
+                          <input
+                            type="number"
+                            min="1"
+                            value={audioStartAyah}
+                            onChange={(event) => {
+                              audioRangeUserModifiedRef.current = true;
+                              setAudioStartAyah(event.target.value);
+                            }}
+                            className="rounded-lg border bg-transparent px-3 py-2 text-sm"
+                          />
+                        </label>
+                      </div>
+                    </fieldset>
+
+                    <fieldset className="rounded-lg border p-3">
+                      <legend className="px-1 text-sm font-semibold">
+                        النهاية
+                      </legend>
+
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <label className="flex flex-col gap-1 text-xs">
+                          السورة
+                          <input
+                            type="number"
+                            min="1"
+                            max="114"
+                            value={audioEndSurah}
+                            onChange={(event) => {
+                              audioRangeUserModifiedRef.current = true;
+                              setAudioEndSurah(event.target.value);
+                            }}
+                            className="rounded-lg border bg-transparent px-3 py-2 text-sm"
+                          />
+                        </label>
+
+                        <label className="flex flex-col gap-1 text-xs">
+                          الآية
+                          <input
+                            type="number"
+                            min="1"
+                            value={audioEndAyah}
+                            onChange={(event) => {
+                              audioRangeUserModifiedRef.current = true;
+                              setAudioEndAyah(event.target.value);
+                            }}
+                            className="rounded-lg border bg-transparent px-3 py-2 text-sm"
+                          />
+                        </label>
+                      </div>
+                    </fieldset>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <fieldset className="rounded-lg border p-3">
+                      <legend className="px-1 text-sm font-semibold">
+                        تكرار الآية
+                      </legend>
+
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {["1", "2", "3", "n"].map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            className={
+                              ayahRepeatCount === value
+                                ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                                : "rounded-lg border px-3 py-2 text-sm"
+                            }
+                            aria-pressed={ayahRepeatCount === value}
+                            onClick={() => setAyahRepeatCount(value)}
+                          >
+                            {value === "n" ? "N" : value}
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+
+                    <fieldset className="rounded-lg border p-3">
+                      <legend className="px-1 text-sm font-semibold">
+                        تكرار التحديد
+                      </legend>
+
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {["1", "2", "3", "n"].map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            className={
+                              selectionRepeatCount === value
+                                ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                                : "rounded-lg border px-3 py-2 text-sm"
+                            }
+                            aria-pressed={selectionRepeatCount === value}
+                            onClick={() => setSelectionRepeatCount(value)}
+                          >
+                            {value === "n" ? "N" : value}
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {[
+                      {
+                        title: "الصمت قبل الآية",
+                        value: silenceBeforeAyah,
+                        setValue: setSilenceBeforeAyah,
+                      },
+                      {
+                        title: "الصمت بعد الآية",
+                        value: silenceAfterAyah,
+                        setValue: setSilenceAfterAyah,
+                      },
+                      {
+                        title: "الصمت قبل التحديد",
+                        value: silenceBeforeSelection,
+                        setValue: setSilenceBeforeSelection,
+                      },
+                      {
+                        title: "الصمت بعد التحديد",
+                        value: silenceAfterSelection,
+                        setValue: setSilenceAfterSelection,
+                      },
+                    ].map((item) => (
+                      <fieldset
+                        key={item.title}
+                        className="rounded-lg border p-3"
+                      >
+                        <legend className="px-1 text-sm font-semibold">
+                          {item.title}
+                        </legend>
+
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {["0", "0.5", "0.75", "1", "1.25", "1.5", "2"].map(
+                            (value) => (
+                              <button
+                                key={value}
+                                type="button"
+                                className={
+                                  item.value === value
+                                    ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                                    : "rounded-lg border px-3 py-2 text-sm"
+                                }
+                                aria-pressed={item.value === value}
+                                onClick={() => item.setValue(value)}
+                              >
+                                {value}×
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      </fieldset>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col gap-2 rounded-lg border p-3">
+                    <div className="text-sm font-semibold">القارئ</div>
+
+                    <select
+                      value={selectedReciter}
+                      onChange={(event) =>
+                        setSelectedReciter(event.target.value)
+                      }
+                      className="rounded-lg border bg-transparent px-3 py-2 text-sm"
+                      aria-label="اختيار القارئ"
+                    >
+                      <option value="hafs-afassi">العفاسي</option>
+                      <option value="hafs-abdelbasset">عبد الباسط</option>
+                      <option value="hafs-soudais">السديس</option>
+                      <option value="hafs-houssari">الحصري</option>
+                      <option value="hafs-chatir">أبو شاطر</option>
+                      <option value="hafs-djebril">جبريل</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {modePickerOpen && (
+                <div
+                  className="flex flex-wrap justify-center gap-2 border-t border-[var(--border)] pt-3"
+                  role="menu"
+                >
+                  {SECONDARY_MODES.map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={secondaryMode === mode.id}
+                      className={
+                        secondaryMode === mode.id
+                          ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                          : "rounded-lg border px-3 py-2 text-sm"
+                      }
+                      onClick={() => selectSecondaryMode(mode.id)}
+                    >
+                      {mode.icon} {mode.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {reciterPickerOpen && secondaryMode === "listening" && (
+                <div
+                  className="flex flex-wrap justify-center gap-2 border-t border-[var(--border)] pt-3"
+                  role="menu"
+                  aria-label="اختيار القارئ"
+                >
+                  {[
+                    ["hafs-afassi", "العفاسي"],
+                    ["hafs-abdelbasset", "عبد الباسط"],
+                    ["hafs-soudais", "السديس"],
+                    ["hafs-houssari", "الحصري"],
+                    ["hafs-chatir", "أبو شاطر"],
+                    ["hafs-djebril", "جبريل"],
+                  ].map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={selectedReciter === id}
+                      className={
+                        selectedReciter === id
+                          ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                          : "rounded-lg border px-3 py-2 text-sm"
+                      }
+                      onClick={() => {
+                        setSelectedReciter(id);
+                        setReciterPickerOpen(false);
+                        showSecondaryMessage(`القارئ: ${label}`);
+                      }}
+                    >
+                      🎙️ {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {secondaryMessage && (
+                <div
+                  className="text-center text-xs font-medium"
+                  role="status"
+                  aria-live="polite"
+                >
+                  ✓ {secondaryMessage}
+                </div>
+              )}
+
+              <div className="text-center text-xs text-[var(--muted)]">
+                تغيير الوضع يحافظ على الصفحة والتحديد والسياق الحالي.
               </div>
             </div>
           )}
