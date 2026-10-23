@@ -35,11 +35,16 @@ type MenuState = null | {
 };
 
 type SecondaryMode =
+  | "qiraa"
   | "listening"
   | "recitation"
+  | "talqin"
   | "memorization"
+  | "tathbit"
   | "review"
   | "tadabbur"
+  | "khatma"
+  | "tahajjud"
   | "progress";
 
 const SECONDARY_MODES: Array<{
@@ -47,11 +52,16 @@ const SECONDARY_MODES: Array<{
   label: string;
   icon: string;
 }> = [
+  { id: "qiraa", label: "القراءة", icon: "📖" },
   { id: "listening", label: "الاستماع", icon: "🎧" },
   { id: "recitation", label: "التلاوة", icon: "🎙️" },
+  { id: "talqin", label: "التلقين", icon: "🗣️" },
   { id: "memorization", label: "الحفظ", icon: "🧠" },
+  { id: "tathbit", label: "التثبيت", icon: "📌" },
   { id: "review", label: "المراجعة", icon: "🔄" },
   { id: "tadabbur", label: "التدبر", icon: "👓" },
+  { id: "khatma", label: "الختمة", icon: "📿" },
+  { id: "tahajjud", label: "التهجد", icon: "🌙" },
   { id: "progress", label: "المتابعة", icon: "📊" },
 ];
 
@@ -112,6 +122,7 @@ export function MushafPage({
   const [menu, setMenu] = useState<MenuState>(null);
   const [secondaryMode, setSecondaryMode] =
     useState<SecondaryMode>("listening");
+  const secondaryModeRef = useRef<SecondaryMode>("listening");
   const [modePickerOpen, setModePickerOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [repeatEnabled, setRepeatEnabled] = useState(false);
@@ -141,6 +152,7 @@ export function MushafPage({
   const [audioStartPage, setAudioStartPage] = useState(String(pageNumber));
   const [audioEndPage, setAudioEndPage] = useState("604");
   const audioRangeUserModifiedRef = useRef(false);
+  const modeSelectionContextRef = useRef<string | null>(null);
   const [ayahRepeatCount, setAyahRepeatCount] = useState("1");
   const [selectionRepeatCount, setSelectionRepeatCount] = useState("1");
   const [ayahRepeatOptionsOpen, setAyahRepeatOptionsOpen] = useState(false);
@@ -228,6 +240,17 @@ export function MushafPage({
       cancelled = true;
     };
   }, [mushafId, pageNumber]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        `irtaki.mushaf.position.${mushafId}.${riwayaId}.${secondaryModeRef.current}`,
+        String(pageNumber),
+      );
+    } catch {
+      // Le lecteur reste utilisable si le stockage est indisponible.
+    }
+  }, [pageNumber, mushafId, riwayaId]);
 
   function navigatePage(delta: number) {
     const nextPage = Math.max(1, Math.min(TOTAL_PAGES, pageNumber + delta));
@@ -1185,10 +1208,144 @@ export function MushafPage({
     };
   }, []);
 
+  function getModePositionKey(mode: SecondaryMode) {
+    return `irtaki.mushaf.position.${mushafId}.${riwayaId}.${mode}`;
+  }
+
+  function getModeSelectionKey(mode: SecondaryMode) {
+    return `irtaki.mushaf.selection.${mushafId}.${riwayaId}.${mode}`;
+  }
+
+  function saveModeSelection(mode: SecondaryMode) {
+    try {
+      window.localStorage.setItem(
+        getModeSelectionKey(mode),
+        JSON.stringify({
+          startSurah: audioStartSurah,
+          startAyah: audioStartAyah,
+          endSurah: audioEndSurah,
+          endAyah: audioEndAyah,
+          startSurahQuery: audioStartSurahQuery,
+          endSurahQuery: audioEndSurahQuery,
+          startPage: audioStartPage,
+          endPage: audioEndPage,
+          userModified: audioRangeUserModifiedRef.current,
+        }),
+      );
+    } catch {
+      // Le lecteur reste utilisable si le stockage est indisponible.
+    }
+  }
+
+  function restoreModeSelection(mode: SecondaryMode, fallbackPage: number) {
+    let saved: Record<string, unknown> = {};
+
+    try {
+      const raw = window.localStorage.getItem(getModeSelectionKey(mode));
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          saved = parsed as Record<string, unknown>;
+        }
+      }
+    } catch {
+      // Utiliser les valeurs par défaut si le stockage est invalide.
+    }
+
+    const readString = (key: string, fallback: string) =>
+      typeof saved[key] === "string" ? (saved[key] as string) : fallback;
+
+    const safePage = Math.max(1, Math.min(TOTAL_PAGES, fallbackPage));
+
+    setAudioStartSurah(readString("startSurah", ""));
+    setAudioStartAyah(readString("startAyah", ""));
+    setAudioEndSurah(readString("endSurah", "114"));
+    setAudioEndAyah(readString("endAyah", "6"));
+    setAudioStartSurahQuery(readString("startSurahQuery", ""));
+    setAudioEndSurahQuery(readString("endSurahQuery", ""));
+    setAudioStartPage(readString("startPage", String(safePage)));
+    setAudioEndPage(readString("endPage", String(TOTAL_PAGES)));
+
+    audioRangeUserModifiedRef.current = saved.userModified === true;
+
+    // Ne pas restaurer les états temporaires des menus déroulants.
+    setAudioStartSurahPickerOpen(false);
+    setAudioEndSurahPickerOpen(false);
+    setAudioStartSurahPickerQuery("");
+    setAudioEndSurahPickerQuery("");
+  }
+
+  // Sauvegarder la sélection du mode actif lorsque ses valeurs changent.
+  // Cet effet précède volontairement l'effet de chargement initial.
+  useEffect(() => {
+    const contextKey = `${mushafId}.${riwayaId}`;
+
+    if (modeSelectionContextRef.current !== contextKey) {
+      return;
+    }
+
+    saveModeSelection(secondaryMode);
+  }, [
+    secondaryMode,
+    mushafId,
+    riwayaId,
+    audioStartSurah,
+    audioStartAyah,
+    audioEndSurah,
+    audioEndAyah,
+    audioStartSurahQuery,
+    audioEndSurahQuery,
+    audioStartPage,
+    audioEndPage,
+  ]);
+
+  // Charger la sélection propre au contexte Mushaf/riwaya au montage.
+  useEffect(() => {
+    const contextKey = `${mushafId}.${riwayaId}`;
+
+    restoreModeSelection(secondaryModeRef.current, pageNumber);
+    modeSelectionContextRef.current = contextKey;
+  }, [mushafId, riwayaId]);
+
   function selectSecondaryMode(mode: SecondaryMode) {
-    setSecondaryMode(mode);
-    setModePickerOpen(false);
-    setReciterPickerOpen(false);
+    try {
+      // Sauvegarder indépendamment la sélection et la position du mode quitté.
+      saveModeSelection(secondaryModeRef.current);
+      window.localStorage.setItem(
+        getModePositionKey(secondaryModeRef.current),
+        String(pageNumber),
+      );
+
+      // Restaurer la dernière position du mode demandé, si elle existe.
+      const savedPage = Number(
+        window.localStorage.getItem(getModePositionKey(mode)),
+      );
+      const targetPage =
+        Number.isInteger(savedPage) &&
+        savedPage >= 1 &&
+        savedPage <= TOTAL_PAGES
+          ? savedPage
+          : pageNumber;
+
+      // Recharger la sélection indépendante du mode choisi.
+      restoreModeSelection(mode, targetPage);
+
+      secondaryModeRef.current = mode;
+      setSecondaryMode(mode);
+      setModePickerOpen(false);
+      setReciterPickerOpen(false);
+
+      if (targetPage !== pageNumber) {
+        router.push(`/coran/${riwayaId}/page/${targetPage}`);
+      }
+    } catch {
+      // Si le stockage est indisponible, conserver la navigation normale.
+      secondaryModeRef.current = mode;
+      setSecondaryMode(mode);
+      setModePickerOpen(false);
+      setReciterPickerOpen(false);
+    }
+
     showSecondaryMessage(
       SECONDARY_MODES.find((item) => item.id === mode)?.label ?? "",
     );
@@ -2022,15 +2179,13 @@ export function MushafPage({
                 </button>
               </div>
 
-              {moreMenuOpen && secondaryMode === "listening" && (
+              {moreMenuOpen && (
                 <div
                   className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
                   role="menu"
-                  aria-label="إعدادات الاستماع"
+                  aria-label="تحديد"
                 >
-                  <div className="text-center text-sm font-semibold">
-                    إعدادات الاستماع
-                  </div>
+                  <div className="text-center text-sm font-semibold">تحديد</div>
 
                   <div className="flex flex-col gap-3">
                     <div className="grid grid-cols-3 gap-2">
@@ -2313,6 +2468,18 @@ export function MushafPage({
                       </button>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {moreMenuOpen && secondaryMode === "listening" && (
+                <div
+                  className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
+                  role="menu"
+                  aria-label="إعدادات الاستماع"
+                >
+                  <div className="text-center text-sm font-semibold">
+                    إعدادات الاستماع
+                  </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <fieldset className="rounded-lg border p-3">
@@ -2532,7 +2699,7 @@ export function MushafPage({
 
               {modePickerOpen && (
                 <div
-                  className="flex flex-wrap justify-center gap-2 border-t border-[var(--border)] pt-3"
+                  className="grid grid-cols-2 justify-center gap-2 border-t border-[var(--border)] pt-3 sm:grid-cols-5"
                   role="menu"
                 >
                   {SECONDARY_MODES.map((mode) => (
