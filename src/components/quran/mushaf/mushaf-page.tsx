@@ -132,6 +132,12 @@ export function MushafPage({
   const [audioEndAyah, setAudioEndAyah] = useState("6");
   const [audioStartSurahQuery, setAudioStartSurahQuery] = useState("");
   const [audioEndSurahQuery, setAudioEndSurahQuery] = useState("");
+  const [audioStartSurahPickerOpen, setAudioStartSurahPickerOpen] =
+    useState(false);
+  const [audioEndSurahPickerOpen, setAudioEndSurahPickerOpen] = useState(false);
+  const [audioStartSurahPickerQuery, setAudioStartSurahPickerQuery] =
+    useState("");
+  const [audioEndSurahPickerQuery, setAudioEndSurahPickerQuery] = useState("");
   const [audioStartPage, setAudioStartPage] = useState(String(pageNumber));
   const [audioEndPage, setAudioEndPage] = useState("604");
   const audioRangeUserModifiedRef = useRef(false);
@@ -870,17 +876,17 @@ export function MushafPage({
     const query = value.trim();
     if (!query) return undefined;
 
-    const numberPrefix = query.match(/^(\\d+)\\s*[-–—]/);
+    const numberPrefix = query.match(/^(\d+)\s*[-–—]/);
     const numericValue = numberPrefix ? numberPrefix[1] : query;
-    if (/^\\d+$/.test(numericValue)) {
+    if (/^\d+$/.test(numericValue)) {
       return surahs.find((surah) => surah.number === Number(numericValue));
     }
 
     const normalize = (text: string) =>
       text
-        .replace(/^\\d+\\s*[-–—]\\s*/, "")
-        .replace(/^(surah|sourate)\\s+(de\\s+|of\\s+)?/i, "")
-        .replace(/^سورة\\s*/u, "")
+        .replace(/^\d+\s*[-–—]\s*/, "")
+        .replace(/^(surah|sourate)\s+(de\s+|of\s+)?/i, "")
+        .replace(/^سورة\s*/u, "")
         .trim()
         .toLocaleLowerCase();
 
@@ -893,6 +899,28 @@ export function MushafPage({
         getAudioSurahLabel(surah),
       ].some((name) => normalize(name) === normalized),
     );
+  }
+
+  function getFilteredAudioSurahs(query: string) {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+
+    if (!normalizedQuery) return surahs;
+
+    return surahs.filter((surah) => {
+      const number = String(surah.number);
+      const labels = [
+        number,
+        `${number} - ${getAudioSurahLabel(surah)}`,
+        surah.name,
+        surah.codedName ?? "",
+        surah.translatedName ?? "",
+        getAudioSurahLabel(surah),
+      ];
+
+      return labels.some((label) =>
+        label.toLocaleLowerCase().includes(normalizedQuery),
+      );
+    });
   }
 
   function changeAudioStartSurah(value: string) {
@@ -2004,15 +2032,6 @@ export function MushafPage({
                     إعدادات الاستماع
                   </div>
 
-                  <datalist id="irtaki-audio-surahs">
-                    {surahs.map((surah) => (
-                      <option
-                        key={surah.number}
-                        value={getAudioSurahLabel(surah)}
-                      />
-                    ))}
-                  </datalist>
-
                   <div className="flex flex-col gap-3">
                     <div className="grid grid-cols-3 gap-2">
                       <div className="col-span-3 text-sm font-semibold">
@@ -2038,17 +2057,72 @@ export function MushafPage({
                           className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
                         />
                       </label>
-                      <label className="flex min-w-0 flex-col gap-1 text-xs">
+                      <label className="relative flex min-w-0 flex-col gap-1 text-xs">
                         السورة
                         <input
-                          list="irtaki-audio-surahs"
+                          role="combobox"
+                          aria-label="سورة البداية"
+                          aria-expanded={audioStartSurahPickerOpen}
+                          aria-controls="audio-start-surah-options"
+                          autoComplete="off"
                           value={audioStartSurahQuery}
                           placeholder="اسم أو رقم"
-                          onChange={(event) =>
-                            changeAudioStartSurah(event.target.value)
-                          }
+                          onFocus={() => {
+                            setAudioStartSurahPickerQuery("");
+                            setAudioStartSurahPickerOpen(true);
+                          }}
+                          onClick={() => {
+                            if (!audioStartSurahPickerOpen) {
+                              setAudioStartSurahPickerQuery("");
+                              setAudioStartSurahPickerOpen(true);
+                            }
+                          }}
+                          onBlur={() => setAudioStartSurahPickerOpen(false)}
+                          onChange={(event) => {
+                            setAudioStartSurahPickerQuery(event.target.value);
+                            setAudioStartSurahPickerOpen(true);
+                            changeAudioStartSurah(event.target.value);
+                          }}
                           className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
                         />
+                        {audioStartSurahPickerOpen && (
+                          <div
+                            id="audio-start-surah-options"
+                            role="listbox"
+                            aria-label="اختيار سورة البداية"
+                            className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-[var(--border)] bg-white text-gray-900 shadow-lg dark:bg-gray-900 dark:text-white"
+                          >
+                            {getFilteredAudioSurahs(
+                              audioStartSurahPickerQuery,
+                            ).map((surah) => (
+                              <button
+                                key={surah.number}
+                                type="button"
+                                role="option"
+                                aria-selected={
+                                  Number(audioStartSurah) === surah.number
+                                }
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  changeAudioStartSurah(
+                                    `${surah.number} - ${getAudioSurahLabel(surah)}`,
+                                  );
+                                  setAudioStartSurahPickerQuery("");
+                                  setAudioStartSurahPickerOpen(false);
+                                }}
+                                className="block w-full px-3 py-2 text-right text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                              >
+                                {surah.number} - {getAudioSurahLabel(surah)}
+                              </button>
+                            ))}
+                            {getFilteredAudioSurahs(audioStartSurahPickerQuery)
+                              .length === 0 && (
+                              <div className="px-3 py-2 text-sm">
+                                لا توجد سورة مطابقة
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </label>
                       <label className="flex min-w-0 flex-col gap-1 text-xs">
                         الآية
@@ -2091,17 +2165,75 @@ export function MushafPage({
                           className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
                         />
                       </label>
-                      <label className="flex min-w-0 flex-col gap-1 text-xs">
+                      <label className="relative flex min-w-0 flex-col gap-1 text-xs">
                         السورة
                         <input
-                          list="irtaki-audio-surahs"
-                          value={audioEndSurahQuery}
-                          placeholder="اسم أو رقم"
-                          onChange={(event) =>
-                            changeAudioEndSurah(event.target.value)
+                          role="combobox"
+                          aria-label="سورة النهاية"
+                          aria-expanded={audioEndSurahPickerOpen}
+                          aria-controls="audio-end-surah-options"
+                          autoComplete="off"
+                          value={
+                            audioEndSurahPickerOpen
+                              ? audioEndSurahPickerQuery
+                              : audioEndSurahQuery
                           }
+                          placeholder="اسم أو رقم"
+                          onFocus={() => {
+                            setAudioEndSurahPickerQuery("");
+                            setAudioEndSurahPickerOpen(true);
+                          }}
+                          onClick={() => {
+                            if (!audioEndSurahPickerOpen) {
+                              setAudioEndSurahPickerQuery("");
+                              setAudioEndSurahPickerOpen(true);
+                            }
+                          }}
+                          onBlur={() => setAudioEndSurahPickerOpen(false)}
+                          onChange={(event) => {
+                            setAudioEndSurahPickerQuery(event.target.value);
+                            setAudioEndSurahPickerOpen(true);
+                          }}
                           className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
                         />
+                        {audioEndSurahPickerOpen && (
+                          <div
+                            id="audio-end-surah-options"
+                            role="listbox"
+                            aria-label="اختيار سورة النهاية"
+                            className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-[var(--border)] bg-white text-gray-900 shadow-lg dark:bg-gray-900 dark:text-white"
+                          >
+                            {getFilteredAudioSurahs(
+                              audioEndSurahPickerQuery,
+                            ).map((surah) => (
+                              <button
+                                key={surah.number}
+                                type="button"
+                                role="option"
+                                aria-selected={
+                                  Number(audioEndSurah) === surah.number
+                                }
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  changeAudioEndSurah(
+                                    `${surah.number} - ${getAudioSurahLabel(surah)}`,
+                                  );
+                                  setAudioEndSurahPickerQuery("");
+                                  setAudioEndSurahPickerOpen(false);
+                                }}
+                                className="block w-full px-3 py-2 text-right text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                              >
+                                {surah.number} - {getAudioSurahLabel(surah)}
+                              </button>
+                            ))}
+                            {getFilteredAudioSurahs(audioEndSurahPickerQuery)
+                              .length === 0 && (
+                              <div className="px-3 py-2 text-sm">
+                                لا توجد سورة مطابقة
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </label>
                       <label className="flex min-w-0 flex-col gap-1 text-xs">
                         الآية
