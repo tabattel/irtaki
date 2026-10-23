@@ -8,7 +8,12 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 
-import { getAyahsByPage, getSurahs, type AyahDto } from "@/lib/api/quran";
+import {
+  getAyahsByPage,
+  getAyahsBySurah,
+  getSurahs,
+  type AyahDto,
+} from "@/lib/api/quran";
 import { getMushafPageLayout, type MushafPageLayout } from "@/lib/api/mushaf";
 
 import { MushafLine } from "./mushaf-line";
@@ -240,6 +245,34 @@ export function MushafPage({
       cancelled = true;
     };
   }, [mushafId, pageNumber]);
+
+  // Restaurer le dernier mode avant de sauvegarder la position de page.
+  useEffect(() => {
+    const storageKey = `irtaki.mushaf.mode.${mushafId}.${riwayaId}`;
+    let storedMode: string | null = null;
+
+    try {
+      storedMode = window.localStorage.getItem(storageKey);
+    } catch {
+      // Utiliser le mode par défaut si le stockage est indisponible.
+    }
+
+    const savedMode = SECONDARY_MODES.find(
+      (candidate) => candidate.id === storedMode,
+    )?.id;
+    const initialMode: SecondaryMode = savedMode ?? "listening";
+
+    secondaryModeRef.current = initialMode;
+    setSecondaryMode(initialMode);
+
+    if (!savedMode) {
+      try {
+        window.localStorage.setItem(storageKey, initialMode);
+      } catch {
+        // Le lecteur reste utilisable sans stockage local.
+      }
+    }
+  }, [mushafId, riwayaId]);
 
   useEffect(() => {
     try {
@@ -1125,6 +1158,78 @@ export function MushafPage({
     router.push(`/coran/${riwayaId}/page/${startSurahData.firstPage}`);
   }
 
+  async function startCurrentModeAtSelection() {
+    if (secondaryMode === "listening") {
+      return;
+    }
+
+    const startSurah = Number(audioStartSurah);
+    const startAyah = Number(audioStartAyah);
+
+    if (
+      !Number.isInteger(startSurah) ||
+      startSurah < 1 ||
+      startSurah > 114 ||
+      !Number.isInteger(startAyah) ||
+      startAyah < 1
+    ) {
+      showSecondaryMessage("الرجاء تحديد آية بداية صحيحة");
+      return;
+    }
+
+    const surahData = surahs.find((surah) => surah.number === startSurah);
+
+    if (!surahData || startAyah > surahData.numberOfAyahs) {
+      showSecondaryMessage("رقم الآية غير صحيح");
+      return;
+    }
+
+    try {
+      const surahAyahs = await getAyahsBySurah(startSurah);
+      const targetAyah = surahAyahs.find((ayah) => ayah.number === startAyah);
+
+      if (
+        !targetAyah ||
+        !Number.isInteger(targetAyah.pageNumber) ||
+        targetAyah.pageNumber < 1 ||
+        targetAyah.pageNumber > TOTAL_PAGES
+      ) {
+        showSecondaryMessage("تعذر العثور على الآية المحددة");
+        return;
+      }
+
+      // Arrêter toute lecture éventuellement laissée active par un autre mode.
+      // Cette action ne prépare ni ne démarre une nouvelle lecture audio.
+      pausePlayback();
+
+      setMoreMenuOpen(false);
+      setModePickerOpen(false);
+      setReciterPickerOpen(false);
+
+      if (targetAyah.pageNumber === pageNumber) {
+        setSelectedAyahId(targetAyah.id);
+
+        window.setTimeout(() => {
+          const element = document.querySelector<HTMLElement>(
+            `[data-ayah-id="${targetAyah.id}"]`,
+          );
+          element?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }, 0);
+      } else {
+        router.push(
+          `/coran/${riwayaId}/page/${targetAyah.pageNumber}?ayah=${targetAyah.id}`,
+        );
+      }
+
+      showSecondaryMessage("تم الانتقال إلى بداية التحديد");
+    } catch {
+      showSecondaryMessage("تعذر الوصول إلى الآية المحددة");
+    }
+  }
+
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(AUDIO_SETTINGS_STORAGE_KEY);
@@ -1309,6 +1414,11 @@ export function MushafPage({
 
   function selectSecondaryMode(mode: SecondaryMode) {
     try {
+      window.localStorage.setItem(
+        `irtaki.mushaf.mode.${mushafId}.${riwayaId}`,
+        mode,
+      );
+
       // Sauvegarder indépendamment la sélection et la position du mode quitté.
       saveModeSelection(secondaryModeRef.current);
       window.localStorage.setItem(
@@ -2157,6 +2267,19 @@ export function MushafPage({
                       📈
                     </button>
                   </>
+                )}
+
+                {secondaryMode !== "listening" && (
+                  <button
+                    type="button"
+                    className="rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm font-semibold text-[var(--background)]"
+                    aria-label="البدء من أول آية في التحديد"
+                    onClick={() => {
+                      void startCurrentModeAtSelection();
+                    }}
+                  >
+                    ▶ ابدأ
+                  </button>
                 )}
 
                 <button
