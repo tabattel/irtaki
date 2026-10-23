@@ -62,6 +62,17 @@ const AUDIO_RECITER_STORAGE_KEY = "irtaki.audio.reciter";
 const AUDIO_CONTINUATION_STORAGE_KEY = "irtaki.audio.continuation";
 const AUDIO_RATE_STORAGE_KEY = "irtaki.audio.playback-rate";
 const AUDIO_AUTOPLAY_NEXT_STORAGE_KEY = "irtaki.audio.autoplay-next";
+const AUDIO_SETTINGS_STORAGE_KEY = "irtaki.audio.settings";
+const AUDIO_LOOP_STORAGE_KEY = "irtaki.audio.loop";
+const REPEAT_VALUES = ["1", "2", "3", "5", "n"] as const;
+const SILENCE_VALUES = ["0", "0.5", "0.75", "1", "1.25", "1.5", "2"] as const;
+
+type AudioLoop = {
+  startSurah: number;
+  startAyah: number;
+  startPage: number;
+  pass: number;
+};
 
 type AudioContinuation = {
   reciterId: string;
@@ -119,9 +130,16 @@ export function MushafPage({
   const [audioStartAyah, setAudioStartAyah] = useState("");
   const [audioEndSurah, setAudioEndSurah] = useState("114");
   const [audioEndAyah, setAudioEndAyah] = useState("6");
+  const [audioStartSurahQuery, setAudioStartSurahQuery] = useState("");
+  const [audioEndSurahQuery, setAudioEndSurahQuery] = useState("");
+  const [audioStartPage, setAudioStartPage] = useState(String(pageNumber));
+  const [audioEndPage, setAudioEndPage] = useState("604");
   const audioRangeUserModifiedRef = useRef(false);
   const [ayahRepeatCount, setAyahRepeatCount] = useState("1");
   const [selectionRepeatCount, setSelectionRepeatCount] = useState("1");
+  const [ayahRepeatOptionsOpen, setAyahRepeatOptionsOpen] = useState(false);
+  const [selectionRepeatOptionsOpen, setSelectionRepeatOptionsOpen] =
+    useState(false);
   const [silenceBeforeAyah, setSilenceBeforeAyah] = useState("0");
   const [silenceAfterAyah, setSilenceAfterAyah] = useState("0");
   const [silenceBeforeSelection, setSilenceBeforeSelection] = useState("0");
@@ -148,6 +166,19 @@ export function MushafPage({
   const audioContinuationHandledRef = useRef(false);
   const audioShouldContinueRef = useRef(false);
   const audioPlaybackCancelledRef = useRef(false);
+  const silenceCancelRef = useRef<(() => void) | null>(null);
+  const silenceDoneRef = useRef(false);
+  const ayahPlayCountRef = useRef(1);
+  const handleEndedRef = useRef<() => void>(() => {});
+  const audioSettingsRef = useRef({
+    ayahRepeat: "1",
+    selectionRepeat: "1",
+    silenceBeforeAyah: "0",
+    silenceAfterAyah: "0",
+    silenceBeforeSelection: "0",
+    silenceAfterSelection: "0",
+  });
+  const [audioSettingsLoaded, setAudioSettingsLoaded] = useState(false);
   const selectionRepeatRemainingRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -670,6 +701,44 @@ export function MushafPage({
     return false;
   }
 
+  function readAudioLoop(): AudioLoop | undefined {
+    try {
+      const raw = window.sessionStorage.getItem(AUDIO_LOOP_STORAGE_KEY);
+      if (!raw) return undefined;
+      const l = JSON.parse(raw) as Partial<AudioLoop>;
+      if (
+        typeof l.startSurah !== "number" ||
+        typeof l.startAyah !== "number" ||
+        typeof l.startPage !== "number" ||
+        typeof l.pass !== "number"
+      ) {
+        return undefined;
+      }
+      return {
+        startSurah: l.startSurah,
+        startAyah: l.startAyah,
+        startPage: l.startPage,
+        pass: l.pass,
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  function writeAudioLoop(loop: AudioLoop) {
+    window.sessionStorage.setItem(AUDIO_LOOP_STORAGE_KEY, JSON.stringify(loop));
+  }
+
+  function clearAudioLoop() {
+    window.sessionStorage.removeItem(AUDIO_LOOP_STORAGE_KEY);
+  }
+
+  function cancelSilence() {
+    silenceCancelRef.current?.();
+    silenceCancelRef.current = null;
+    silenceDoneRef.current = false;
+  }
+
   async function playCurrentAyah() {
     const audio = audioRef.current;
     const currentAyah = getCurrentAudioAyah();
@@ -715,6 +784,7 @@ export function MushafPage({
     }
 
     window.sessionStorage.removeItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY);
+    cancelSilence();
     audio.pause();
     setIsPlaying(false);
     showSecondaryMessage("إيقاف");
@@ -727,7 +797,7 @@ export function MushafPage({
       return;
     }
 
-    if (!audio.paused) {
+    if (!audio.paused || silenceCancelRef.current) {
       pausePlayback();
       return;
     }
@@ -760,6 +830,9 @@ export function MushafPage({
 
   function navigateAyah(delta: number) {
     clearAudioContinuation();
+    clearAudioLoop();
+    cancelSilence();
+    ayahPlayCountRef.current = 1;
 
     if (ayahs.length === 0) {
       return;
@@ -783,6 +856,135 @@ export function MushafPage({
     }
 
     navigatePage(delta);
+  }
+
+  function getAudioSurahLabel(surah: (typeof surahs)[number]) {
+    return (surah.translatedName || surah.name || surah.codedName || "")
+      .trim()
+      .replace(/^(surah|sourate)\\s+(de\\s+|of\\s+)?/i, "")
+      .replace(/^سورة\\s*/u, "")
+      .trim();
+  }
+
+  function resolveAudioSurah(value: string) {
+    const query = value.trim();
+    if (!query) return undefined;
+
+    const numberPrefix = query.match(/^(\\d+)\\s*[-–—]/);
+    const numericValue = numberPrefix ? numberPrefix[1] : query;
+    if (/^\\d+$/.test(numericValue)) {
+      return surahs.find((surah) => surah.number === Number(numericValue));
+    }
+
+    const normalize = (text: string) =>
+      text
+        .replace(/^\\d+\\s*[-–—]\\s*/, "")
+        .replace(/^(surah|sourate)\\s+(de\\s+|of\\s+)?/i, "")
+        .replace(/^سورة\\s*/u, "")
+        .trim()
+        .toLocaleLowerCase();
+
+    const normalized = normalize(query);
+    return surahs.find((surah) =>
+      [
+        surah.name,
+        surah.codedName ?? "",
+        surah.translatedName ?? "",
+        getAudioSurahLabel(surah),
+      ].some((name) => normalize(name) === normalized),
+    );
+  }
+
+  function changeAudioStartSurah(value: string) {
+    audioRangeUserModifiedRef.current = true;
+    setAudioStartSurahQuery(value);
+
+    const surah = resolveAudioSurah(value);
+    if (!surah) {
+      setAudioStartSurah("");
+      setAudioStartAyah("1");
+      return;
+    }
+
+    setAudioStartSurah(String(surah.number));
+    setAudioStartAyah("1");
+    setAudioEndSurah(String(surah.number));
+    setAudioEndAyah(String(surah.numberOfAyahs));
+    setAudioEndSurahQuery(getAudioSurahLabel(surah));
+  }
+
+  function changeAudioEndSurah(value: string) {
+    audioRangeUserModifiedRef.current = true;
+    setAudioEndSurahQuery(value);
+
+    const surah = resolveAudioSurah(value);
+    if (!surah) {
+      setAudioEndSurah("");
+      setAudioEndAyah("");
+      return;
+    }
+
+    setAudioEndSurah(String(surah.number));
+    setAudioEndAyah(String(surah.numberOfAyahs));
+    setAudioEndSurahQuery(getAudioSurahLabel(surah));
+  }
+
+  async function applyAudioPages(
+    startPageValue = audioStartPage,
+    endPageValue = audioEndPage,
+  ) {
+    const startPage = Number(startPageValue);
+    const endPage = Number(endPageValue);
+
+    if (
+      !Number.isInteger(startPage) ||
+      !Number.isInteger(endPage) ||
+      startPage < 1 ||
+      startPage > TOTAL_PAGES ||
+      endPage > TOTAL_PAGES ||
+      endPage < startPage
+    ) {
+      showSecondaryMessage("الرجاء التحقق من صفحات البداية والنهاية");
+      return;
+    }
+
+    try {
+      const [startAyahs, endAyahs] = await Promise.all([
+        getAyahsByPage(startPage),
+        getAyahsByPage(endPage),
+      ]);
+
+      const first = startAyahs[0];
+      const last = endAyahs[endAyahs.length - 1];
+
+      if (!first || !last) {
+        showSecondaryMessage("تعذر تحميل آيات الصفحة المحددة");
+        return;
+      }
+
+      const firstSurah = surahs.find(
+        (surah) => surah.number === first.surahNumber,
+      );
+      const lastSurah = surahs.find(
+        (surah) => surah.number === last.surahNumber,
+      );
+
+      if (!firstSurah || !lastSurah) {
+        showSecondaryMessage("تعذر العثور على السورة");
+        return;
+      }
+
+      audioRangeUserModifiedRef.current = true;
+      setAudioStartSurah(String(first.surahNumber));
+      setAudioStartAyah(String(first.number));
+      setAudioStartSurahQuery(getAudioSurahLabel(firstSurah));
+      setAudioEndSurah(String(last.surahNumber));
+      setAudioEndAyah(String(last.number));
+      setAudioEndSurahQuery(getAudioSurahLabel(lastSurah));
+      showSecondaryMessage("تم تحديث نطاق القراءة حسب الصفحات");
+    } catch {
+      showSecondaryMessage("تعذر تحميل الصفحات المحددة");
+    }
   }
 
   function validateAndStartAudio() {
@@ -842,6 +1044,14 @@ export function MushafPage({
     };
 
     writeAudioContinuation(continuation);
+    writeAudioLoop({
+      startSurah,
+      startAyah,
+      startPage: startSurahData.firstPage,
+      pass: 1,
+    });
+    cancelSilence();
+    ayahPlayCountRef.current = 1;
     setMoreMenuOpen(false);
     setReciterPickerOpen(false);
     setModePickerOpen(false);
@@ -864,6 +1074,89 @@ export function MushafPage({
     router.push(`/coran/${riwayaId}/page/${startSurahData.firstPage}`);
   }
 
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(AUDIO_SETTINGS_STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as Record<string, unknown>;
+        const pick = (
+          value: unknown,
+          allowed: readonly string[],
+          fallback: string,
+        ) =>
+          typeof value === "string" && allowed.includes(value)
+            ? value
+            : fallback;
+        const pickRepeat = (value: unknown): string => {
+          if (value === "n") return "n";
+          if (
+            typeof value === "string" &&
+            /^\d+$/.test(value) &&
+            Number.isSafeInteger(Number(value)) &&
+            Number(value) > 0
+          ) {
+            return value;
+          }
+          return "1";
+        };
+        setAyahRepeatCount(pickRepeat(saved.ayahRepeat));
+        setSelectionRepeatCount(pickRepeat(saved.selectionRepeat));
+        setSilenceBeforeAyah(
+          pick(saved.silenceBeforeAyah, SILENCE_VALUES, "0"),
+        );
+        setSilenceAfterAyah(pick(saved.silenceAfterAyah, SILENCE_VALUES, "0"));
+        setSilenceBeforeSelection(
+          pick(saved.silenceBeforeSelection, SILENCE_VALUES, "0"),
+        );
+        setSilenceAfterSelection(
+          pick(saved.silenceAfterSelection, SILENCE_VALUES, "0"),
+        );
+      }
+    } catch {
+      // réglages ignorés si illisibles
+    }
+    setAudioSettingsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    audioSettingsRef.current = {
+      ayahRepeat: ayahRepeatCount,
+      selectionRepeat: selectionRepeatCount,
+      silenceBeforeAyah,
+      silenceAfterAyah,
+      silenceBeforeSelection,
+      silenceAfterSelection,
+    };
+
+    if (!audioSettingsLoaded) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        AUDIO_SETTINGS_STORAGE_KEY,
+        JSON.stringify(audioSettingsRef.current),
+      );
+    } catch {
+      // stockage indisponible
+    }
+  }, [
+    audioSettingsLoaded,
+    ayahRepeatCount,
+    selectionRepeatCount,
+    silenceBeforeAyah,
+    silenceAfterAyah,
+    silenceBeforeSelection,
+    silenceAfterSelection,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      silenceCancelRef.current?.();
+      silenceCancelRef.current = null;
+    };
+  }, []);
+
   function selectSecondaryMode(mode: SecondaryMode) {
     setSecondaryMode(mode);
     setModePickerOpen(false);
@@ -880,11 +1173,23 @@ export function MushafPage({
 
     const firstAyah = ayahs[0];
 
+    const initialSurah = surahs.find(
+      (surah) => surah.number === firstAyah.surahNumber,
+    );
+
     setAudioStartSurah(String(firstAyah.surahNumber));
     setAudioStartAyah(String(firstAyah.number));
-    setAudioEndSurah("114");
-    setAudioEndAyah("6");
-  }, [ayahs]);
+    setAudioEndSurah(String(firstAyah.surahNumber));
+    setAudioEndAyah(String(firstAyah.number));
+    setAudioStartSurahQuery(
+      initialSurah ? `${initialSurah.number} - ${initialSurah.name}` : "",
+    );
+    setAudioEndSurahQuery(
+      initialSurah ? `${initialSurah.number} - ${initialSurah.name}` : "",
+    );
+    setAudioStartPage(String(pageNumber));
+    setAudioEndPage(String(pageNumber));
+  }, [ayahs, surahs, pageNumber]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -904,6 +1209,15 @@ export function MushafPage({
       return;
     }
 
+    function replayCurrentAyah() {
+      const el = audioRef.current;
+      if (!el) return;
+      el.currentTime = 0;
+      void el.play().catch(() => {
+        setIsPlaying(false);
+      });
+    }
+
     function handleEnded() {
       const currentAyah = getCurrentAudioAyah();
       console.log("[AUDIO] ended", {
@@ -918,6 +1232,86 @@ export function MushafPage({
       if (!currentAyah) {
         setIsPlaying(false);
         return;
+      }
+
+      const settings = audioSettingsRef.current;
+      const rangeContinuation = readAudioContinuation();
+      const atRangeEnd = rangeContinuation
+        ? isAudioEndReached(currentAyah, rangeContinuation)
+        : false;
+
+      // Silence après l'ayah (ou après la plage), proportionnel à la durée réelle.
+      if (!silenceDoneRef.current) {
+        const el = audioRef.current;
+        const duration = el && Number.isFinite(el.duration) ? el.duration : 0;
+        const multiplier = Number(
+          atRangeEnd
+            ? settings.silenceAfterSelection
+            : settings.silenceAfterAyah,
+        );
+        const seconds = duration * multiplier;
+
+        if (seconds > 0) {
+          const timer = window.setTimeout(() => {
+            silenceCancelRef.current = null;
+            silenceDoneRef.current = true;
+            handleEndedRef.current();
+          }, seconds * 1000);
+          silenceCancelRef.current = () => window.clearTimeout(timer);
+          return;
+        }
+      }
+      silenceDoneRef.current = false;
+
+      // Répétition d'ayah.
+      const ayahTarget =
+        settings.ayahRepeat === "n"
+          ? Number.POSITIVE_INFINITY
+          : Number(settings.ayahRepeat);
+
+      if (ayahPlayCountRef.current < ayahTarget) {
+        ayahPlayCountRef.current += 1;
+        replayCurrentAyah();
+        return;
+      }
+      ayahPlayCountRef.current = 1;
+
+      // Répétition de la plage début/fin.
+      if (rangeContinuation && atRangeEnd) {
+        const selectionTarget =
+          settings.selectionRepeat === "n"
+            ? Number.POSITIVE_INFINITY
+            : Number(settings.selectionRepeat);
+        const loop = readAudioLoop();
+
+        if (loop && loop.pass < selectionTarget) {
+          writeAudioLoop({ ...loop, pass: loop.pass + 1 });
+          writeAudioContinuation({
+            ...rangeContinuation,
+            surahNumber: loop.startSurah,
+            ayahNumber: loop.startAyah,
+          });
+
+          const startAyahOnPage = ayahs.find(
+            (ayah) =>
+              ayah.surahNumber === loop.startSurah &&
+              ayah.number === loop.startAyah,
+          );
+
+          if (startAyahOnPage) {
+            if (startAyahOnPage.id === currentAyah.id) {
+              replayCurrentAyah();
+            } else {
+              audioShouldContinueRef.current = true;
+              setSelectedAyahId(startAyahOnPage.id);
+            }
+            return;
+          }
+
+          audioShouldContinueRef.current = true;
+          router.push(`/coran/${riwayaId}/page/${loop.startPage}`);
+          return;
+        }
       }
 
       if (repeatEnabled) {
@@ -1046,6 +1440,7 @@ export function MushafPage({
       "ayahs",
       ayahs.length,
     ); // DEBUG-AUDIO
+    handleEndedRef.current = handleEnded;
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("error", handleError);
 
@@ -1092,7 +1487,7 @@ export function MushafPage({
       shouldContinue: audioShouldContinueRef.current,
     }); // DEBUG-AUDIO
     if (audioSourceKeyRef.current === sourceKey) {
-      if (isContinuationTarget && audio.paused) {
+      if (isContinuationTarget && audio.paused && !silenceCancelRef.current) {
         audio.playbackRate = playbackRate;
         void audio.play().then(
           () => setIsPlaying(true),
@@ -1117,6 +1512,8 @@ export function MushafPage({
       isContinuationTarget;
 
     audioShouldContinueRef.current = false;
+    cancelSilence();
+    ayahPlayCountRef.current = 1;
     audio.pause();
     audio.src = getAudioUrl(
       selectedReciter,
@@ -1129,14 +1526,47 @@ export function MushafPage({
     audio.load();
 
     if (shouldResume) {
-      void audio.play().then(
-        () => setIsPlaying(true),
-        (err) => {
-          console.log("[AUDIO] play() rejected", err?.name, err?.message); // DEBUG-AUDIO
-          setIsPlaying(false);
-          showSecondaryMessage("تعذر تشغيل الصوت");
-        },
+      const startPlayback = () => {
+        void audio.play().then(
+          () => setIsPlaying(true),
+          (err) => {
+            console.log("[AUDIO] play() rejected", err?.name, err?.message); // DEBUG-AUDIO
+            setIsPlaying(false);
+            showSecondaryMessage("تعذر تشغيل الصوت");
+          },
+        );
+      };
+
+      const loop = readAudioLoop();
+      const isRangeStart = Boolean(
+        readAudioContinuation() &&
+        loop &&
+        loop.startSurah === currentAyah.surahNumber &&
+        loop.startAyah === currentAyah.number,
       );
+      const beforeMultiplier = Number(
+        isRangeStart
+          ? audioSettingsRef.current.silenceBeforeSelection
+          : audioSettingsRef.current.silenceBeforeAyah,
+      );
+
+      if (beforeMultiplier > 0) {
+        const onMetadata = () => {
+          const seconds = Number.isFinite(audio.duration)
+            ? audio.duration * beforeMultiplier
+            : 0;
+          const timer = window.setTimeout(() => {
+            silenceCancelRef.current = null;
+            startPlayback();
+          }, seconds * 1000);
+          silenceCancelRef.current = () => window.clearTimeout(timer);
+        };
+        audio.addEventListener("loadedmetadata", onMetadata, { once: true });
+        silenceCancelRef.current = () =>
+          audio.removeEventListener("loadedmetadata", onMetadata);
+      } else {
+        startPlayback();
+      }
     }
   }, [selectedAyahId, selectedReciter, pageNumber, ayahs, playbackRate]);
 
@@ -1566,7 +1996,7 @@ export function MushafPage({
 
               {moreMenuOpen && secondaryMode === "listening" && (
                 <div
-                  className="flex min-w-[min(92vw,42rem)] flex-col gap-4 border-t border-[var(--border)] pt-4"
+                  className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
                   role="menu"
                   aria-label="إعدادات الاستماع"
                 >
@@ -1574,88 +2004,182 @@ export function MushafPage({
                     إعدادات الاستماع
                   </div>
 
-                  <button
-                    type="button"
-                    className="rounded-lg border bg-[var(--foreground)] px-4 py-3 font-semibold text-[var(--background)]"
-                    onClick={validateAndStartAudio}
-                  >
-                    ▶ اعتماد الإعدادات وبدء القراءة
-                  </button>
+                  <datalist id="irtaki-audio-surahs">
+                    {surahs.map((surah) => (
+                      <option
+                        key={surah.number}
+                        value={getAudioSurahLabel(surah)}
+                      />
+                    ))}
+                  </datalist>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <fieldset className="rounded-lg border p-3">
-                      <legend className="px-1 text-sm font-semibold">
+                  <div className="flex flex-col gap-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-3 text-sm font-semibold">
                         البداية
-                      </legend>
-
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <label className="flex flex-col gap-1 text-xs">
-                          السورة
-                          <input
-                            type="number"
-                            min="1"
-                            max="114"
-                            value={audioStartSurah}
-                            onChange={(event) => {
-                              audioRangeUserModifiedRef.current = true;
-                              setAudioStartSurah(event.target.value);
-                            }}
-                            className="rounded-lg border bg-transparent px-3 py-2 text-sm"
-                          />
-                        </label>
-
-                        <label className="flex flex-col gap-1 text-xs">
-                          الآية
-                          <input
-                            type="number"
-                            min="1"
-                            value={audioStartAyah}
-                            onChange={(event) => {
-                              audioRangeUserModifiedRef.current = true;
-                              setAudioStartAyah(event.target.value);
-                            }}
-                            className="rounded-lg border bg-transparent px-3 py-2 text-sm"
-                          />
-                        </label>
                       </div>
-                    </fieldset>
+                      <label className="flex min-w-0 flex-col gap-1 text-xs">
+                        الصفحة
+                        <input
+                          type="number"
+                          min="1"
+                          max={TOTAL_PAGES}
+                          value={audioStartPage}
+                          onChange={(event) =>
+                            setAudioStartPage(event.target.value)
+                          }
+                          onBlur={() => {
+                            setAudioEndPage(audioStartPage);
+                            void applyAudioPages(
+                              audioStartPage,
+                              audioStartPage,
+                            );
+                          }}
+                          className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="flex min-w-0 flex-col gap-1 text-xs">
+                        السورة
+                        <input
+                          list="irtaki-audio-surahs"
+                          value={audioStartSurahQuery}
+                          placeholder="اسم أو رقم"
+                          onChange={(event) =>
+                            changeAudioStartSurah(event.target.value)
+                          }
+                          className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="flex min-w-0 flex-col gap-1 text-xs">
+                        الآية
+                        <input
+                          type="number"
+                          min="1"
+                          max={
+                            surahs.find(
+                              (surah) =>
+                                surah.number === Number(audioStartSurah),
+                            )?.numberOfAyahs ?? 1
+                          }
+                          value={audioStartAyah}
+                          onChange={(event) => {
+                            audioRangeUserModifiedRef.current = true;
+                            setAudioStartAyah(event.target.value);
+                          }}
+                          className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                        />
+                      </label>
+                    </div>
 
-                    <fieldset className="rounded-lg border p-3">
-                      <legend className="px-1 text-sm font-semibold">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-3 text-sm font-semibold">
                         النهاية
-                      </legend>
-
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <label className="flex flex-col gap-1 text-xs">
-                          السورة
-                          <input
-                            type="number"
-                            min="1"
-                            max="114"
-                            value={audioEndSurah}
-                            onChange={(event) => {
-                              audioRangeUserModifiedRef.current = true;
-                              setAudioEndSurah(event.target.value);
-                            }}
-                            className="rounded-lg border bg-transparent px-3 py-2 text-sm"
-                          />
-                        </label>
-
-                        <label className="flex flex-col gap-1 text-xs">
-                          الآية
-                          <input
-                            type="number"
-                            min="1"
-                            value={audioEndAyah}
-                            onChange={(event) => {
-                              audioRangeUserModifiedRef.current = true;
-                              setAudioEndAyah(event.target.value);
-                            }}
-                            className="rounded-lg border bg-transparent px-3 py-2 text-sm"
-                          />
-                        </label>
                       </div>
-                    </fieldset>
+                      <label className="flex min-w-0 flex-col gap-1 text-xs">
+                        الصفحة
+                        <input
+                          type="number"
+                          min="1"
+                          max={TOTAL_PAGES}
+                          value={audioEndPage}
+                          onChange={(event) =>
+                            setAudioEndPage(event.target.value)
+                          }
+                          onBlur={() => {
+                            void applyAudioPages(audioStartPage, audioEndPage);
+                          }}
+                          className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="flex min-w-0 flex-col gap-1 text-xs">
+                        السورة
+                        <input
+                          list="irtaki-audio-surahs"
+                          value={audioEndSurahQuery}
+                          placeholder="اسم أو رقم"
+                          onChange={(event) =>
+                            changeAudioEndSurah(event.target.value)
+                          }
+                          className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="flex min-w-0 flex-col gap-1 text-xs">
+                        الآية
+                        <input
+                          type="number"
+                          min="1"
+                          max={
+                            surahs.find(
+                              (surah) => surah.number === Number(audioEndSurah),
+                            )?.numberOfAyahs ?? 1
+                          }
+                          value={audioEndAyah}
+                          onChange={(event) => {
+                            audioRangeUserModifiedRef.current = true;
+                            setAudioEndAyah(event.target.value);
+                          }}
+                          className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void applyAudioPages()}
+                        className="rounded-lg border px-3 py-2 text-sm font-semibold"
+                      >
+                        تطبيق نطاق الصفحات
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const startSurah = Number(audioStartSurah);
+                          const startAyah = Number(audioStartAyah);
+                          const endSurah = Number(audioEndSurah);
+                          const endAyah = Number(audioEndAyah);
+
+                          const startSurahData = surahs.find(
+                            (surah) => surah.number === startSurah,
+                          );
+                          const endSurahData = surahs.find(
+                            (surah) => surah.number === endSurah,
+                          );
+
+                          if (
+                            !startSurahData ||
+                            !endSurahData ||
+                            !Number.isInteger(startAyah) ||
+                            !Number.isInteger(endAyah) ||
+                            startAyah < 1 ||
+                            endAyah < 1 ||
+                            startAyah > startSurahData.numberOfAyahs ||
+                            endAyah > endSurahData.numberOfAyahs
+                          ) {
+                            showSecondaryMessage(
+                              "الرجاء التحقق من السورة ورقم الآية",
+                            );
+                            return;
+                          }
+
+                          if (
+                            startSurah > endSurah ||
+                            (startSurah === endSurah && startAyah > endAyah)
+                          ) {
+                            showSecondaryMessage("البداية يجب أن تسبق النهاية");
+                            return;
+                          }
+
+                          audioRangeUserModifiedRef.current = true;
+                          setAudioStartPage(String(startSurahData.firstPage));
+                          setAudioEndPage(String(endSurahData.firstPage));
+                          showSecondaryMessage("تم تطبيق نطاق الآيات");
+                        }}
+                        className="rounded-lg border px-3 py-2 text-sm font-semibold"
+                      >
+                        تطبيق نطاق الآيات
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -1664,22 +2188,61 @@ export function MushafPage({
                         تكرار الآية
                       </legend>
 
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {["1", "2", "3", "n"].map((value) => (
-                          <button
-                            key={value}
-                            type="button"
-                            className={
-                              ayahRepeatCount === value
-                                ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
-                                : "rounded-lg border px-3 py-2 text-sm"
+                      <div className="relative mt-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={
+                            ayahRepeatCount === "n" ? "∞" : ayahRepeatCount
+                          }
+                          aria-label="عدد تكرار الآية"
+                          aria-expanded={ayahRepeatOptionsOpen}
+                          onFocus={(event) => {
+                            setAyahRepeatOptionsOpen(true);
+                            event.currentTarget.select();
+                          }}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (/^\d*$/.test(value)) {
+                              setAyahRepeatCount(value);
                             }
-                            aria-pressed={ayahRepeatCount === value}
-                            onClick={() => setAyahRepeatCount(value)}
-                          >
-                            {value === "n" ? "N" : value}
-                          </button>
-                        ))}
+                          }}
+                          onBlur={() => {
+                            if (
+                              !ayahRepeatCount ||
+                              !Number.isSafeInteger(Number(ayahRepeatCount)) ||
+                              Number(ayahRepeatCount) < 1
+                            ) {
+                              setAyahRepeatCount("1");
+                            }
+                            setAyahRepeatOptionsOpen(false);
+                          }}
+                          className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm"
+                        />
+
+                        {ayahRepeatOptionsOpen && (
+                          <div className="absolute inset-x-0 top-full z-20 mt-1 grid grid-cols-5 gap-1 rounded-lg border bg-[var(--background)] p-2 shadow-lg">
+                            {REPEAT_VALUES.map((value) => (
+                              <button
+                                key={value}
+                                type="button"
+                                aria-pressed={ayahRepeatCount === value}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  setAyahRepeatCount(value);
+                                  setAyahRepeatOptionsOpen(false);
+                                }}
+                                className={
+                                  ayahRepeatCount === value
+                                    ? "rounded-md border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                                    : "rounded-md border px-2 py-2 text-sm"
+                                }
+                              >
+                                {value === "n" ? "∞" : value}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </fieldset>
 
@@ -1688,27 +2251,70 @@ export function MushafPage({
                         تكرار التحديد
                       </legend>
 
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {["1", "2", "3", "n"].map((value) => (
-                          <button
-                            key={value}
-                            type="button"
-                            className={
-                              selectionRepeatCount === value
-                                ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
-                                : "rounded-lg border px-3 py-2 text-sm"
+                      <div className="relative mt-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={
+                            selectionRepeatCount === "n"
+                              ? "∞"
+                              : selectionRepeatCount
+                          }
+                          aria-label="عدد تكرار التحديد"
+                          aria-expanded={selectionRepeatOptionsOpen}
+                          onFocus={(event) => {
+                            setSelectionRepeatOptionsOpen(true);
+                            event.currentTarget.select();
+                          }}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (/^\d*$/.test(value)) {
+                              setSelectionRepeatCount(value);
                             }
-                            aria-pressed={selectionRepeatCount === value}
-                            onClick={() => setSelectionRepeatCount(value)}
-                          >
-                            {value === "n" ? "N" : value}
-                          </button>
-                        ))}
+                          }}
+                          onBlur={() => {
+                            if (
+                              !selectionRepeatCount ||
+                              !Number.isSafeInteger(
+                                Number(selectionRepeatCount),
+                              ) ||
+                              Number(selectionRepeatCount) < 1
+                            ) {
+                              setSelectionRepeatCount("1");
+                            }
+                            setSelectionRepeatOptionsOpen(false);
+                          }}
+                          className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm"
+                        />
+
+                        {selectionRepeatOptionsOpen && (
+                          <div className="absolute inset-x-0 top-full z-20 mt-1 grid grid-cols-5 gap-1 rounded-lg border bg-[var(--background)] p-2 shadow-lg">
+                            {REPEAT_VALUES.map((value) => (
+                              <button
+                                key={value}
+                                type="button"
+                                aria-pressed={selectionRepeatCount === value}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  setSelectionRepeatCount(value);
+                                  setSelectionRepeatOptionsOpen(false);
+                                }}
+                                className={
+                                  selectionRepeatCount === value
+                                    ? "rounded-md border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                                    : "rounded-md border px-2 py-2 text-sm"
+                                }
+                              >
+                                {value === "n" ? "∞" : value}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </fieldset>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {[
                       {
                         title: "الصمت قبل الآية",
@@ -1731,34 +2337,34 @@ export function MushafPage({
                         setValue: setSilenceAfterSelection,
                       },
                     ].map((item) => (
-                      <fieldset
+                      <details
                         key={item.title}
-                        className="rounded-lg border p-3"
+                        className="group min-w-0 rounded-lg border"
                       >
-                        <legend className="px-1 text-sm font-semibold">
-                          {item.title}
-                        </legend>
-
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {["0", "0.5", "0.75", "1", "1.25", "1.5", "2"].map(
-                            (value) => (
-                              <button
-                                key={value}
-                                type="button"
-                                className={
-                                  item.value === value
-                                    ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
-                                    : "rounded-lg border px-3 py-2 text-sm"
-                                }
-                                aria-pressed={item.value === value}
-                                onClick={() => item.setValue(value)}
-                              >
-                                {value}×
-                              </button>
-                            ),
-                          )}
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-1 px-2 py-3 text-xs">
+                          <span className="min-w-0 truncate">{item.title}</span>
+                          <span className="shrink-0 font-semibold">
+                            {item.value}×⌄
+                          </span>
+                        </summary>
+                        <div className="flex flex-wrap gap-1 border-t p-2">
+                          {SILENCE_VALUES.map((value) => (
+                            <button
+                              key={value}
+                              type="button"
+                              className={
+                                item.value === value
+                                  ? "rounded-md border bg-[var(--foreground)] px-2 py-1 text-xs text-[var(--background)]"
+                                  : "rounded-md border px-2 py-1 text-xs"
+                              }
+                              aria-pressed={item.value === value}
+                              onClick={() => item.setValue(value)}
+                            >
+                              {value}×
+                            </button>
+                          ))}
                         </div>
-                      </fieldset>
+                      </details>
                     ))}
                   </div>
 
@@ -1781,6 +2387,14 @@ export function MushafPage({
                       <option value="hafs-djebril">جبريل</option>
                     </select>
                   </div>
+
+                  <button
+                    type="button"
+                    className="w-full rounded-lg border bg-[var(--foreground)] px-4 py-3 font-semibold text-[var(--background)]"
+                    onClick={validateAndStartAudio}
+                  >
+                    ✓ اعتماد التحديد وبدء القراءة
+                  </button>
                 </div>
               )}
 
