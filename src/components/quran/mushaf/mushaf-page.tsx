@@ -39,6 +39,14 @@ type MenuState = null | {
   ayahId?: number;
 };
 
+type MushafAnnotation = {
+  id: string;
+  ayahId: number;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type SecondaryMode =
   | "qiraa"
   | "listening"
@@ -125,6 +133,141 @@ export function MushafPage({
   );
 
   const [menu, setMenu] = useState<MenuState>(null);
+  const [annotationPanelOpen, setAnnotationPanelOpen] = useState(false);
+  const [annotationAyahId, setAnnotationAyahId] = useState<number | null>(null);
+  const [annotations, setAnnotations] = useState<MushafAnnotation[]>([]);
+  const [annotationContent, setAnnotationContent] = useState("");
+  const [annotationStatus, setAnnotationStatus] = useState("");
+  const [annotationBusy, setAnnotationBusy] = useState(false);
+
+  async function openAnnotations(ayahId?: number) {
+    setAnnotationPanelOpen(true);
+    setAnnotationContent("");
+    setAnnotationStatus("");
+    setAnnotations([]);
+
+    let targetAyahId = ayahId ?? selectedAyahId;
+
+    if (!targetAyahId && selectedWords.size > 0) {
+      const firstKey = [...selectedWords][0] ?? "";
+      const [surahNumber, ayahNumber] = firstKey.split(":").map(Number);
+
+      if (Number.isInteger(surahNumber) && Number.isInteger(ayahNumber)) {
+        targetAyahId = ayahs.find(
+          (ayah) =>
+            ayah.surahNumber === surahNumber &&
+            ayah.number === ayahNumber,
+        )?.id;
+      }
+    }
+
+    if (!targetAyahId) {
+      setAnnotationAyahId(null);
+      setAnnotationStatus("حدد آية أو كلمة أولاً");
+      setMenu(null);
+      return;
+    }
+
+    setAnnotationAyahId(targetAyahId);
+    setMenu(null);
+    setAnnotationBusy(true);
+
+    try {
+      const response = await fetch("/api/annotations");
+
+      if (!response.ok) {
+        throw new Error(
+          response.status === 401
+            ? "يلزم تسجيل الدخول لعرض الملاحظات وحفظها."
+            : "تعذر تحميل الملاحظات.",
+        );
+      }
+
+      const data: unknown = await response.json();
+
+      if (!Array.isArray(data)) {
+        throw new Error("استجابة الملاحظات غير صالحة.");
+      }
+
+      setAnnotations(data as MushafAnnotation[]);
+    } catch (error) {
+      setAnnotationStatus(
+        error instanceof Error ? error.message : "تعذر تحميل الملاحظات.",
+      );
+    } finally {
+      setAnnotationBusy(false);
+    }
+  }
+
+  async function saveAnnotation() {
+    const content = annotationContent.trim();
+
+    if (annotationAyahId === null || !content || annotationBusy) {
+      return;
+    }
+
+    setAnnotationBusy(true);
+    setAnnotationStatus("");
+
+    try {
+      const response = await fetch("/api/annotations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ayahId: annotationAyahId,
+          content,
+        }),
+      });
+
+      const payload: unknown = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const errorCode =
+          payload !== null &&
+          typeof payload === "object" &&
+          "error" in payload
+            ? payload.error
+            : undefined;
+
+        if (response.status === 401 || errorCode === "UNAUTHORIZED") {
+          throw new Error("يلزم تسجيل الدخول لحفظ الملاحظات.");
+        }
+        if (errorCode === "INVALID_ANNOTATION_CONTENT") {
+          throw new Error("اكتب ملاحظة غير فارغة.");
+        }
+        if (errorCode === "AYAH_NOT_FOUND") {
+          throw new Error("تعذر العثور على الآية المحددة.");
+        }
+
+        throw new Error("تعذر حفظ الملاحظة.");
+      }
+
+      if (
+        payload === null ||
+        typeof payload !== "object" ||
+        !("id" in payload) ||
+        !("ayahId" in payload) ||
+        !("content" in payload)
+      ) {
+        throw new Error("استجابة حفظ الملاحظة غير صالحة.");
+      }
+
+      const annotation = payload as MushafAnnotation;
+      setAnnotations((current) => [
+        annotation,
+        ...current.filter((item) => item.id !== annotation.id),
+      ]);
+      setAnnotationContent("");
+      setAnnotationStatus("تم حفظ الملاحظة.");
+    } catch (error) {
+      setAnnotationStatus(
+        error instanceof Error ? error.message : "تعذر حفظ الملاحظة.",
+      );
+    } finally {
+      setAnnotationBusy(false);
+    }
+  }
+
   const [secondaryMode, setSecondaryMode] =
     useState<SecondaryMode>("listening");
   const secondaryModeRef = useRef<SecondaryMode>("listening");
@@ -1982,6 +2125,13 @@ export function MushafPage({
         >
           {menu.type === "ayah" && (
             <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                className="rounded-lg border px-3 py-2"
+                onClick={() => void openAnnotations(menu.ayahId)}
+              >
+                التعليقات والملاحظات
+              </button>
               <div className="font-semibold">قائمة الآية</div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" className="rounded-lg border px-3 py-2">
@@ -2002,6 +2152,13 @@ export function MushafPage({
 
           {menu.type === "word" && (
             <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                className="rounded-lg border px-3 py-2"
+                onClick={() => void openAnnotations()}
+              >
+                التعليقات والملاحظات
+              </button>
               <div className="font-semibold">قائمة الكلمة</div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" className="rounded-lg border px-3 py-2">
@@ -2898,6 +3055,13 @@ export function MushafPage({
 
           {menu.type === "selection" && (
             <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                className="rounded-lg border px-3 py-2"
+                onClick={() => void openAnnotations()}
+              >
+                التعليقات والملاحظات
+              </button>
               <div className="font-semibold">تحديد الكلمات</div>
 
               <div className="text-sm text-[var(--muted)]">
@@ -2923,6 +3087,94 @@ export function MushafPage({
           )}
         </div>
       ) : null}
+
+      {annotationPanelOpen && (
+        <div
+          className="fixed inset-x-4 bottom-4 z-[60] mx-auto max-h-[70vh] max-w-xl overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 shadow-xl"
+          dir="rtl"
+          role="dialog"
+          aria-modal="true"
+          aria-label="التعليقات والملاحظات"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold">التعليقات والملاحظات</h2>
+            <button
+              type="button"
+              className="rounded-lg border px-3 py-1"
+              onClick={() => setAnnotationPanelOpen(false)}
+            >
+              إغلاق
+            </button>
+          </div>
+
+          {annotationAyahId !== null && (
+            <div className="mt-3 space-y-2">
+              {annotations
+                .filter((item) => item.ayahId === annotationAyahId)
+                .map((item) => (
+                  <div key={item.id} className="rounded-lg border p-3">
+                    <p className="whitespace-pre-wrap">{item.content}</p>
+                  </div>
+                ))}
+
+              {annotations.every(
+                (item) => item.ayahId !== annotationAyahId,
+              ) && !annotationBusy && (
+                <p className="text-sm text-[var(--muted)]">
+                  لا توجد ملاحظات لهذا الموضع.
+                </p>
+              )}
+            </div>
+          )}
+
+          {annotationBusy && (
+            <p role="status" className="mt-3 text-sm">
+              جارٍ تحميل الملاحظات أو حفظها…
+            </p>
+          )}
+
+          <form
+            className="mt-3 flex flex-col gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveAnnotation();
+            }}
+          >
+            <label htmlFor="mushaf-annotation-content">ملاحظة جديدة</label>
+            <textarea
+              id="mushaf-annotation-content"
+              value={annotationContent}
+              onChange={(event) => setAnnotationContent(event.target.value)}
+              rows={3}
+              maxLength={5000}
+              className="w-full rounded-lg border bg-transparent p-3"
+              placeholder="اكتب ملاحظتك…"
+            />
+
+            <div className="flex items-center justify-between gap-3">
+              <p
+                role="status"
+                aria-live="polite"
+                className="text-sm text-[var(--muted)]"
+              >
+                {annotationStatus}
+              </p>
+              <button
+                type="submit"
+                disabled={
+                  annotationBusy ||
+                  !annotationContent.trim() ||
+                  annotationAyahId === null
+                }
+                className="rounded-lg border px-4 py-2 disabled:opacity-50"
+              >
+                حفظ الملاحظة
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
     </article>
   );
 }
