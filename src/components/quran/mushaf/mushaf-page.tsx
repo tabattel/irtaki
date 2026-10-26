@@ -486,6 +486,9 @@ export function MushafPage({
   const [ayahRepeatOptionsOpen, setAyahRepeatOptionsOpen] = useState(false);
   const [selectionRepeatOptionsOpen, setSelectionRepeatOptionsOpen] =
     useState(false);
+  const [ayahRepeatToolbarOpen, setAyahRepeatToolbarOpen] = useState(false);
+  const [selectionRepeatToolbarOpen, setSelectionRepeatToolbarOpen] =
+    useState(false);
   const [silenceBeforeAyah, setSilenceBeforeAyah] = useState("0");
   const [silenceAfterAyah, setSilenceAfterAyah] = useState("0");
   const [silenceBeforeSelection, setSilenceBeforeSelection] = useState("0");
@@ -1310,6 +1313,47 @@ export function MushafPage({
     return ayahs[0];
   }
 
+  function getEndedAudioPosition():
+    { surahNumber: number; number: number } | undefined {
+    const audio = audioRef.current;
+    const source = audio?.currentSrc || audio?.src || "";
+    const match = source.match(/\/api\/audio\/[^/]+\/(\d+)\/(\d+)(?:[?#]|$)/);
+
+    if (match) {
+      return {
+        surahNumber: Number(match[1]),
+        number: Number(match[2]),
+      };
+    }
+
+    const currentAyah = getCurrentAudioAyah();
+    return currentAyah
+      ? {
+          surahNumber: currentAyah.surahNumber,
+          number: currentAyah.number,
+        }
+      : undefined;
+  }
+
+  function getEndedAudioAyah() {
+    const audio = audioRef.current;
+    const source = audio?.currentSrc || audio?.src || "";
+    const match = source.match(/\/api\/audio\/[^/]+\/(\d+)\/(\d+)(?:[?#]|$)/);
+
+    if (match) {
+      const surahNumber = Number(match[1]);
+      const ayahNumber = Number(match[2]);
+      const endedAyah = ayahs.find(
+        (ayah) =>
+          ayah.surahNumber === surahNumber && ayah.number === ayahNumber,
+      );
+
+      if (endedAyah) return endedAyah;
+    }
+
+    return getCurrentAudioAyah();
+  }
+
   function getAudioUrl(
     reciterId: string,
     surahNumber: number,
@@ -1603,8 +1647,7 @@ export function MushafPage({
 
     const surah = resolveAudioSurah(value);
     if (!surah) {
-      setAudioStartSurah("");
-      setAudioStartAyah("1");
+      // Garder la dernière sélection valide pendant la saisie du filtre.
       return;
     }
 
@@ -1621,8 +1664,7 @@ export function MushafPage({
 
     const surah = resolveAudioSurah(value);
     if (!surah) {
-      setAudioEndSurah("");
-      setAudioEndAyah("");
+      // Garder la dernière sélection valide pendant la saisie du filtre.
       return;
     }
 
@@ -1689,7 +1731,7 @@ export function MushafPage({
     }
   }
 
-  function validateAndStartAudio() {
+  async function validateAndStartAudio() {
     const startSurah = Number(audioStartSurah);
     const startAyah = Number(audioStartAyah);
     const endSurah = Number(audioEndSurah);
@@ -1720,7 +1762,6 @@ export function MushafPage({
     }
 
     const startSurahData = surahs.find((surah) => surah.number === startSurah);
-
     const endSurahData = surahs.find((surah) => surah.number === endSurah);
 
     if (!startSurahData || !endSurahData) {
@@ -1736,44 +1777,71 @@ export function MushafPage({
       return;
     }
 
-    const continuation: AudioContinuation = {
-      reciterId: selectedReciter,
-      surahNumber: startSurah,
-      ayahNumber: startAyah,
-      endSurahNumber: endSurah,
-      endAyahNumber: endAyah,
-      playbackRate,
-    };
-
-    writeAudioContinuation(continuation);
-    writeAudioLoop({
-      startSurah,
-      startAyah,
-      startPage: startSurahData.firstPage,
-      pass: 1,
-    });
-    cancelSilence();
-    ayahPlayCountRef.current = 1;
-    setMoreMenuOpen(false);
-    setReciterPickerOpen(false);
-    setModePickerOpen(false);
-    setIsPlaying(true);
-
-    if (startSurahData.firstPage === pageNumber) {
-      const targetAyah = ayahs.find(
-        (ayah) => ayah.surahNumber === startSurah && ayah.number === startAyah,
+    try {
+      const startSurahAyahs = await getAyahsBySurah(startSurah);
+      const targetAyah = startSurahAyahs.find(
+        (ayah) => ayah.number === startAyah,
       );
 
-      if (targetAyah) {
-        setSelectedAyahId(targetAyah.id);
-        window.setTimeout(() => {
-          void playCurrentAyah();
-        }, 0);
+      if (
+        !targetAyah ||
+        !Number.isInteger(targetAyah.pageNumber) ||
+        targetAyah.pageNumber < 1 ||
+        targetAyah.pageNumber > TOTAL_PAGES
+      ) {
+        showSecondaryMessage("تعذر العثور على الآية المحددة");
         return;
       }
-    }
 
-    router.push(`/coran/${riwayaId}/page/${startSurahData.firstPage}`);
+      const startPage = targetAyah.pageNumber;
+
+      const continuation: AudioContinuation = {
+        reciterId: selectedReciter,
+        surahNumber: startSurah,
+        ayahNumber: startAyah,
+        endSurahNumber: endSurah,
+        endAyahNumber: endAyah,
+        playbackRate,
+      };
+
+      writeAudioContinuation(continuation);
+      writeAudioLoop({
+        startSurah,
+        startAyah,
+        startPage,
+        pass: 1,
+      });
+
+      saveModeSelection(secondaryMode);
+      cancelSilence();
+      ayahPlayCountRef.current = 1;
+      audioShouldContinueRef.current = false;
+      setMoreMenuOpen(false);
+      setReciterPickerOpen(false);
+      setModePickerOpen(false);
+      setIsPlaying(true);
+
+      if (startPage === pageNumber) {
+        const visibleTargetAyah = ayahs.find(
+          (ayah) =>
+            ayah.surahNumber === startSurah && ayah.number === startAyah,
+        );
+
+        if (visibleTargetAyah) {
+          setSelectedAyahId(visibleTargetAyah.id);
+          window.setTimeout(() => {
+            void playCurrentAyah();
+          }, 0);
+          return;
+        }
+      }
+
+      audioShouldContinueRef.current = true;
+      router.push(`/coran/${riwayaId}/page/${startPage}?ayah=${targetAyah.id}`);
+    } catch {
+      setIsPlaying(false);
+      showSecondaryMessage("تعذر الوصول إلى الآية المحددة");
+    }
   }
 
   async function startCurrentModeAtSelection() {
@@ -1963,21 +2031,67 @@ export function MushafPage({
       // Utiliser les valeurs par défaut si le stockage est invalide.
     }
 
-    const readString = (key: string, fallback: string) =>
-      typeof saved[key] === "string" ? (saved[key] as string) : fallback;
+    const readSavedString = (key: string): string | undefined => {
+      const value = saved[key];
+      return typeof value === "string" && value.trim() ? value : undefined;
+    };
 
     const safePage = Math.max(1, Math.min(TOTAL_PAGES, fallbackPage));
+    const firstVisibleAyah = ayahs[0];
 
-    setAudioStartSurah(readString("startSurah", ""));
-    setAudioStartAyah(readString("startAyah", ""));
-    setAudioEndSurah(readString("endSurah", "114"));
-    setAudioEndAyah(readString("endAyah", "6"));
-    setAudioStartSurahQuery(readString("startSurahQuery", ""));
-    setAudioEndSurahQuery(readString("endSurahQuery", ""));
-    setAudioStartPage(readString("startPage", String(safePage)));
-    setAudioEndPage(readString("endPage", String(TOTAL_PAGES)));
+    const fallbackStartSurah =
+      audioStartSurah.trim() ||
+      (firstVisibleAyah ? String(firstVisibleAyah.surahNumber) : "");
+    const fallbackStartAyah =
+      audioStartAyah.trim() ||
+      (firstVisibleAyah ? String(firstVisibleAyah.number) : "");
+    const startSurahValue = readSavedString("startSurah") ?? fallbackStartSurah;
+    const startAyahValue = readSavedString("startAyah") ?? fallbackStartAyah;
+    const endSurahValue =
+      readSavedString("endSurah") ?? audioEndSurah.trim() ?? startSurahValue;
+    const endAyahValue =
+      readSavedString("endAyah") ?? audioEndAyah.trim() ?? startAyahValue;
 
-    audioRangeUserModifiedRef.current = saved.userModified === true;
+    const startSurahData = surahs.find(
+      (surah) => surah.number === Number(startSurahValue),
+    );
+    const endSurahData = surahs.find(
+      (surah) => surah.number === Number(endSurahValue),
+    );
+
+    setAudioStartSurah(startSurahValue);
+    setAudioStartAyah(startAyahValue);
+    setAudioEndSurah(endSurahValue);
+    setAudioEndAyah(endAyahValue);
+    setAudioStartSurahQuery(
+      readSavedString("startSurahQuery") ??
+        (startSurahData
+          ? getAudioSurahLabel(startSurahData)
+          : audioStartSurahQuery),
+    );
+    setAudioEndSurahQuery(
+      readSavedString("endSurahQuery") ??
+        (endSurahData ? getAudioSurahLabel(endSurahData) : audioEndSurahQuery),
+    );
+    setAudioStartPage(
+      readSavedString("startPage") ?? audioStartPage.trim() ?? String(safePage),
+    );
+    setAudioEndPage(
+      readSavedString("endPage") ?? audioEndPage.trim() ?? String(TOTAL_PAGES),
+    );
+
+    const hasSavedRange = Boolean(
+      readSavedString("startSurah") &&
+      readSavedString("startAyah") &&
+      readSavedString("endSurah") &&
+      readSavedString("endAyah"),
+    );
+
+    audioRangeUserModifiedRef.current =
+      Boolean(
+        startSurahValue && startAyahValue && endSurahValue && endAyahValue,
+      ) &&
+      (saved.userModified === true || hasSavedRange);
 
     // Ne pas restaurer les états temporaires des menus déroulants.
     setAudioStartSurahPickerOpen(false);
@@ -2120,26 +2234,29 @@ export function MushafPage({
     }
 
     function handleEnded() {
-      const currentAyah = getCurrentAudioAyah();
-      console.log("[AUDIO] ended", {
-        page: pageNumber,
-        ayah: currentAyah && [currentAyah.surahNumber, currentAyah.number],
-        idx: currentAyah ? ayahs.findIndex((a) => a.id === currentAyah.id) : -1,
-        total: ayahs.length,
-        repeatEnabled,
-        continuation: readAudioContinuation(),
-      }); // DEBUG-AUDIO
+      const currentAyah = getEndedAudioAyah();
+      const endedPosition = getEndedAudioPosition() ?? currentAyah;
+      const rangeContinuation = readAudioContinuation();
+      const atRangeEnd = Boolean(
+        rangeContinuation &&
+        endedPosition &&
+        isAudioEndReached(endedPosition, rangeContinuation),
+      );
 
       if (!currentAyah) {
-        setIsPlaying(false);
+        if (rangeContinuation && atRangeEnd) {
+          audioShouldContinueRef.current = false;
+          audioRef.current?.pause();
+          clearAudioContinuation();
+          setIsPlaying(false);
+          showSecondaryMessage("انتهى الاستماع");
+        } else {
+          setIsPlaying(false);
+        }
         return;
       }
 
       const settings = audioSettingsRef.current;
-      const rangeContinuation = readAudioContinuation();
-      const atRangeEnd = rangeContinuation
-        ? isAudioEndReached(currentAyah, rangeContinuation)
-        : false;
 
       // Silence après l'ayah (ou après la plage), proportionnel à la durée réelle.
       if (!silenceDoneRef.current) {
@@ -2163,19 +2280,6 @@ export function MushafPage({
         }
       }
       silenceDoneRef.current = false;
-
-      // Répétition d'ayah.
-      const ayahTarget =
-        settings.ayahRepeat === "n"
-          ? Number.POSITIVE_INFINITY
-          : Number(settings.ayahRepeat);
-
-      if (ayahPlayCountRef.current < ayahTarget) {
-        ayahPlayCountRef.current += 1;
-        replayCurrentAyah();
-        return;
-      }
-      ayahPlayCountRef.current = 1;
 
       // Répétition de la plage début/fin.
       if (rangeContinuation && atRangeEnd) {
@@ -2214,6 +2318,30 @@ export function MushafPage({
           return;
         }
       }
+
+      // La fin de la plage doit primer sur la répétition globale.
+      // Les répétitions d'ayah et de sélection ont déjà été traitées au-dessus.
+      if (rangeContinuation && atRangeEnd) {
+        audioShouldContinueRef.current = false;
+        audioRef.current?.pause();
+        clearAudioContinuation();
+        setIsPlaying(false);
+        showSecondaryMessage("انتهى الاستماع");
+        return;
+      }
+
+      // Répétition d'ayah.
+      const ayahTarget =
+        settings.ayahRepeat === "n"
+          ? Number.POSITIVE_INFINITY
+          : Number(settings.ayahRepeat);
+
+      if (ayahPlayCountRef.current < ayahTarget) {
+        ayahPlayCountRef.current += 1;
+        replayCurrentAyah();
+        return;
+      }
+      ayahPlayCountRef.current = 1;
 
       if (repeatEnabled) {
         const currentAudio = audioRef.current;
@@ -2899,10 +3027,10 @@ export function MushafPage({
                     <button
                       type="button"
                       className="rounded-lg border px-3 py-2"
-                      aria-label="السابق"
-                      onClick={() => navigateAyah(-1)}
+                      aria-label="التالي"
+                      onClick={() => navigateAyah(1)}
                     >
-                      ⏮
+                      ⏭
                     </button>
 
                     <button
@@ -2918,25 +3046,111 @@ export function MushafPage({
                     <button
                       type="button"
                       className="rounded-lg border px-3 py-2"
-                      aria-label="التالي"
-                      onClick={() => navigateAyah(1)}
+                      aria-label="السابق"
+                      onClick={() => navigateAyah(-1)}
                     >
-                      ⏭
+                      ⏮
                     </button>
 
-                    <button
-                      type="button"
-                      className={
-                        repeatEnabled
-                          ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-[var(--background)]"
-                          : "rounded-lg border px-3 py-2"
-                      }
-                      aria-label="التكرار"
-                      aria-pressed={repeatEnabled}
-                      onClick={toggleRepeat}
-                    >
-                      🔁
-                    </button>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className="rounded-lg border px-3 py-2 text-sm"
+                        aria-label="عدد تكرار الآية"
+                        title="عدد تكرار الآية"
+                        aria-expanded={ayahRepeatToolbarOpen}
+                        onClick={() => {
+                          setAyahRepeatToolbarOpen((open) => !open);
+                          setSelectionRepeatToolbarOpen(false);
+                          setReciterPickerOpen(false);
+                          setModePickerOpen(false);
+                        }}
+                      >
+                        <span aria-hidden="true">↻¹</span>{" "}
+                        {ayahRepeatCount === "n" ? "∞" : ayahRepeatCount}
+                      </button>
+
+                      {ayahRepeatToolbarOpen && (
+                        <div
+                          role="group"
+                          aria-label="خيارات عدد تكرار الآية"
+                          className="absolute bottom-full left-1/2 z-50 mb-2 grid w-48 -translate-x-1/2 grid-cols-5 gap-1 rounded-lg border bg-[var(--background)] p-2 shadow-lg"
+                        >
+                          <div className="col-span-5 text-center text-xs font-semibold">
+                            تكرار الآية
+                          </div>
+                          {REPEAT_VALUES.map((value) => (
+                            <button
+                              key={value}
+                              type="button"
+                              aria-pressed={ayahRepeatCount === value}
+                              onClick={() => {
+                                setAyahRepeatCount(value);
+                                setAyahRepeatToolbarOpen(false);
+                              }}
+                              className={
+                                ayahRepeatCount === value
+                                  ? "rounded-md border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                                  : "rounded-md border px-2 py-2 text-sm"
+                              }
+                            >
+                              {value === "n" ? "∞" : value}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className="rounded-lg border px-3 py-2 text-sm"
+                        aria-label="عدد تكرار التحديد"
+                        title="عدد تكرار التحديد"
+                        aria-expanded={selectionRepeatToolbarOpen}
+                        onClick={() => {
+                          setSelectionRepeatToolbarOpen((open) => !open);
+                          setAyahRepeatToolbarOpen(false);
+                          setReciterPickerOpen(false);
+                          setModePickerOpen(false);
+                        }}
+                      >
+                        <span aria-hidden="true">↻▤</span>{" "}
+                        {selectionRepeatCount === "n"
+                          ? "∞"
+                          : selectionRepeatCount}
+                      </button>
+
+                      {selectionRepeatToolbarOpen && (
+                        <div
+                          role="group"
+                          aria-label="خيارات عدد تكرار التحديد"
+                          className="absolute bottom-full left-1/2 z-50 mb-2 grid w-48 -translate-x-1/2 grid-cols-5 gap-1 rounded-lg border bg-[var(--background)] p-2 shadow-lg"
+                        >
+                          <div className="col-span-5 text-center text-xs font-semibold">
+                            تكرار التحديد
+                          </div>
+                          {REPEAT_VALUES.map((value) => (
+                            <button
+                              key={value}
+                              type="button"
+                              aria-pressed={selectionRepeatCount === value}
+                              onClick={() => {
+                                setSelectionRepeatCount(value);
+                                setSelectionRepeatToolbarOpen(false);
+                              }}
+                              className={
+                                selectionRepeatCount === value
+                                  ? "rounded-md border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                                  : "rounded-md border px-2 py-2 text-sm"
+                              }
+                            >
+                              {value === "n" ? "∞" : value}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
                     <button
                       type="button"
@@ -2944,7 +3158,7 @@ export function MushafPage({
                       aria-label="سرعة التشغيل"
                       onClick={cyclePlaybackRate}
                     >
-                      {playbackRate}×
+                      ⏱ {playbackRate}×
                     </button>
 
                     <button
@@ -3486,7 +3700,7 @@ export function MushafPage({
                     type="button"
                     className="w-full rounded-lg border bg-[var(--foreground)] px-4 py-3 font-semibold text-[var(--background)]"
                     onClick={() => {
-                      void startCurrentModeAtSelection();
+                      void validateAndStartAudio();
                     }}
                   >
                     اعتماد التحديد
