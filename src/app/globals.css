@@ -58,3 +58,45 @@ a {
 .mushaf-hafs-text {
   font-family: "KFGQPC Uthmanic Hafs", serif;
 }
+
+/* IRTAKI_MUSHAF_UNDERLINE_STYLES_V1 */
+.mushaf-underline-single {
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.mushaf-underline-double {
+  text-decoration-line: underline;
+  text-decoration-style: double;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.mushaf-underline-wavy {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.mushaf-underline-double-wavy {
+  text-decoration: none;
+}
+
+.mushaf-underline-double-wavy::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -7px;
+  height: 8px;
+  background-color: currentColor;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='12'%20height='8'%20viewBox='0%200%2012%208'%3E%3Cpath%20d='M0%202%20Q3%200%206%202%20T12%202%20M0%206%20Q3%204%206%206%20T12%206'%20fill='none'%20stroke='white'%20stroke-width='1.5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='12'%20height='8'%20viewBox='0%200%2012%208'%3E%3Cpath%20d='M0%202%20Q3%200%206%202%20T12%202%20M0%206%20Q3%204%206%206%20T12%206'%20fill='none'%20stroke='white'%20stroke-width='1.5'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+  -webkit-mask-size: 12px 8px;
+  mask-size: 12px 8px;
+  pointer-events: none;
+}

@@ -3,6 +3,35 @@ import { useMemo } from "react";
 import type { AyahDto } from "@/lib/api/quran";
 import type { MushafLayoutWord } from "@/lib/api/mushaf";
 
+type UnderlineStyle = "single" | "double" | "wavy" | "double-wavy";
+
+function resolveUnderlineStyle(
+  textModifications: Record<string, boolean>,
+  mode: string,
+  target: string,
+  previewOriginal: boolean,
+): UnderlineStyle | null {
+  if (previewOriginal) return null;
+
+  const priority: UnderlineStyle[] = [
+    "double-wavy",
+    "wavy",
+    "double",
+    "single",
+  ];
+
+  for (const style of priority) {
+    if (textModifications[`${mode}:${target}:underline-${style}`] === true) {
+      return style;
+    }
+  }
+
+  // Compatibilité avec les soulignements simples déjà sauvegardés.
+  return textModifications[`${mode}:${target}:underline`] === true
+    ? "single"
+    : null;
+}
+
 type MushafAyahProps = {
   ayah: AyahDto;
   layoutWords?: MushafLayoutWord[];
@@ -68,9 +97,12 @@ export function MushafAyah({
   const ayahHighlight =
     previewOriginalOptions[`${mode}:highlight`] !== true &&
     textModifications[`${mode}:ayah:${ayah.id}:highlight`] === true;
-  const ayahUnderline =
-    previewOriginalOptions[`${mode}:underline`] !== true &&
-    textModifications[`${mode}:ayah:${ayah.id}:underline`] === true;
+  const ayahUnderlineStyle = resolveUnderlineStyle(
+    textModifications,
+    mode,
+    `ayah:${ayah.id}`,
+    previewOriginalOptions[`${mode}:underline`] === true,
+  );
   const ayahColor =
     previewOriginalOptions[`${mode}:colors`] !== true
       ? colorAssignments[`${mode}:ayah:${ayah.id}:colors`]
@@ -116,9 +148,12 @@ export function MushafAyah({
           const wordHighlight =
             previewOriginalOptions[`${mode}:highlight`] !== true &&
             textModifications[`${mode}:word:${wordKey}:highlight`] === true;
-          const wordUnderline =
-            previewOriginalOptions[`${mode}:underline`] !== true &&
-            textModifications[`${mode}:word:${wordKey}:underline`] === true;
+          const wordUnderlineStyle = resolveUnderlineStyle(
+            textModifications,
+            mode,
+            `word:${wordKey}`,
+            previewOriginalOptions[`${mode}:underline`] === true,
+          );
           const wordColor =
             previewOriginalOptions[`${mode}:colors`] !== true
               ? colorAssignments[`${mode}:word:${wordKey}:colors`]
@@ -130,6 +165,7 @@ export function MushafAyah({
           const wordHidden =
             !showAllTextOverride &&
             textModifications[`${mode}:word:${wordKey}:hidden`] === true;
+          const underlineStyle = wordUnderlineStyle ?? ayahUnderlineStyle;
 
           return (
             <span
@@ -150,9 +186,8 @@ export function MushafAyah({
                 wordHighlight || ayahHighlight
                   ? "rounded-sm bg-yellow-200/80 dark:bg-yellow-400/30"
                   : "",
-                wordUnderline || ayahUnderline
-                  ? "underline decoration-2 underline-offset-4"
-                  : "",
+                underlineStyle ? `mushaf-underline-${underlineStyle}` : "",
+                underlineStyle === "double-wavy" ? "relative" : "",
                 wordHidden || ayahHidden ? "opacity-0" : "",
               ]
                 .filter(Boolean)

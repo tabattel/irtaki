@@ -82,7 +82,67 @@ const SECONDARY_MODES: Array<{
   { id: "progress", label: "المتابعة", icon: "📊" },
 ];
 
-type TextModification = "colors" | "highlight" | "underline" | "hidden";
+type UnderlineStyle = "single" | "double" | "wavy" | "double-wavy";
+function UnderlineStyleIcon({ style }: { style: UnderlineStyle }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-8"
+      viewBox="0 0 32 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {style === "single" && (
+        <path d="M2 9H30" stroke="currentColor" strokeWidth="1.8" />
+      )}
+      {style === "double" && (
+        <>
+          <path d="M2 6H30" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M2 11H30" stroke="currentColor" strokeWidth="1.5" />
+        </>
+      )}
+      {style === "wavy" && (
+        <path
+          d="M2 8 C5 4 7 12 10 8 S15 4 18 8 S23 12 26 8 S29 4 30 8"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+      )}
+      {style === "double-wavy" && (
+        <>
+          <path
+            d="M2 5 C5 1 7 9 10 5 S15 1 18 5 S23 9 26 5 S29 1 30 5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M2 11 C5 7 7 15 10 11 S15 7 18 11 S23 15 26 11 S29 7 30 11"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+        </>
+      )}
+    </svg>
+  );
+}
+type UnderlineAction = `underline-${UnderlineStyle}`;
+type TextModification =
+  "colors" | "highlight" | "underline" | "hidden" | UnderlineAction;
+
+const UNDERLINE_STYLE_OPTIONS: {
+  style: UnderlineStyle;
+  action: UnderlineAction;
+  label: string;
+}[] = [
+  { style: "single", action: "underline-single", label: "خط مفرد" },
+  { style: "double", action: "underline-double", label: "خط مزدوج" },
+  { style: "wavy", action: "underline-wavy", label: "خط متموج" },
+  {
+    style: "double-wavy",
+    action: "underline-double-wavy",
+    label: "خط متموج مزدوج",
+  },
+];
 
 const TOTAL_PAGES = 604;
 const LONG_PRESS_MS = 550;
@@ -142,6 +202,7 @@ export function MushafPage({
   const [openColorPaletteAction, setOpenColorPaletteAction] = useState<
     "colors" | "highlight" | null
   >(null);
+  const [openUnderlinePalette, setOpenUnderlinePalette] = useState(false);
   const [colorPaletteLabels, setColorPaletteLabels] = useState<
     Record<string, string>
   >({});
@@ -591,6 +652,42 @@ export function MushafPage({
       }
       return next;
     });
+    setContextMenuMessage(null);
+  }
+
+  function toggleContextUnderlineStyle(style: UnderlineStyle) {
+    const targets = contextTextTargetKeys();
+
+    if (targets.length === 0) {
+      setContextMenuMessage("حدد آية أو كلمة أو تحديداً أولاً");
+      return;
+    }
+
+    const action: UnderlineAction = `underline-${style}`;
+    const allEnabled = targets.every(
+      (target) =>
+        textModifications[`${secondaryMode}:${target}:${action}`] === true,
+    );
+
+    setTextModifications((current) => {
+      const next = { ...current };
+
+      for (const target of targets) {
+        // Retirer les anciens styles pour éviter leur superposition.
+        next[`${secondaryMode}:${target}:underline`] = false;
+
+        for (const option of UNDERLINE_STYLE_OPTIONS) {
+          next[`${secondaryMode}:${target}:${option.action}`] = false;
+        }
+
+        if (!allEnabled) {
+          next[`${secondaryMode}:${target}:${action}`] = true;
+        }
+      }
+
+      return next;
+    });
+
     setContextMenuMessage(null);
   }
 
@@ -2443,10 +2540,39 @@ export function MushafPage({
       onDoubleClick={handleDoubleClick}
     >
       <audio ref={audioRef} preload="metadata" className="hidden" />
-      <header className="mb-6 flex items-center justify-between text-sm text-[var(--muted)]">
-        <span>مصحف حفص</span>
-        <span>
+      <header className="mb-6 grid grid-cols-3 items-center gap-2 text-xs text-[var(--muted)] sm:text-sm">
+        <span className="text-right tabular-nums">
           صفحة {pageNumber} / {TOTAL_PAGES}
+        </span>
+        <span className="text-center font-medium">
+          {[...new Set(ayahs.map((ayah) => ayah.surahNumber))]
+            .sort((a, b) => a - b)
+            .map(
+              (number) => surahs.find((surah) => surah.number === number)?.name,
+            )
+            .filter((name): name is string => Boolean(name))
+            .join("، ") || "—"}
+        </span>
+        <span className="text-left tabular-nums">
+          {[
+            ...new Map(
+              ayahs.map((ayah) => {
+                const hizbNumber = Math.ceil(ayah.hizb / 4);
+                const quarterIndex = (ayah.hizb - 1) % 4;
+                const quarterNames = [
+                  "الربع الأول",
+                  "الربع الثاني",
+                  "الربع الثالث",
+                  "الربع الأخير",
+                ];
+
+                return [
+                  `${hizbNumber}:${quarterIndex}`,
+                  `الحزب ${hizbNumber} — ${quarterNames[quarterIndex]}`,
+                ] as const;
+              }),
+            ).values(),
+          ].join("، ") || "—"}
         </span>
       </header>
 
@@ -2545,14 +2671,48 @@ export function MushafPage({
                     }))
                   }
                 />
-                <button
-                  type="button"
-                  aria-pressed={isContextTextActionEnabled("underline")}
-                  className="rounded-lg border px-3 py-2"
-                  onClick={() => toggleContextTextAction("underline")}
-                >
-                  〰️ تسطير
-                </button>
+                <div className="relative inline-flex">
+                  <button
+                    type="button"
+                    aria-expanded={openUnderlinePalette}
+                    aria-haspopup="true"
+                    aria-pressed={UNDERLINE_STYLE_OPTIONS.some((option) =>
+                      isContextTextActionEnabled(option.action),
+                    )}
+                    className="rounded-lg border px-3 py-2"
+                    onClick={() => {
+                      setOpenColorPaletteAction(null);
+                      setOpenUnderlinePalette((current) => !current);
+                    }}
+                  >
+                    〰️ تسطير
+                  </button>
+                  {openUnderlinePalette && (
+                    <div
+                      className="absolute top-full right-0 z-50 mt-2 flex items-center gap-2 rounded-xl border bg-[var(--background)] p-2 shadow-lg"
+                      role="group"
+                      aria-label="أنواع التسطير"
+                    >
+                      {UNDERLINE_STYLE_OPTIONS.map((option) => (
+                        <button
+                          key={option.action}
+                          type="button"
+                          aria-label={option.label}
+                          aria-pressed={isContextTextActionEnabled(
+                            option.action,
+                          )}
+                          className="flex h-10 w-12 items-center justify-center rounded-lg border p-2"
+                          onClick={() => {
+                            toggleContextUnderlineStyle(option.style);
+                            setOpenUnderlinePalette(false);
+                          }}
+                        >
+                          <UnderlineStyleIcon style={option.style} />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
                   type="button"
                   aria-pressed={isContextTextActionEnabled("hidden")}
@@ -2650,14 +2810,48 @@ export function MushafPage({
                     }))
                   }
                 />
-                <button
-                  type="button"
-                  aria-pressed={isContextTextActionEnabled("underline")}
-                  className="rounded-lg border px-3 py-2"
-                  onClick={() => toggleContextTextAction("underline")}
-                >
-                  〰️ تسطير
-                </button>
+                <div className="relative inline-flex">
+                  <button
+                    type="button"
+                    aria-expanded={openUnderlinePalette}
+                    aria-haspopup="true"
+                    aria-pressed={UNDERLINE_STYLE_OPTIONS.some((option) =>
+                      isContextTextActionEnabled(option.action),
+                    )}
+                    className="rounded-lg border px-3 py-2"
+                    onClick={() => {
+                      setOpenColorPaletteAction(null);
+                      setOpenUnderlinePalette((current) => !current);
+                    }}
+                  >
+                    〰️ تسطير
+                  </button>
+                  {openUnderlinePalette && (
+                    <div
+                      className="absolute top-full right-0 z-50 mt-2 flex items-center gap-2 rounded-xl border bg-[var(--background)] p-2 shadow-lg"
+                      role="group"
+                      aria-label="أنواع التسطير"
+                    >
+                      {UNDERLINE_STYLE_OPTIONS.map((option) => (
+                        <button
+                          key={option.action}
+                          type="button"
+                          aria-label={option.label}
+                          aria-pressed={isContextTextActionEnabled(
+                            option.action,
+                          )}
+                          className="flex h-10 w-12 items-center justify-center rounded-lg border p-2"
+                          onClick={() => {
+                            toggleContextUnderlineStyle(option.style);
+                            setOpenUnderlinePalette(false);
+                          }}
+                        >
+                          <UnderlineStyleIcon style={option.style} />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
                   type="button"
                   aria-pressed={isContextTextActionEnabled("hidden")}
@@ -3800,14 +3994,48 @@ export function MushafPage({
                     }))
                   }
                 />
-                <button
-                  type="button"
-                  aria-pressed={isContextTextActionEnabled("underline")}
-                  className="rounded-lg border px-3 py-2"
-                  onClick={() => toggleContextTextAction("underline")}
-                >
-                  〰️ تسطير
-                </button>
+                <div className="relative inline-flex">
+                  <button
+                    type="button"
+                    aria-expanded={openUnderlinePalette}
+                    aria-haspopup="true"
+                    aria-pressed={UNDERLINE_STYLE_OPTIONS.some((option) =>
+                      isContextTextActionEnabled(option.action),
+                    )}
+                    className="rounded-lg border px-3 py-2"
+                    onClick={() => {
+                      setOpenColorPaletteAction(null);
+                      setOpenUnderlinePalette((current) => !current);
+                    }}
+                  >
+                    〰️ تسطير
+                  </button>
+                  {openUnderlinePalette && (
+                    <div
+                      className="absolute top-full right-0 z-50 mt-2 flex items-center gap-2 rounded-xl border bg-[var(--background)] p-2 shadow-lg"
+                      role="group"
+                      aria-label="أنواع التسطير"
+                    >
+                      {UNDERLINE_STYLE_OPTIONS.map((option) => (
+                        <button
+                          key={option.action}
+                          type="button"
+                          aria-label={option.label}
+                          aria-pressed={isContextTextActionEnabled(
+                            option.action,
+                          )}
+                          className="flex h-10 w-12 items-center justify-center rounded-lg border p-2"
+                          onClick={() => {
+                            toggleContextUnderlineStyle(option.style);
+                            setOpenUnderlinePalette(false);
+                          }}
+                        >
+                          <UnderlineStyleIcon style={option.style} />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
                   type="button"
                   aria-pressed={isContextTextActionEnabled("hidden")}
