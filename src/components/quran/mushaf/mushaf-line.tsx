@@ -9,6 +9,10 @@ type MushafLineProps = {
   surahNames: Map<number, string>;
   selectedAyahId?: number;
   selectedWords?: Set<string>;
+  mode: string;
+  textModifications: Record<string, boolean>;
+  previewOriginalOptions: Record<string, boolean>;
+  showAllTextOverride: boolean;
 };
 
 const BASMALLAH = "بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ";
@@ -19,6 +23,10 @@ export function MushafLine({
   surahNames,
   selectedAyahId,
   selectedWords,
+  mode,
+  textModifications,
+  previewOriginalOptions,
+  showAllTextOverride,
 }: MushafLineProps) {
   if (line.type === "surah_name") {
     const name =
@@ -88,6 +96,10 @@ export function MushafLine({
             layoutWords={words}
             selected={ayah.id === selectedAyahId}
             selectedWords={selectedWords}
+            mode={mode}
+            textModifications={textModifications}
+            previewOriginalOptions={previewOriginalOptions}
+            showAllTextOverride={showAllTextOverride}
           />
         );
       })}

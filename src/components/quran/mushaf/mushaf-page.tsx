@@ -37,12 +37,14 @@ type WordSelection = {
 type MenuState = null | {
   type: "ayah" | "word" | "selection" | "app-secondary";
   ayahId?: number;
+  wordKeys?: string[];
 };
 
 type MushafAnnotation = {
   id: string;
   ayahId: number;
   content: string;
+  mode: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -77,6 +79,8 @@ const SECONDARY_MODES: Array<{
   { id: "tahajjud", label: "التهجد", icon: "🌙" },
   { id: "progress", label: "المتابعة", icon: "📊" },
 ];
+
+type TextModification = "colors" | "highlight" | "underline" | "hidden";
 
 const TOTAL_PAGES = 604;
 const LONG_PRESS_MS = 550;
@@ -155,8 +159,7 @@ export function MushafPage({
       if (Number.isInteger(surahNumber) && Number.isInteger(ayahNumber)) {
         targetAyahId = ayahs.find(
           (ayah) =>
-            ayah.surahNumber === surahNumber &&
-            ayah.number === ayahNumber,
+            ayah.surahNumber === surahNumber && ayah.number === ayahNumber,
         )?.id;
       }
     }
@@ -173,7 +176,9 @@ export function MushafPage({
     setAnnotationBusy(true);
 
     try {
-      const response = await fetch("/api/annotations");
+      const response = await fetch(
+        `/api/annotations?mode=${encodeURIComponent(secondaryMode)}`,
+      );
 
       if (!response.ok) {
         throw new Error(
@@ -216,6 +221,7 @@ export function MushafPage({
         body: JSON.stringify({
           ayahId: annotationAyahId,
           content,
+          mode: secondaryMode,
         }),
       });
 
@@ -223,9 +229,7 @@ export function MushafPage({
 
       if (!response.ok) {
         const errorCode =
-          payload !== null &&
-          typeof payload === "object" &&
-          "error" in payload
+          payload !== null && typeof payload === "object" && "error" in payload
             ? payload.error
             : undefined;
 
@@ -311,7 +315,201 @@ export function MushafPage({
   const [silenceBeforeSelection, setSilenceBeforeSelection] = useState("0");
   const [silenceAfterSelection, setSilenceAfterSelection] = useState("0");
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [annotationOptions, setAnnotationOptions] = useState<
+    Record<string, boolean>
+  >({});
+  const [showAllTextByMode, setShowAllTextByMode] = useState<
+    Record<string, boolean>
+  >({});
+  const [textModifications, setTextModifications] = useState<
+    Record<string, boolean>
+  >({});
+  const [previewOriginalOptions, setPreviewOriginalOptions] = useState<
+    Record<string, boolean>
+  >({});
   const [secondaryMessage, setSecondaryMessage] = useState<string | null>(null);
+
+  const [contextSettingsReady, setContextSettingsReady] = useState(false);
+
+  useEffect(() => {
+    const isBooleanRecord = (
+      value: unknown,
+    ): value is Record<string, boolean> => {
+      return (
+        value !== null &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        Object.values(value).every((item) => typeof item === "boolean")
+      );
+    };
+
+    try {
+      const raw = window.localStorage.getItem(
+        "irtaki.mushaf.context-menu-settings.v1",
+      );
+
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+
+        if (
+          parsed !== null &&
+          typeof parsed === "object" &&
+          !Array.isArray(parsed)
+        ) {
+          const saved = parsed as Record<string, unknown>;
+
+          if (isBooleanRecord(saved.textModifications)) {
+            setTextModifications(saved.textModifications);
+          }
+
+          if (isBooleanRecord(saved.annotationOptions)) {
+            setAnnotationOptions(saved.annotationOptions);
+          }
+
+          if (isBooleanRecord(saved.showAllTextByMode)) {
+            setShowAllTextByMode(saved.showAllTextByMode);
+          }
+        }
+      }
+    } catch {
+      // Le stockage peut être indisponible ou contenir des données invalides.
+    } finally {
+      setContextSettingsReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Ne jamais écraser les valeurs sauvegardées avant leur lecture.
+    if (!contextSettingsReady) return;
+
+    try {
+      window.localStorage.setItem(
+        "irtaki.mushaf.context-menu-settings.v1",
+        JSON.stringify({
+          textModifications,
+          annotationOptions,
+          showAllTextByMode,
+        }),
+      );
+    } catch {
+      // Le navigateur peut refuser l'accès au stockage.
+    }
+  }, [
+    contextSettingsReady,
+    textModifications,
+    annotationOptions,
+    showAllTextByMode,
+  ]);
+  const [contextMenuMessage, setContextMenuMessage] = useState<string | null>(
+    null,
+  );
+
+  function toggleOriginalPreview(optionId: string) {
+    const key = `${secondaryMode}:${optionId}`;
+
+    // Ne touche ni au réglage enregistré ni aux styles des cibles.
+    setPreviewOriginalOptions((current) => ({
+      ...current,
+      [key]: current[key] !== true,
+    }));
+  }
+
+  function contextTextTargetKeys(): string[] {
+    if (!menu) return [];
+
+    if (menu.type === "ayah") {
+      return menu.ayahId === undefined ? [] : [`ayah:${menu.ayahId}`];
+    }
+
+    if (menu.type === "word" || menu.type === "selection") {
+      const keys = menu.wordKeys ?? [...selectedWords];
+      return keys.map((wordKey) => `word:${wordKey}`);
+    }
+
+    return [];
+  }
+
+  function isContextTextActionEnabled(action: TextModification): boolean {
+    const targets = contextTextTargetKeys();
+    if (action === "hidden" && showAllTextByMode[secondaryMode] === true) {
+      return false;
+    }
+    return (
+      targets.length > 0 &&
+      targets.every(
+        (target) =>
+          textModifications[`${secondaryMode}:${target}:${action}`] === true,
+      )
+    );
+  }
+
+  function toggleContextTextAction(action: TextModification) {
+    const targets = contextTextTargetKeys();
+    if (targets.length === 0) {
+      setContextMenuMessage("حدد آية أو كلمة أو تحديداً أولاً");
+      return;
+    }
+    if (action === "hidden" && showAllTextByMode[secondaryMode] === true) {
+      setShowAllTextByMode((current) => ({
+        ...current,
+        [secondaryMode]: false,
+      }));
+      setTextModifications((current) => {
+        const next = { ...current };
+        for (const target of targets) {
+          next[`${secondaryMode}:${target}:hidden`] = true;
+        }
+        return next;
+      });
+      setContextMenuMessage(null);
+      return;
+    }
+
+    const allEnabled = targets.every(
+      (target) =>
+        textModifications[`${secondaryMode}:${target}:${action}`] === true,
+    );
+    setTextModifications((current) => {
+      const next = { ...current };
+      for (const target of targets) {
+        next[`${secondaryMode}:${target}:${action}`] = !allEnabled;
+      }
+      return next;
+    });
+    setContextMenuMessage(null);
+  }
+
+  function toggleGlobalTextVisibility() {
+    const mode = secondaryMode;
+    const showAllTemporarily = showAllTextByMode[mode] !== true;
+
+    // Ne jamais effacer les masquages individuels :
+    // le second clic rétablit exactement leur état précédent.
+    setShowAllTextByMode((current) => ({
+      ...current,
+      [mode]: showAllTemporarily,
+    }));
+
+    showSecondaryMessage(
+      showAllTemporarily ? "إظهار الكل مؤقتاً" : "استعادة الإخفاء السابق",
+    );
+  }
+
+  function contextAyahId(): number | undefined {
+    if (menu?.type === "ayah") return menu.ayahId;
+    const firstKey = [...selectedWords][0];
+    if (firstKey) {
+      const [surahNumber, ayahNumber] = firstKey.split(":").map(Number);
+      if (Number.isInteger(surahNumber) && Number.isInteger(ayahNumber)) {
+        const target = ayahs.find(
+          (ayah) =>
+            ayah.surahNumber === surahNumber && ayah.number === ayahNumber,
+        );
+        if (target) return target.id;
+      }
+    }
+    return selectedAyahId;
+  }
 
   const interactionRef = useRef<{
     mode: InteractionMode;
@@ -455,6 +653,7 @@ export function MushafPage({
           event.preventDefault();
           setMenu({
             type: "selection",
+            wordKeys: [...selectedWords],
           });
           break;
 
@@ -553,6 +752,7 @@ export function MushafPage({
     setSelectedAyahId(undefined);
     setMenu({
       type: "word",
+      wordKeys: [word.key],
     });
   }
 
@@ -641,6 +841,7 @@ export function MushafPage({
         setSelectedAyahId(undefined);
         setMenu({
           type: "selection",
+          wordKeys: [...range],
         });
       }
 
@@ -2093,6 +2294,10 @@ export function MushafPage({
             surahNames={surahNames}
             selectedAyahId={selectedAyahId}
             selectedWords={selectedWords}
+            mode={secondaryMode}
+            textModifications={textModifications}
+            previewOriginalOptions={previewOriginalOptions}
+            showAllTextOverride={showAllTextByMode[secondaryMode] === true}
           />
         ))}
       </div>
@@ -2124,51 +2329,142 @@ export function MushafPage({
           }
         >
           {menu.type === "ayah" && (
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                className="rounded-lg border px-3 py-2"
-                onClick={() => void openAnnotations(menu.ayahId)}
-              >
-                التعليقات والملاحظات
-              </button>
+            <div className="flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3">
               <div className="font-semibold">قائمة الآية</div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="rounded-lg border px-3 py-2">
-                  قراءة
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => {
+                    setSelectedAyahId(menu.ayahId);
+                    selectSecondaryMode("listening");
+                    setContextMenuMessage(null);
+                    setMenu({ type: "app-secondary" });
+                  }}
+                >
+                  🎧 استماع
                 </button>
-                <button type="button" className="rounded-lg border px-3 py-2">
-                  استماع
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("colors")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("colors")}
+                >
+                  🎨 تلوين
                 </button>
-                <button type="button" className="rounded-lg border px-3 py-2">
-                  تكرار
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("highlight")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("highlight")}
+                >
+                  🖍️ تظليل
                 </button>
-                <button type="button" className="rounded-lg border px-3 py-2">
-                  حفظ
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("underline")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("underline")}
+                >
+                  〰️ تسطير
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("hidden")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("hidden")}
+                >
+                  {isContextTextActionEnabled("hidden") ? "إظهار" : "إخفاء"}
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => void openAnnotations(contextAyahId())}
+                >
+                  💬 تعليق
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() =>
+                    setContextMenuMessage("موضوع: الوظيفة غير مربوطة بعد")
+                  }
+                >
+                  موضوع
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() =>
+                    setContextMenuMessage("تفسير: الوظيفة غير مربوطة بعد")
+                  }
+                >
+                  تفسير
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() =>
+                    setContextMenuMessage("متشابهات: الوظيفة غير مربوطة بعد")
+                  }
+                >
+                  متشابهات
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() =>
+                    setContextMenuMessage("قراءات: الوظيفة غير مربوطة بعد")
+                  }
+                >
+                  قراءات
                 </button>
               </div>
             </div>
           )}
 
           {menu.type === "word" && (
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                className="rounded-lg border px-3 py-2"
-                onClick={() => void openAnnotations()}
-              >
-                التعليقات والملاحظات
-              </button>
+            <div className="flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3">
               <div className="font-semibold">قائمة الكلمة</div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="rounded-lg border px-3 py-2">
-                  معنى الكلمة
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("colors")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("colors")}
+                >
+                  🎨 تلوين
                 </button>
-                <button type="button" className="rounded-lg border px-3 py-2">
-                  تفسير
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("highlight")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("highlight")}
+                >
+                  🖍️ تظليل
                 </button>
-                <button type="button" className="rounded-lg border px-3 py-2">
-                  استماع
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("underline")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("underline")}
+                >
+                  〰️ تسطير
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("hidden")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("hidden")}
+                >
+                  {isContextTextActionEnabled("hidden") ? "إظهار" : "إخفاء"}
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => void openAnnotations(contextAyahId())}
+                >
+                  💬 تعليق
                 </button>
               </div>
             </div>
@@ -2292,7 +2588,7 @@ export function MushafPage({
                       type="button"
                       className="rounded-lg border px-3 py-2"
                       aria-label="إظهار وإخفاء"
-                      onClick={() => showSecondaryMessage("إظهار وإخفاء")}
+                      onClick={toggleGlobalTextVisibility}
                     >
                       👁
                     </button>
@@ -2345,7 +2641,7 @@ export function MushafPage({
                       type="button"
                       className="rounded-lg border px-3 py-2"
                       aria-label="إظهار وإخفاء"
-                      onClick={() => showSecondaryMessage("إظهار وإخفاء")}
+                      onClick={toggleGlobalTextVisibility}
                     >
                       👁
                     </button>
@@ -2426,18 +2722,39 @@ export function MushafPage({
                   </>
                 )}
 
-                {secondaryMode !== "listening" && (
-                  <button
-                    type="button"
-                    className="rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm font-semibold text-[var(--background)]"
-                    aria-label="البدء من أول آية في التحديد"
-                    onClick={() => {
-                      void startCurrentModeAtSelection();
-                    }}
-                  >
-                    ▶ ابدأ
-                  </button>
-                )}
+                {secondaryMode !== "listening" &&
+                  secondaryMode !== "recitation" && (
+                    <>
+                      {[
+                        { id: "colors", label: "تلوين", icon: "🎨" },
+                        { id: "underline", label: "تسطير", icon: "〰️" },
+                        { id: "highlight", label: "تظليل", icon: "🖍️" },
+                      ].map((option) => {
+                        const key = `${secondaryMode}:${option.id}`;
+                        const previewingOriginal =
+                          previewOriginalOptions[key] === true;
+                        const enabled = !previewingOriginal;
+
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            aria-label={`اختصار سريع: ${option.label}`}
+                            title={`${option.label}: ${previewingOriginal ? "الأصل معروض" : "عرض الأصل"}`}
+                            aria-pressed={previewingOriginal}
+                            className={
+                              enabled
+                                ? "rounded-lg border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                                : "rounded-lg border px-2 py-2 text-sm"
+                            }
+                            onClick={() => toggleOriginalPreview(option.id)}
+                          >
+                            {option.icon} {option.label}
+                          </button>
+                        );
+                      })}
+                    </>
+                  )}
 
                 <button
                   type="button"
@@ -2459,7 +2776,7 @@ export function MushafPage({
                 </button>
               </div>
 
-              {moreMenuOpen && (
+              {moreMenuOpen && secondaryMode === "listening" && (
                 <div
                   className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
                   role="menu"
@@ -2748,6 +3065,166 @@ export function MushafPage({
                       </button>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {moreMenuOpen &&
+                secondaryMode !== "listening" &&
+                secondaryMode !== "recitation" && (
+                  <div
+                    className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
+                    role="menu"
+                    aria-label="خيارات العرض والتعليقات"
+                  >
+                    <div className="text-center text-sm font-semibold">
+                      خيارات العرض والتعليقات
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {[
+                        { id: "notes", label: "ملاحظات", icon: "📝" },
+                        { id: "colors", label: "تلوين", icon: "🎨" },
+                        { id: "underline", label: "التسطير", icon: "〰️" },
+                        { id: "visibility", label: "إظهار وإخفاء", icon: "👁️" },
+                        {
+                          id: "ayahMarkers",
+                          label: "علامات الآيات",
+                          icon: "۞",
+                        },
+                        {
+                          id: "personalMarkers",
+                          label: "العلامات الشخصية",
+                          icon: "📌",
+                        },
+                        { id: "comments", label: "التعليقات", icon: "💬" },
+                        { id: "highlight", label: "التظليل", icon: "🖍️" },
+                        {
+                          id: "marginNotes",
+                          label: "ملاحظات الهامش",
+                          icon: "📒",
+                        },
+                      ].map((option) => {
+                        const key = `${secondaryMode}:${option.id}`;
+                        const previewingOriginal =
+                          option.id !== "visibility" &&
+                          previewOriginalOptions[key] === true;
+                        const enabled =
+                          option.id === "visibility"
+                            ? showAllTextByMode[secondaryMode] === true
+                            : annotationOptions[key] !== false;
+
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            role="menuitemcheckbox"
+                            aria-checked={enabled}
+                            aria-pressed={
+                              option.id === "visibility"
+                                ? enabled
+                                : previewingOriginal
+                            }
+                            className={
+                              enabled
+                                ? "flex items-center justify-between gap-2 rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                                : "flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
+                            }
+                            onClick={() => {
+                              if (option.id === "visibility") {
+                                toggleGlobalTextVisibility();
+                              } else {
+                                toggleOriginalPreview(option.id);
+                              }
+                            }}
+                          >
+                            <span>
+                              {option.icon} {option.label}
+                            </span>
+                            <span className="text-xs">
+                              {option.id === "visibility"
+                                ? enabled
+                                  ? "استعادة الإخفاء السابق"
+                                  : "إظهار الكل مؤقتاً"
+                                : previewingOriginal
+                                  ? "الأصل معروض"
+                                  : "عرض الأصل"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2 text-sm"
+                      onClick={() => void openAnnotations(selectedAyahId)}
+                    >
+                      📝 فتح وإضافة ملاحظة للآية المحددة
+                    </button>
+                  </div>
+                )}
+
+              {moreMenuOpen && secondaryMode === "recitation" && (
+                <div
+                  className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
+                  role="menu"
+                  aria-label="إعدادات التلاوة"
+                >
+                  <div className="text-center text-sm font-semibold">
+                    إعدادات التلاوة
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2 text-sm"
+                      onClick={() => void openAnnotations(selectedAyahId)}
+                    >
+                      📝 ملاحظات الآية
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2 text-sm"
+                      aria-label="الآية السابقة"
+                      onClick={() => navigateAyah(-1)}
+                    >
+                      ⏮ الآية السابقة
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2 text-sm"
+                      aria-label="الآية التالية"
+                      onClick={() => navigateAyah(1)}
+                    >
+                      ⏭ الآية التالية
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2 text-sm"
+                      aria-pressed={isPlaying}
+                      onClick={togglePlayback}
+                    >
+                      {isPlaying ? "⏸ إيقاف المرجع" : "▶ تشغيل المرجع"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-3 py-2 text-sm"
+                      onClick={() =>
+                        showSecondaryMessage("التسجيل الصوتي غير متاح بعد")
+                      }
+                    >
+                      🎙️ التسجيل الصوتي
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    تُحفظ الملاحظات ضمن وضع التلاوة بشكل مستقل عن بقية الأوضاع.
+                    التسجيل الصوتي الفعلي لم يُنفذ بعد.
+                  </p>
                 </div>
               )}
 
@@ -3054,37 +3531,64 @@ export function MushafPage({
           )}
 
           {menu.type === "selection" && (
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                className="rounded-lg border px-3 py-2"
-                onClick={() => void openAnnotations()}
-              >
-                التعليقات والملاحظات
-              </button>
+            <div className="flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3">
               <div className="font-semibold">تحديد الكلمات</div>
-
               <div className="text-sm text-[var(--muted)]">
                 {selectedWords.size}{" "}
                 {selectedWords.size === 1 ? "كلمة محددة" : "كلمات محددة"}
               </div>
-
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="rounded-lg border px-3 py-2">
-                  استماع
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("colors")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("colors")}
+                >
+                  🎨 تلوين
                 </button>
-                <button type="button" className="rounded-lg border px-3 py-2">
-                  تكرار
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("highlight")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("highlight")}
+                >
+                  🖍️ تظليل
                 </button>
-                <button type="button" className="rounded-lg border px-3 py-2">
-                  ترجمة
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("underline")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("underline")}
+                >
+                  〰️ تسطير
                 </button>
-                <button type="button" className="rounded-lg border px-3 py-2">
-                  تفسير
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("hidden")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("hidden")}
+                >
+                  {isContextTextActionEnabled("hidden") ? "إظهار" : "إخفاء"}
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => void openAnnotations(contextAyahId())}
+                >
+                  💬 تعليق
                 </button>
               </div>
             </div>
           )}
+          {contextMenuMessage ? (
+            <div
+              className="text-center text-sm text-[var(--muted)]"
+              role="status"
+              aria-live="polite"
+            >
+              {contextMenuMessage}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -3117,13 +3621,12 @@ export function MushafPage({
                   </div>
                 ))}
 
-              {annotations.every(
-                (item) => item.ayahId !== annotationAyahId,
-              ) && !annotationBusy && (
-                <p className="text-sm text-[var(--muted)]">
-                  لا توجد ملاحظات لهذا الموضع.
-                </p>
-              )}
+              {annotations.every((item) => item.ayahId !== annotationAyahId) &&
+                !annotationBusy && (
+                  <p className="text-sm text-[var(--muted)]">
+                    لا توجد ملاحظات لهذا الموضع.
+                  </p>
+                )}
             </div>
           )}
 
@@ -3174,7 +3677,6 @@ export function MushafPage({
           </form>
         </div>
       )}
-
     </article>
   );
 }

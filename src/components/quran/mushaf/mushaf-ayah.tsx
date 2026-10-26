@@ -9,6 +9,10 @@ type MushafAyahProps = {
   selected?: boolean;
   selectedWords?: Set<string>;
   onAyahClick?: (ayah: AyahDto) => void;
+  mode: string;
+  textModifications: Record<string, boolean>;
+  previewOriginalOptions: Record<string, boolean>;
+  showAllTextOverride: boolean;
 };
 
 function isAyahNumberMarker(text: string): boolean {
@@ -33,6 +37,10 @@ export function MushafAyah({
   selected = false,
   selectedWords,
   onAyahClick,
+  mode,
+  textModifications,
+  previewOriginalOptions,
+  showAllTextOverride,
 }: MushafAyahProps) {
   const fallbackWords = useMemo(
     () => ayah.text.trim().split(/\s+/),
@@ -52,6 +60,19 @@ export function MushafAyah({
       text: word,
     }));
 
+  const ayahColors =
+    previewOriginalOptions[`${mode}:colors`] !== true &&
+    textModifications[`${mode}:ayah:${ayah.id}:colors`] === true;
+  const ayahHighlight =
+    previewOriginalOptions[`${mode}:highlight`] !== true &&
+    textModifications[`${mode}:ayah:${ayah.id}:highlight`] === true;
+  const ayahUnderline =
+    previewOriginalOptions[`${mode}:underline`] !== true &&
+    textModifications[`${mode}:ayah:${ayah.id}:underline`] === true;
+  const ayahHidden =
+    !showAllTextOverride &&
+    textModifications[`${mode}:ayah:${ayah.id}:hidden`] === true;
+
   return (
     <span
       data-ayah-id={ayah.id}
@@ -61,9 +82,11 @@ export function MushafAyah({
       className={[
         "inline rounded-md transition-colors",
         selected ? "bg-gray-200/80" : "",
+        ayahHidden ? "opacity-0" : "",
       ]
         .filter(Boolean)
         .join(" ")}
+      style={{ opacity: ayahHidden ? 0 : 1 }}
     >
       <button
         type="button"
@@ -77,6 +100,18 @@ export function MushafAyah({
         {renderedWords.map((word, index) => {
           const wordKey = `${word.surah}:${word.ayah}:${word.word}`;
           const selectedWord = selectedWords?.has(wordKey) ?? false;
+          const wordColors =
+            previewOriginalOptions[`${mode}:colors`] !== true &&
+            textModifications[`${mode}:word:${wordKey}:colors`] === true;
+          const wordHighlight =
+            previewOriginalOptions[`${mode}:highlight`] !== true &&
+            textModifications[`${mode}:word:${wordKey}:highlight`] === true;
+          const wordUnderline =
+            previewOriginalOptions[`${mode}:underline`] !== true &&
+            textModifications[`${mode}:word:${wordKey}:underline`] === true;
+          const wordHidden =
+            !showAllTextOverride &&
+            textModifications[`${mode}:word:${wordKey}:hidden`] === true;
 
           return (
             <span
@@ -91,9 +126,20 @@ export function MushafAyah({
                 selectedWord
                   ? "rounded-sm border border-black bg-gray-300/80 px-1"
                   : "",
+                wordColors || ayahColors
+                  ? "text-blue-700 dark:text-blue-300"
+                  : "",
+                wordHighlight || ayahHighlight
+                  ? "rounded-sm bg-yellow-200/80 dark:bg-yellow-400/30"
+                  : "",
+                wordUnderline || ayahUnderline
+                  ? "underline decoration-2 underline-offset-4"
+                  : "",
+                wordHidden || ayahHidden ? "opacity-0" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
+              style={{ opacity: wordHidden || ayahHidden ? 0 : 1 }}
             >
               {word.text}
               {index < renderedWords.length - 1 ? " " : ""}
