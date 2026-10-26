@@ -14,6 +14,8 @@ type MushafLineProps = {
   colorAssignments: Record<string, string>;
   previewOriginalOptions: Record<string, boolean>;
   showAllTextOverride: boolean;
+  hideUnrevealedAyahs: boolean;
+  revealedAyahIds: Set<number>;
 };
 
 const BASMALLAH = "بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ";
@@ -29,6 +31,8 @@ export function MushafLine({
   colorAssignments,
   previewOriginalOptions,
   showAllTextOverride,
+  hideUnrevealedAyahs,
+  revealedAyahIds,
 }: MushafLineProps) {
   if (line.type === "surah_name") {
     const name =
@@ -103,6 +107,7 @@ export function MushafLine({
             colorAssignments={colorAssignments}
             previewOriginalOptions={previewOriginalOptions}
             showAllTextOverride={showAllTextOverride}
+            hideText={hideUnrevealedAyahs && !revealedAyahIds.has(ayah.id)}
           />
         );
       })}

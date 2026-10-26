@@ -43,6 +43,7 @@ type MushafAyahProps = {
   colorAssignments: Record<string, string>;
   previewOriginalOptions: Record<string, boolean>;
   showAllTextOverride: boolean;
+  hideText?: boolean;
 };
 
 function isAyahNumberMarker(text: string): boolean {
@@ -72,6 +73,7 @@ export function MushafAyah({
   colorAssignments,
   previewOriginalOptions,
   showAllTextOverride,
+  hideText = false,
 }: MushafAyahProps) {
   const fallbackWords = useMemo(
     () => ayah.text.trim().split(/\s+/),
@@ -112,8 +114,9 @@ export function MushafAyah({
       ? colorAssignments[`${mode}:ayah:${ayah.id}:highlight`]
       : undefined;
   const ayahHidden =
-    !showAllTextOverride &&
-    textModifications[`${mode}:ayah:${ayah.id}:hidden`] === true;
+    hideText ||
+    (!showAllTextOverride &&
+      textModifications[`${mode}:ayah:${ayah.id}:hidden`] === true);
 
   return (
     <span
