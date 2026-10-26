@@ -25,7 +25,7 @@ function renderAyahMarker(number: string) {
     <span
       aria-hidden="true"
       data-mushaf-ayah-marker
-      className="mx-1 inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-current px-1 align-middle text-sm leading-none"
+      className="mx-1 inline-flex min-w-[1.4em] items-center justify-center px-1 align-middle text-[1.15em] leading-normal font-semibold"
     >
       {number}
     </span>
