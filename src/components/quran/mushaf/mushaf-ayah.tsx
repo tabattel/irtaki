@@ -11,6 +11,7 @@ type MushafAyahProps = {
   onAyahClick?: (ayah: AyahDto) => void;
   mode: string;
   textModifications: Record<string, boolean>;
+  colorAssignments: Record<string, string>;
   previewOriginalOptions: Record<string, boolean>;
   showAllTextOverride: boolean;
 };
@@ -39,6 +40,7 @@ export function MushafAyah({
   onAyahClick,
   mode,
   textModifications,
+  colorAssignments,
   previewOriginalOptions,
   showAllTextOverride,
 }: MushafAyahProps) {
@@ -69,6 +71,14 @@ export function MushafAyah({
   const ayahUnderline =
     previewOriginalOptions[`${mode}:underline`] !== true &&
     textModifications[`${mode}:ayah:${ayah.id}:underline`] === true;
+  const ayahColor =
+    previewOriginalOptions[`${mode}:colors`] !== true
+      ? colorAssignments[`${mode}:ayah:${ayah.id}:colors`]
+      : undefined;
+  const ayahHighlightColor =
+    previewOriginalOptions[`${mode}:highlight`] !== true
+      ? colorAssignments[`${mode}:ayah:${ayah.id}:highlight`]
+      : undefined;
   const ayahHidden =
     !showAllTextOverride &&
     textModifications[`${mode}:ayah:${ayah.id}:hidden`] === true;
@@ -109,6 +119,14 @@ export function MushafAyah({
           const wordUnderline =
             previewOriginalOptions[`${mode}:underline`] !== true &&
             textModifications[`${mode}:word:${wordKey}:underline`] === true;
+          const wordColor =
+            previewOriginalOptions[`${mode}:colors`] !== true
+              ? colorAssignments[`${mode}:word:${wordKey}:colors`]
+              : undefined;
+          const wordHighlightColor =
+            previewOriginalOptions[`${mode}:highlight`] !== true
+              ? colorAssignments[`${mode}:word:${wordKey}:highlight`]
+              : undefined;
           const wordHidden =
             !showAllTextOverride &&
             textModifications[`${mode}:word:${wordKey}:hidden`] === true;
@@ -139,7 +157,14 @@ export function MushafAyah({
               ]
                 .filter(Boolean)
                 .join(" ")}
-              style={{ opacity: wordHidden || ayahHidden ? 0 : 1 }}
+              style={{
+                opacity: wordHidden || ayahHidden ? 0 : 1,
+                color: wordColor ?? ayahColor,
+                backgroundColor:
+                  wordHighlightColor || ayahHighlightColor
+                    ? `${wordHighlightColor ?? ayahHighlightColor}55`
+                    : undefined,
+              }}
             >
               {word.text}
               {index < renderedWords.length - 1 ? " " : ""}

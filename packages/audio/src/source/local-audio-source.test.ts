@@ -11,20 +11,20 @@ describe("local audio source", () => {
   });
 
   it("maps Alafasy ayah 1 to the confirmed storage filename", () => {
-    expect(
-      createLocalAudioSourceLocation("hafs-afassi", 1, 1),
-    ).toEqual({
+    expect(createLocalAudioSourceLocation("hafs-afassi", 1, 1)).toEqual({
       reciterId: "hafs-afassi",
+      qiraaId: 5,
+      riwayaId: 10,
       directory: "mishary-alafasy",
       fileName: "001001.opus",
     });
   });
 
   it("maps a later surah correctly", () => {
-    expect(
-      createLocalAudioSourceLocation("hafs-djebril", 114, 6),
-    ).toEqual({
+    expect(createLocalAudioSourceLocation("hafs-djebril", 114, 6)).toEqual({
       reciterId: "hafs-djebril",
+      qiraaId: 5,
+      riwayaId: 10,
       directory: "mohamed-jebril",
       fileName: "114006.opus",
     });

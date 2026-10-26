@@ -11,6 +11,7 @@ type MushafLineProps = {
   selectedWords?: Set<string>;
   mode: string;
   textModifications: Record<string, boolean>;
+  colorAssignments: Record<string, string>;
   previewOriginalOptions: Record<string, boolean>;
   showAllTextOverride: boolean;
 };
@@ -25,6 +26,7 @@ export function MushafLine({
   selectedWords,
   mode,
   textModifications,
+  colorAssignments,
   previewOriginalOptions,
   showAllTextOverride,
 }: MushafLineProps) {
@@ -98,6 +100,7 @@ export function MushafLine({
             selectedWords={selectedWords}
             mode={mode}
             textModifications={textModifications}
+            colorAssignments={colorAssignments}
             previewOriginalOptions={previewOriginalOptions}
             showAllTextOverride={showAllTextOverride}
           />

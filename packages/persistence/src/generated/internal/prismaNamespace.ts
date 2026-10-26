@@ -1982,6 +1982,7 @@ export const AnnotationScalarFieldEnum = {
   userId: 'userId',
   ayahId: 'ayahId',
   content: 'content',
+  mode: 'mode',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

@@ -49,6 +49,7 @@ describe("AnnotationService", () => {
       "user-1",
       42,
       "My note",
+      "qiraa",
     );
     expect(result.content).toBe("My note");
   });
@@ -86,7 +87,10 @@ describe("AnnotationService", () => {
     const result = await service.list("user-1");
 
     expect(result).toEqual([]);
-    expect(annotationRepository.findByUserId).toHaveBeenCalledWith("user-1");
+    expect(annotationRepository.findByUserId).toHaveBeenCalledWith(
+      "user-1",
+      undefined,
+    );
   });
 
   it("lists annotations for one ayah and the authenticated user", async () => {

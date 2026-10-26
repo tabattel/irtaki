@@ -122,6 +122,7 @@ model Annotation {
   userId    String
   ayahId    Int
   content   String
+  mode      String   @default("qiraa")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

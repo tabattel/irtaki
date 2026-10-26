@@ -8,6 +8,7 @@ export type Annotation = {
   userId: string;
   ayahId: number;
   content: string;
+  mode: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -22,6 +23,7 @@ export class AnnotationService {
     userId: string;
     ayahId: number;
     content: string;
+    mode?: string;
   }): Promise<Annotation> {
     const content = input.content.trim();
 
@@ -39,11 +41,12 @@ export class AnnotationService {
       input.userId,
       input.ayahId,
       content,
+      input.mode ?? "qiraa",
     );
   }
 
-  async list(userId: string): Promise<Annotation[]> {
-    return this.annotationRepository.findByUserId(userId);
+  async list(userId: string, mode?: string): Promise<Annotation[]> {
+    return this.annotationRepository.findByUserId(userId, mode);
   }
 
   async listByAyah(input: {

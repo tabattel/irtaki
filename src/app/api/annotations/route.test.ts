@@ -7,8 +7,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/auth/http/get-authenticated-user", () => ({
-  getAuthenticatedUserFromRequest:
-    mocks.getAuthenticatedUserFromRequest,
+  getAuthenticatedUserFromRequest: mocks.getAuthenticatedUserFromRequest,
 }));
 
 vi.mock("@/annotation/annotation-service", () => ({
@@ -57,7 +56,7 @@ describe("GET /api/annotations", () => {
         content: "Note",
       },
     ]);
-    expect(mocks.list).toHaveBeenCalledWith("user-1");
+    expect(mocks.list).toHaveBeenCalledWith("user-1", "qiraa");
   });
 });
 
@@ -115,6 +114,7 @@ describe("POST /api/annotations", () => {
       userId: "user-1",
       ayahId: 1,
       content: "Note",
+      mode: "qiraa",
     });
   });
 

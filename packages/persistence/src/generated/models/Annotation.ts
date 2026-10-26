@@ -39,6 +39,7 @@ export type AnnotationMinAggregateOutputType = {
   userId: string | null
   ayahId: number | null
   content: string | null
+  mode: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -48,6 +49,7 @@ export type AnnotationMaxAggregateOutputType = {
   userId: string | null
   ayahId: number | null
   content: string | null
+  mode: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -57,6 +59,7 @@ export type AnnotationCountAggregateOutputType = {
   userId: number
   ayahId: number
   content: number
+  mode: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -76,6 +79,7 @@ export type AnnotationMinAggregateInputType = {
   userId?: true
   ayahId?: true
   content?: true
+  mode?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -85,6 +89,7 @@ export type AnnotationMaxAggregateInputType = {
   userId?: true
   ayahId?: true
   content?: true
+  mode?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -94,6 +99,7 @@ export type AnnotationCountAggregateInputType = {
   userId?: true
   ayahId?: true
   content?: true
+  mode?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -190,6 +196,7 @@ export type AnnotationGroupByOutputType = {
   userId: string
   ayahId: number
   content: string
+  mode: string
   createdAt: Date
   updatedAt: Date
   _count: AnnotationCountAggregateOutputType | null
@@ -222,6 +229,7 @@ export type AnnotationWhereInput = {
   userId?: Prisma.StringFilter<"Annotation"> | string
   ayahId?: Prisma.IntFilter<"Annotation"> | number
   content?: Prisma.StringFilter<"Annotation"> | string
+  mode?: Prisma.StringFilter<"Annotation"> | string
   createdAt?: Prisma.DateTimeFilter<"Annotation"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Annotation"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -233,6 +241,7 @@ export type AnnotationOrderByWithRelationInput = {
   userId?: Prisma.SortOrder
   ayahId?: Prisma.SortOrder
   content?: Prisma.SortOrder
+  mode?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
@@ -247,6 +256,7 @@ export type AnnotationWhereUniqueInput = Prisma.AtLeast<{
   userId?: Prisma.StringFilter<"Annotation"> | string
   ayahId?: Prisma.IntFilter<"Annotation"> | number
   content?: Prisma.StringFilter<"Annotation"> | string
+  mode?: Prisma.StringFilter<"Annotation"> | string
   createdAt?: Prisma.DateTimeFilter<"Annotation"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Annotation"> | Date | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
@@ -258,6 +268,7 @@ export type AnnotationOrderByWithAggregationInput = {
   userId?: Prisma.SortOrder
   ayahId?: Prisma.SortOrder
   content?: Prisma.SortOrder
+  mode?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.AnnotationCountOrderByAggregateInput
@@ -275,6 +286,7 @@ export type AnnotationScalarWhereWithAggregatesInput = {
   userId?: Prisma.StringWithAggregatesFilter<"Annotation"> | string
   ayahId?: Prisma.IntWithAggregatesFilter<"Annotation"> | number
   content?: Prisma.StringWithAggregatesFilter<"Annotation"> | string
+  mode?: Prisma.StringWithAggregatesFilter<"Annotation"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Annotation"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Annotation"> | Date | string
 }
@@ -282,6 +294,7 @@ export type AnnotationScalarWhereWithAggregatesInput = {
 export type AnnotationCreateInput = {
   id?: string
   content: string
+  mode?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutAnnotationsInput
@@ -293,6 +306,7 @@ export type AnnotationUncheckedCreateInput = {
   userId: string
   ayahId: number
   content: string
+  mode?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -300,6 +314,7 @@ export type AnnotationUncheckedCreateInput = {
 export type AnnotationUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutAnnotationsNestedInput
@@ -311,6 +326,7 @@ export type AnnotationUncheckedUpdateInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   ayahId?: Prisma.IntFieldUpdateOperationsInput | number
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -320,6 +336,7 @@ export type AnnotationCreateManyInput = {
   userId: string
   ayahId: number
   content: string
+  mode?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -327,6 +344,7 @@ export type AnnotationCreateManyInput = {
 export type AnnotationUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -336,6 +354,7 @@ export type AnnotationUncheckedUpdateManyInput = {
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   ayahId?: Prisma.IntFieldUpdateOperationsInput | number
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -355,6 +374,7 @@ export type AnnotationCountOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   ayahId?: Prisma.SortOrder
   content?: Prisma.SortOrder
+  mode?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -368,6 +388,7 @@ export type AnnotationMaxOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   ayahId?: Prisma.SortOrder
   content?: Prisma.SortOrder
+  mode?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -377,6 +398,7 @@ export type AnnotationMinOrderByAggregateInput = {
   userId?: Prisma.SortOrder
   ayahId?: Prisma.SortOrder
   content?: Prisma.SortOrder
+  mode?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -472,6 +494,7 @@ export type AnnotationUncheckedUpdateManyWithoutUserNestedInput = {
 export type AnnotationCreateWithoutAyahInput = {
   id?: string
   content: string
+  mode?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutAnnotationsInput
@@ -481,6 +504,7 @@ export type AnnotationUncheckedCreateWithoutAyahInput = {
   id?: string
   userId: string
   content: string
+  mode?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -519,6 +543,7 @@ export type AnnotationScalarWhereInput = {
   userId?: Prisma.StringFilter<"Annotation"> | string
   ayahId?: Prisma.IntFilter<"Annotation"> | number
   content?: Prisma.StringFilter<"Annotation"> | string
+  mode?: Prisma.StringFilter<"Annotation"> | string
   createdAt?: Prisma.DateTimeFilter<"Annotation"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Annotation"> | Date | string
 }
@@ -526,6 +551,7 @@ export type AnnotationScalarWhereInput = {
 export type AnnotationCreateWithoutUserInput = {
   id?: string
   content: string
+  mode?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   ayah: Prisma.AyahCreateNestedOneWithoutAnnotationsInput
@@ -535,6 +561,7 @@ export type AnnotationUncheckedCreateWithoutUserInput = {
   id?: string
   ayahId: number
   content: string
+  mode?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -569,6 +596,7 @@ export type AnnotationCreateManyAyahInput = {
   id?: string
   userId: string
   content: string
+  mode?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -576,6 +604,7 @@ export type AnnotationCreateManyAyahInput = {
 export type AnnotationUpdateWithoutAyahInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutAnnotationsNestedInput
@@ -585,6 +614,7 @@ export type AnnotationUncheckedUpdateWithoutAyahInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -593,6 +623,7 @@ export type AnnotationUncheckedUpdateManyWithoutAyahInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -601,6 +632,7 @@ export type AnnotationCreateManyUserInput = {
   id?: string
   ayahId: number
   content: string
+  mode?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -608,6 +640,7 @@ export type AnnotationCreateManyUserInput = {
 export type AnnotationUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ayah?: Prisma.AyahUpdateOneRequiredWithoutAnnotationsNestedInput
@@ -617,6 +650,7 @@ export type AnnotationUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   ayahId?: Prisma.IntFieldUpdateOperationsInput | number
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -625,6 +659,7 @@ export type AnnotationUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   ayahId?: Prisma.IntFieldUpdateOperationsInput | number
   content?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -636,6 +671,7 @@ export type AnnotationSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   userId?: boolean
   ayahId?: boolean
   content?: boolean
+  mode?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -647,6 +683,7 @@ export type AnnotationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   userId?: boolean
   ayahId?: boolean
   content?: boolean
+  mode?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -658,6 +695,7 @@ export type AnnotationSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   userId?: boolean
   ayahId?: boolean
   content?: boolean
+  mode?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -669,11 +707,12 @@ export type AnnotationSelectScalar = {
   userId?: boolean
   ayahId?: boolean
   content?: boolean
+  mode?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type AnnotationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "ayahId" | "content" | "createdAt" | "updatedAt", ExtArgs["result"]["annotation"]>
+export type AnnotationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "ayahId" | "content" | "mode" | "createdAt" | "updatedAt", ExtArgs["result"]["annotation"]>
 export type AnnotationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   ayah?: boolean | Prisma.AyahDefaultArgs<ExtArgs>
@@ -698,6 +737,7 @@ export type $AnnotationPayload<ExtArgs extends runtime.Types.Extensions.Internal
     userId: string
     ayahId: number
     content: string
+    mode: string
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["annotation"]>
@@ -1129,6 +1169,7 @@ export interface AnnotationFieldRefs {
   readonly userId: Prisma.FieldRef<"Annotation", 'String'>
   readonly ayahId: Prisma.FieldRef<"Annotation", 'Int'>
   readonly content: Prisma.FieldRef<"Annotation", 'String'>
+  readonly mode: Prisma.FieldRef<"Annotation", 'String'>
   readonly createdAt: Prisma.FieldRef<"Annotation", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Annotation", 'DateTime'>
 }

@@ -6,12 +6,14 @@ export class AnnotationRepository {
     userId: string,
     ayahId: number,
     content: string,
+    mode = "qiraa",
   ): Promise<Annotation> {
     return prisma.annotation.create({
       data: {
         userId,
         ayahId,
         content,
+        mode,
       },
     });
   }
@@ -25,9 +27,12 @@ export class AnnotationRepository {
     });
   }
 
-  findByUserId(userId: string): Promise<Annotation[]> {
+  findByUserId(userId: string, mode?: string): Promise<Annotation[]> {
     return prisma.annotation.findMany({
-      where: { userId },
+      where: {
+        userId,
+        ...(mode ? { mode } : {}),
+      },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
   }

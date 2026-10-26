@@ -1,5 +1,7 @@
 "use client";
 
+import { MushafColorPalette } from "./mushaf-color-palette";
+
 import {
   type PointerEvent as ReactPointerEvent,
   useEffect,
@@ -137,12 +139,125 @@ export function MushafPage({
   );
 
   const [menu, setMenu] = useState<MenuState>(null);
+  const [openColorPaletteAction, setOpenColorPaletteAction] = useState<
+    "colors" | "highlight" | null
+  >(null);
+  const [colorPaletteLabels, setColorPaletteLabels] = useState<
+    Record<string, string>
+  >({});
+  const [colorPaletteLabelsLoaded, setColorPaletteLabelsLoaded] =
+    useState(false);
+  const [colorAssignments, setColorAssignments] = useState<
+    Record<string, string>
+  >({});
+  const [colorAssignmentsLoadedFor, setColorAssignmentsLoadedFor] = useState<
+    string | null
+  >(null);
+  const colorAssignmentStorageKey = `irtaki.mushaf.color-assignments.v1.${mushafId}.${riwayaId}`;
   const [annotationPanelOpen, setAnnotationPanelOpen] = useState(false);
   const [annotationAyahId, setAnnotationAyahId] = useState<number | null>(null);
   const [annotations, setAnnotations] = useState<MushafAnnotation[]>([]);
   const [annotationContent, setAnnotationContent] = useState("");
   const [annotationStatus, setAnnotationStatus] = useState("");
   const [annotationBusy, setAnnotationBusy] = useState(false);
+
+  useEffect(() => {
+    let restored: Record<string, string> = {};
+
+    try {
+      const raw = window.localStorage.getItem(
+        "irtaki.mushaf.color-palette-labels.v1",
+      );
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          !Array.isArray(parsed)
+        ) {
+          for (const [id, value] of Object.entries(parsed)) {
+            if (typeof value !== "string") continue;
+
+            const label = value.slice(0, 40);
+            if (/^c(?:0[1-9]|1[0-2])$/.test(id)) {
+              for (const selectionType of [
+                "ayah",
+                "word",
+                "selection",
+              ] as const) {
+                for (const action of ["colors", "highlight"] as const) {
+                  restored[`${selectionType}.${action}.${id}`] = label;
+                }
+              }
+            } else if (
+              /^(ayah|word|selection)\.(colors|highlight)\.c(?:0[1-9]|1[0-2])$/.test(
+                id,
+              )
+            ) {
+              restored[id] = value.slice(0, 40);
+            }
+          }
+        }
+      }
+    } catch {
+      // La palette reste utilisable si le stockage local est indisponible.
+    }
+
+    setColorPaletteLabels(restored);
+    setColorPaletteLabelsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!colorPaletteLabelsLoaded) return;
+    try {
+      window.localStorage.setItem(
+        "irtaki.mushaf.color-palette-labels.v1",
+        JSON.stringify(colorPaletteLabels),
+      );
+    } catch {
+      // Les libellés restent disponibles pendant la session.
+    }
+  }, [colorPaletteLabels, colorPaletteLabelsLoaded]);
+
+  useEffect(() => {
+    let restored: Record<string, string> = {};
+
+    try {
+      const raw = window.localStorage.getItem(colorAssignmentStorageKey);
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          !Array.isArray(parsed)
+        ) {
+          for (const [key, value] of Object.entries(parsed)) {
+            if (typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value)) {
+              restored[key] = value;
+            }
+          }
+        }
+      }
+    } catch {
+      // Les couleurs restent utilisables pendant la session.
+    }
+
+    setColorAssignments(restored);
+    setColorAssignmentsLoadedFor(colorAssignmentStorageKey);
+  }, [colorAssignmentStorageKey]);
+
+  useEffect(() => {
+    if (colorAssignmentsLoadedFor !== colorAssignmentStorageKey) return;
+
+    try {
+      window.localStorage.setItem(
+        colorAssignmentStorageKey,
+        JSON.stringify(colorAssignments),
+      );
+    } catch {
+      // Les couleurs restent disponibles pendant la session.
+    }
+  }, [colorAssignments, colorAssignmentsLoadedFor, colorAssignmentStorageKey]);
 
   async function openAnnotations(ayahId?: number) {
     setAnnotationPanelOpen(true);
@@ -477,6 +592,68 @@ export function MushafPage({
       return next;
     });
     setContextMenuMessage(null);
+  }
+
+  function applyContextColor(action: "colors" | "highlight", color: string) {
+    const targets: string[] = [];
+
+    if (menu?.type === "ayah") {
+      targets.push(`ayah:${menu.ayahId}`);
+    } else if (menu?.type === "word") {
+      const keys = menu.wordKeys ?? [...selectedWords];
+      for (const key of keys) {
+        targets.push(`word:${key}`);
+      }
+    } else if (menu?.type === "selection") {
+      for (const key of selectedWords) {
+        targets.push(`word:${key}`);
+      }
+    }
+
+    if (targets.length === 0) {
+      setContextMenuMessage("حدد آية أو كلمة أولاً");
+      setOpenColorPaletteAction(null);
+      return;
+    }
+
+    const keys = targets.map(
+      (target) => `${secondaryMode}:${target}:${action}`,
+    );
+    const removeColor = keys.every(
+      (key) =>
+        colorAssignments[key] === color && textModifications[key] === true,
+    );
+
+    setColorAssignments((current) => {
+      const next = { ...current };
+      for (const key of keys) {
+        if (removeColor) {
+          delete next[key];
+        } else {
+          next[key] = color;
+        }
+      }
+      return next;
+    });
+
+    setTextModifications((current) => {
+      const next = { ...current };
+      for (const key of keys) {
+        next[key] = !removeColor;
+      }
+      return next;
+    });
+
+    setOpenColorPaletteAction(null);
+    setContextMenuMessage(
+      removeColor
+        ? action === "colors"
+          ? "تم إلغاء اللون"
+          : "تم إلغاء التظليل"
+        : action === "colors"
+          ? "تم تطبيق اللون على التحديد"
+          : "تم تطبيق التظليل على التحديد",
+    );
   }
 
   function toggleGlobalTextVisibility() {
@@ -1503,10 +1680,6 @@ export function MushafPage({
   }
 
   async function startCurrentModeAtSelection() {
-    if (secondaryMode === "listening") {
-      return;
-    }
-
     const startSurah = Number(audioStartSurah);
     const startAyah = Number(audioStartAyah);
 
@@ -1542,13 +1715,7 @@ export function MushafPage({
         return;
       }
 
-      // Arrêter toute lecture éventuellement laissée active par un autre mode.
-      // Cette action ne prépare ni ne démarre une nouvelle lecture audio.
-      pausePlayback();
-
       setMoreMenuOpen(false);
-      setModePickerOpen(false);
-      setReciterPickerOpen(false);
 
       if (targetAyah.pageNumber === pageNumber) {
         setSelectedAyahId(targetAyah.id);
@@ -1567,8 +1734,6 @@ export function MushafPage({
           `/coran/${riwayaId}/page/${targetAyah.pageNumber}?ayah=${targetAyah.id}`,
         );
       }
-
-      showSecondaryMessage("تم الانتقال إلى بداية التحديد");
     } catch {
       showSecondaryMessage("تعذر الوصول إلى الآية المحددة");
     }
@@ -2296,6 +2461,7 @@ export function MushafPage({
             selectedWords={selectedWords}
             mode={secondaryMode}
             textModifications={textModifications}
+            colorAssignments={colorAssignments}
             previewOriginalOptions={previewOriginalOptions}
             showAllTextOverride={showAllTextByMode[secondaryMode] === true}
           />
@@ -2308,13 +2474,7 @@ export function MushafPage({
             "fixed inset-x-0 z-50 mx-auto w-fit rounded-xl border",
             "border-[var(--border)] bg-[var(--background)] px-5 py-3",
             "shadow-lg",
-            menu.type === "ayah"
-              ? "top-4"
-              : menu.type === "app-secondary"
-                ? "bottom-4"
-                : menu.type === "word"
-                  ? "bottom-4"
-                  : "bottom-4",
+            menu.type === "app-secondary" ? "bottom-4" : "top-4",
           ].join(" ")}
           dir="rtl"
           role="dialog"
@@ -2344,22 +2504,44 @@ export function MushafPage({
                 >
                   🎧 استماع
                 </button>
-                <button
-                  type="button"
-                  aria-pressed={isContextTextActionEnabled("colors")}
-                  className="rounded-lg border px-3 py-2"
-                  onClick={() => toggleContextTextAction("colors")}
-                >
-                  🎨 تلوين
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={isContextTextActionEnabled("highlight")}
-                  className="rounded-lg border px-3 py-2"
-                  onClick={() => toggleContextTextAction("highlight")}
-                >
-                  🖍️ تظليل
-                </button>
+                <MushafColorPalette
+                  action="colors"
+                  mode={secondaryMode}
+                  selectionType="ayah"
+                  open={openColorPaletteAction === "colors"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "colors" ? null : "colors",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("colors", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
+                <MushafColorPalette
+                  action="highlight"
+                  mode={secondaryMode}
+                  selectionType="ayah"
+                  open={openColorPaletteAction === "highlight"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "highlight" ? null : "highlight",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("highlight", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
                 <button
                   type="button"
                   aria-pressed={isContextTextActionEnabled("underline")}
@@ -2427,22 +2609,44 @@ export function MushafPage({
             <div className="flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3">
               <div className="font-semibold">قائمة الكلمة</div>
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  aria-pressed={isContextTextActionEnabled("colors")}
-                  className="rounded-lg border px-3 py-2"
-                  onClick={() => toggleContextTextAction("colors")}
-                >
-                  🎨 تلوين
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={isContextTextActionEnabled("highlight")}
-                  className="rounded-lg border px-3 py-2"
-                  onClick={() => toggleContextTextAction("highlight")}
-                >
-                  🖍️ تظليل
-                </button>
+                <MushafColorPalette
+                  action="colors"
+                  mode={secondaryMode}
+                  selectionType="word"
+                  open={openColorPaletteAction === "colors"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "colors" ? null : "colors",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("colors", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
+                <MushafColorPalette
+                  action="highlight"
+                  mode={secondaryMode}
+                  selectionType="word"
+                  open={openColorPaletteAction === "highlight"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "highlight" ? null : "highlight",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("highlight", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
                 <button
                   type="button"
                   aria-pressed={isContextTextActionEnabled("underline")}
@@ -2776,296 +2980,321 @@ export function MushafPage({
                 </button>
               </div>
 
-              {moreMenuOpen && secondaryMode === "listening" && (
-                <div
-                  className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
-                  role="menu"
-                  aria-label="تحديد"
-                >
-                  <div className="text-center text-sm font-semibold">تحديد</div>
+              {moreMenuOpen && (
+                <>
+                  <div
+                    className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
+                    role="menu"
+                    aria-label="تحديد"
+                  >
+                    <div className="text-center text-sm font-semibold">
+                      تحديد
+                    </div>
 
-                  <div className="flex flex-col gap-3">
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="col-span-3 text-sm font-semibold">
-                        البداية
-                      </div>
-                      <label className="flex min-w-0 flex-col gap-1 text-xs">
-                        الصفحة
-                        <input
-                          type="number"
-                          min="1"
-                          max={TOTAL_PAGES}
-                          value={audioStartPage}
-                          onChange={(event) =>
-                            setAudioStartPage(event.target.value)
-                          }
-                          onBlur={() => {
-                            setAudioEndPage(audioStartPage);
-                            void applyAudioPages(
-                              audioStartPage,
-                              audioStartPage,
-                            );
-                          }}
-                          className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
-                        />
-                      </label>
-                      <label className="relative flex min-w-0 flex-col gap-1 text-xs">
-                        السورة
-                        <input
-                          role="combobox"
-                          aria-label="سورة البداية"
-                          aria-expanded={audioStartSurahPickerOpen}
-                          aria-controls="audio-start-surah-options"
-                          autoComplete="off"
-                          value={audioStartSurahQuery}
-                          placeholder="اسم أو رقم"
-                          onFocus={() => {
-                            setAudioStartSurahPickerQuery("");
-                            setAudioStartSurahPickerOpen(true);
-                          }}
-                          onClick={() => {
-                            if (!audioStartSurahPickerOpen) {
+                    <div className="flex flex-col gap-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="col-span-3 text-sm font-semibold">
+                          البداية
+                        </div>
+                        <label className="flex min-w-0 flex-col gap-1 text-xs">
+                          الصفحة
+                          <input
+                            type="number"
+                            min="1"
+                            max={TOTAL_PAGES}
+                            value={audioStartPage}
+                            onChange={(event) =>
+                              setAudioStartPage(event.target.value)
+                            }
+                            onBlur={() => {
+                              setAudioEndPage(audioStartPage);
+                              void applyAudioPages(
+                                audioStartPage,
+                                audioStartPage,
+                              );
+                            }}
+                            className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="relative flex min-w-0 flex-col gap-1 text-xs">
+                          السورة
+                          <input
+                            role="combobox"
+                            aria-label="سورة البداية"
+                            aria-expanded={audioStartSurahPickerOpen}
+                            aria-controls="audio-start-surah-options"
+                            autoComplete="off"
+                            value={audioStartSurahQuery}
+                            placeholder="اسم أو رقم"
+                            onFocus={() => {
                               setAudioStartSurahPickerQuery("");
                               setAudioStartSurahPickerOpen(true);
+                            }}
+                            onClick={() => {
+                              if (!audioStartSurahPickerOpen) {
+                                setAudioStartSurahPickerQuery("");
+                                setAudioStartSurahPickerOpen(true);
+                              }
+                            }}
+                            onBlur={() => setAudioStartSurahPickerOpen(false)}
+                            onChange={(event) => {
+                              setAudioStartSurahPickerQuery(event.target.value);
+                              setAudioStartSurahPickerOpen(true);
+                              changeAudioStartSurah(event.target.value);
+                            }}
+                            className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                          />
+                          {audioStartSurahPickerOpen && (
+                            <div
+                              id="audio-start-surah-options"
+                              role="listbox"
+                              aria-label="اختيار سورة البداية"
+                              className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-[var(--border)] bg-white text-gray-900 shadow-lg dark:bg-gray-900 dark:text-white"
+                            >
+                              {getFilteredAudioSurahs(
+                                audioStartSurahPickerQuery,
+                              ).map((surah) => (
+                                <button
+                                  key={surah.number}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={
+                                    Number(audioStartSurah) === surah.number
+                                  }
+                                  onMouseDown={(event) =>
+                                    event.preventDefault()
+                                  }
+                                  onClick={() => {
+                                    changeAudioStartSurah(
+                                      `${surah.number} - ${getAudioSurahLabel(surah)}`,
+                                    );
+                                    setAudioStartSurahPickerQuery("");
+                                    setAudioStartSurahPickerOpen(false);
+                                  }}
+                                  className="block w-full px-3 py-2 text-right text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                                >
+                                  {surah.number} - {getAudioSurahLabel(surah)}
+                                </button>
+                              ))}
+                              {getFilteredAudioSurahs(
+                                audioStartSurahPickerQuery,
+                              ).length === 0 && (
+                                <div className="px-3 py-2 text-sm">
+                                  لا توجد سورة مطابقة
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </label>
+                        <label className="flex min-w-0 flex-col gap-1 text-xs">
+                          الآية
+                          <input
+                            type="number"
+                            min="1"
+                            max={
+                              surahs.find(
+                                (surah) =>
+                                  surah.number === Number(audioStartSurah),
+                              )?.numberOfAyahs ?? 1
                             }
-                          }}
-                          onBlur={() => setAudioStartSurahPickerOpen(false)}
-                          onChange={(event) => {
-                            setAudioStartSurahPickerQuery(event.target.value);
-                            setAudioStartSurahPickerOpen(true);
-                            changeAudioStartSurah(event.target.value);
-                          }}
-                          className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
-                        />
-                        {audioStartSurahPickerOpen && (
-                          <div
-                            id="audio-start-surah-options"
-                            role="listbox"
-                            aria-label="اختيار سورة البداية"
-                            className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-[var(--border)] bg-white text-gray-900 shadow-lg dark:bg-gray-900 dark:text-white"
-                          >
-                            {getFilteredAudioSurahs(
-                              audioStartSurahPickerQuery,
-                            ).map((surah) => (
-                              <button
-                                key={surah.number}
-                                type="button"
-                                role="option"
-                                aria-selected={
-                                  Number(audioStartSurah) === surah.number
-                                }
-                                onMouseDown={(event) => event.preventDefault()}
-                                onClick={() => {
-                                  changeAudioStartSurah(
-                                    `${surah.number} - ${getAudioSurahLabel(surah)}`,
-                                  );
-                                  setAudioStartSurahPickerQuery("");
-                                  setAudioStartSurahPickerOpen(false);
-                                }}
-                                className="block w-full px-3 py-2 text-right text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
-                              >
-                                {surah.number} - {getAudioSurahLabel(surah)}
-                              </button>
-                            ))}
-                            {getFilteredAudioSurahs(audioStartSurahPickerQuery)
-                              .length === 0 && (
-                              <div className="px-3 py-2 text-sm">
-                                لا توجد سورة مطابقة
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </label>
-                      <label className="flex min-w-0 flex-col gap-1 text-xs">
-                        الآية
-                        <input
-                          type="number"
-                          min="1"
-                          max={
-                            surahs.find(
-                              (surah) =>
-                                surah.number === Number(audioStartSurah),
-                            )?.numberOfAyahs ?? 1
-                          }
-                          value={audioStartAyah}
-                          onChange={(event) => {
-                            audioRangeUserModifiedRef.current = true;
-                            setAudioStartAyah(event.target.value);
-                          }}
-                          className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
-                        />
-                      </label>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="col-span-3 text-sm font-semibold">
-                        النهاية
+                            value={audioStartAyah}
+                            onChange={(event) => {
+                              audioRangeUserModifiedRef.current = true;
+                              setAudioStartAyah(event.target.value);
+                            }}
+                            className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                          />
+                        </label>
                       </div>
-                      <label className="flex min-w-0 flex-col gap-1 text-xs">
-                        الصفحة
-                        <input
-                          type="number"
-                          min="1"
-                          max={TOTAL_PAGES}
-                          value={audioEndPage}
-                          onChange={(event) =>
-                            setAudioEndPage(event.target.value)
-                          }
-                          onBlur={() => {
-                            void applyAudioPages(audioStartPage, audioEndPage);
-                          }}
-                          className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
-                        />
-                      </label>
-                      <label className="relative flex min-w-0 flex-col gap-1 text-xs">
-                        السورة
-                        <input
-                          role="combobox"
-                          aria-label="سورة النهاية"
-                          aria-expanded={audioEndSurahPickerOpen}
-                          aria-controls="audio-end-surah-options"
-                          autoComplete="off"
-                          value={
-                            audioEndSurahPickerOpen
-                              ? audioEndSurahPickerQuery
-                              : audioEndSurahQuery
-                          }
-                          placeholder="اسم أو رقم"
-                          onFocus={() => {
-                            setAudioEndSurahPickerQuery("");
-                            setAudioEndSurahPickerOpen(true);
-                          }}
-                          onClick={() => {
-                            if (!audioEndSurahPickerOpen) {
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="col-span-3 text-sm font-semibold">
+                          النهاية
+                        </div>
+                        <label className="flex min-w-0 flex-col gap-1 text-xs">
+                          الصفحة
+                          <input
+                            type="number"
+                            min="1"
+                            max={TOTAL_PAGES}
+                            value={audioEndPage}
+                            onChange={(event) =>
+                              setAudioEndPage(event.target.value)
+                            }
+                            onBlur={() => {
+                              void applyAudioPages(
+                                audioStartPage,
+                                audioEndPage,
+                              );
+                            }}
+                            className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="relative flex min-w-0 flex-col gap-1 text-xs">
+                          السورة
+                          <input
+                            role="combobox"
+                            aria-label="سورة النهاية"
+                            aria-expanded={audioEndSurahPickerOpen}
+                            aria-controls="audio-end-surah-options"
+                            autoComplete="off"
+                            value={
+                              audioEndSurahPickerOpen
+                                ? audioEndSurahPickerQuery
+                                : audioEndSurahQuery
+                            }
+                            placeholder="اسم أو رقم"
+                            onFocus={() => {
                               setAudioEndSurahPickerQuery("");
                               setAudioEndSurahPickerOpen(true);
+                            }}
+                            onClick={() => {
+                              if (!audioEndSurahPickerOpen) {
+                                setAudioEndSurahPickerQuery("");
+                                setAudioEndSurahPickerOpen(true);
+                              }
+                            }}
+                            onBlur={() => setAudioEndSurahPickerOpen(false)}
+                            onChange={(event) => {
+                              setAudioEndSurahPickerQuery(event.target.value);
+                              setAudioEndSurahPickerOpen(true);
+                            }}
+                            className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                          />
+                          {audioEndSurahPickerOpen && (
+                            <div
+                              id="audio-end-surah-options"
+                              role="listbox"
+                              aria-label="اختيار سورة النهاية"
+                              className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-[var(--border)] bg-white text-gray-900 shadow-lg dark:bg-gray-900 dark:text-white"
+                            >
+                              {getFilteredAudioSurahs(
+                                audioEndSurahPickerQuery,
+                              ).map((surah) => (
+                                <button
+                                  key={surah.number}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={
+                                    Number(audioEndSurah) === surah.number
+                                  }
+                                  onMouseDown={(event) =>
+                                    event.preventDefault()
+                                  }
+                                  onClick={() => {
+                                    changeAudioEndSurah(
+                                      `${surah.number} - ${getAudioSurahLabel(surah)}`,
+                                    );
+                                    setAudioEndSurahPickerQuery("");
+                                    setAudioEndSurahPickerOpen(false);
+                                  }}
+                                  className="block w-full px-3 py-2 text-right text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                                >
+                                  {surah.number} - {getAudioSurahLabel(surah)}
+                                </button>
+                              ))}
+                              {getFilteredAudioSurahs(audioEndSurahPickerQuery)
+                                .length === 0 && (
+                                <div className="px-3 py-2 text-sm">
+                                  لا توجد سورة مطابقة
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </label>
+                        <label className="flex min-w-0 flex-col gap-1 text-xs">
+                          الآية
+                          <input
+                            type="number"
+                            min="1"
+                            max={
+                              surahs.find(
+                                (surah) =>
+                                  surah.number === Number(audioEndSurah),
+                              )?.numberOfAyahs ?? 1
                             }
-                          }}
-                          onBlur={() => setAudioEndSurahPickerOpen(false)}
-                          onChange={(event) => {
-                            setAudioEndSurahPickerQuery(event.target.value);
-                            setAudioEndSurahPickerOpen(true);
-                          }}
-                          className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
-                        />
-                        {audioEndSurahPickerOpen && (
-                          <div
-                            id="audio-end-surah-options"
-                            role="listbox"
-                            aria-label="اختيار سورة النهاية"
-                            className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-[var(--border)] bg-white text-gray-900 shadow-lg dark:bg-gray-900 dark:text-white"
-                          >
-                            {getFilteredAudioSurahs(
-                              audioEndSurahPickerQuery,
-                            ).map((surah) => (
-                              <button
-                                key={surah.number}
-                                type="button"
-                                role="option"
-                                aria-selected={
-                                  Number(audioEndSurah) === surah.number
-                                }
-                                onMouseDown={(event) => event.preventDefault()}
-                                onClick={() => {
-                                  changeAudioEndSurah(
-                                    `${surah.number} - ${getAudioSurahLabel(surah)}`,
-                                  );
-                                  setAudioEndSurahPickerQuery("");
-                                  setAudioEndSurahPickerOpen(false);
-                                }}
-                                className="block w-full px-3 py-2 text-right text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
-                              >
-                                {surah.number} - {getAudioSurahLabel(surah)}
-                              </button>
-                            ))}
-                            {getFilteredAudioSurahs(audioEndSurahPickerQuery)
-                              .length === 0 && (
-                              <div className="px-3 py-2 text-sm">
-                                لا توجد سورة مطابقة
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </label>
-                      <label className="flex min-w-0 flex-col gap-1 text-xs">
-                        الآية
-                        <input
-                          type="number"
-                          min="1"
-                          max={
-                            surahs.find(
-                              (surah) => surah.number === Number(audioEndSurah),
-                            )?.numberOfAyahs ?? 1
-                          }
-                          value={audioEndAyah}
-                          onChange={(event) => {
-                            audioRangeUserModifiedRef.current = true;
-                            setAudioEndAyah(event.target.value);
-                          }}
-                          className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
-                        />
-                      </label>
-                    </div>
+                            value={audioEndAyah}
+                            onChange={(event) => {
+                              audioRangeUserModifiedRef.current = true;
+                              setAudioEndAyah(event.target.value);
+                            }}
+                            className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                          />
+                        </label>
+                      </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void applyAudioPages()}
-                        className="rounded-lg border px-3 py-2 text-sm font-semibold"
-                      >
-                        تطبيق نطاق الصفحات
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const startSurah = Number(audioStartSurah);
-                          const startAyah = Number(audioStartAyah);
-                          const endSurah = Number(audioEndSurah);
-                          const endAyah = Number(audioEndAyah);
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void applyAudioPages()}
+                          className="rounded-lg border px-3 py-2 text-sm font-semibold"
+                        >
+                          تطبيق نطاق الصفحات
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const startSurah = Number(audioStartSurah);
+                            const startAyah = Number(audioStartAyah);
+                            const endSurah = Number(audioEndSurah);
+                            const endAyah = Number(audioEndAyah);
 
-                          const startSurahData = surahs.find(
-                            (surah) => surah.number === startSurah,
-                          );
-                          const endSurahData = surahs.find(
-                            (surah) => surah.number === endSurah,
-                          );
-
-                          if (
-                            !startSurahData ||
-                            !endSurahData ||
-                            !Number.isInteger(startAyah) ||
-                            !Number.isInteger(endAyah) ||
-                            startAyah < 1 ||
-                            endAyah < 1 ||
-                            startAyah > startSurahData.numberOfAyahs ||
-                            endAyah > endSurahData.numberOfAyahs
-                          ) {
-                            showSecondaryMessage(
-                              "الرجاء التحقق من السورة ورقم الآية",
+                            const startSurahData = surahs.find(
+                              (surah) => surah.number === startSurah,
                             );
-                            return;
-                          }
+                            const endSurahData = surahs.find(
+                              (surah) => surah.number === endSurah,
+                            );
 
-                          if (
-                            startSurah > endSurah ||
-                            (startSurah === endSurah && startAyah > endAyah)
-                          ) {
-                            showSecondaryMessage("البداية يجب أن تسبق النهاية");
-                            return;
-                          }
+                            if (
+                              !startSurahData ||
+                              !endSurahData ||
+                              !Number.isInteger(startAyah) ||
+                              !Number.isInteger(endAyah) ||
+                              startAyah < 1 ||
+                              endAyah < 1 ||
+                              startAyah > startSurahData.numberOfAyahs ||
+                              endAyah > endSurahData.numberOfAyahs
+                            ) {
+                              showSecondaryMessage(
+                                "الرجاء التحقق من السورة ورقم الآية",
+                              );
+                              return;
+                            }
 
-                          audioRangeUserModifiedRef.current = true;
-                          setAudioStartPage(String(startSurahData.firstPage));
-                          setAudioEndPage(String(endSurahData.firstPage));
-                          showSecondaryMessage("تم تطبيق نطاق الآيات");
-                        }}
-                        className="rounded-lg border px-3 py-2 text-sm font-semibold"
-                      >
-                        تطبيق نطاق الآيات
-                      </button>
+                            if (
+                              startSurah > endSurah ||
+                              (startSurah === endSurah && startAyah > endAyah)
+                            ) {
+                              showSecondaryMessage(
+                                "البداية يجب أن تسبق النهاية",
+                              );
+                              return;
+                            }
+
+                            audioRangeUserModifiedRef.current = true;
+                            setAudioStartPage(String(startSurahData.firstPage));
+                            setAudioEndPage(String(endSurahData.firstPage));
+                            showSecondaryMessage("تم تطبيق نطاق الآيات");
+                          }}
+                          className="rounded-lg border px-3 py-2 text-sm font-semibold"
+                        >
+                          تطبيق نطاق الآيات
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
+
+                  <button
+                    type="button"
+                    className="w-full rounded-lg border bg-[var(--foreground)] px-4 py-3 font-semibold text-[var(--background)]"
+                    onClick={() => {
+                      void startCurrentModeAtSelection();
+                    }}
+                  >
+                    اعتماد التحديد
+                  </button>
+                </>
               )}
 
               {moreMenuOpen &&
@@ -3443,14 +3672,6 @@ export function MushafPage({
                       <option value="hafs-djebril">جبريل</option>
                     </select>
                   </div>
-
-                  <button
-                    type="button"
-                    className="w-full rounded-lg border bg-[var(--foreground)] px-4 py-3 font-semibold text-[var(--background)]"
-                    onClick={validateAndStartAudio}
-                  >
-                    ✓ اعتماد التحديد وبدء القراءة
-                  </button>
                 </div>
               )}
 
@@ -3538,22 +3759,44 @@ export function MushafPage({
                 {selectedWords.size === 1 ? "كلمة محددة" : "كلمات محددة"}
               </div>
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  aria-pressed={isContextTextActionEnabled("colors")}
-                  className="rounded-lg border px-3 py-2"
-                  onClick={() => toggleContextTextAction("colors")}
-                >
-                  🎨 تلوين
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={isContextTextActionEnabled("highlight")}
-                  className="rounded-lg border px-3 py-2"
-                  onClick={() => toggleContextTextAction("highlight")}
-                >
-                  🖍️ تظليل
-                </button>
+                <MushafColorPalette
+                  action="colors"
+                  mode={secondaryMode}
+                  selectionType="selection"
+                  open={openColorPaletteAction === "colors"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "colors" ? null : "colors",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("colors", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
+                <MushafColorPalette
+                  action="highlight"
+                  mode={secondaryMode}
+                  selectionType="selection"
+                  open={openColorPaletteAction === "highlight"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "highlight" ? null : "highlight",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("highlight", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
                 <button
                   type="button"
                   aria-pressed={isContextTextActionEnabled("underline")}

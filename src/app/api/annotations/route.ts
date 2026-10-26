@@ -1,6 +1,20 @@
 import { AnnotationService } from "@/annotation/annotation-service";
 import { getAuthenticatedUserFromRequest } from "@/auth/http/get-authenticated-user";
 
+const ANNOTATION_MODES = new Set([
+  "qiraa",
+  "listening",
+  "recitation",
+  "talqin",
+  "memorization",
+  "tathbit",
+  "review",
+  "tadabbur",
+  "khatma",
+  "tahajjud",
+  "progress",
+]);
+
 export async function GET(request: Request) {
   const user = await getAuthenticatedUserFromRequest(request);
 
@@ -11,8 +25,13 @@ export async function GET(request: Request) {
     );
   }
 
+  const requestedMode = new URL(request.url).searchParams.get("mode");
+  if (requestedMode && !ANNOTATION_MODES.has(requestedMode)) {
+    return Response.json({ error: "INVALID_ANNOTATION_MODE" }, { status: 400 });
+  }
+
   const service = new AnnotationService();
-  const annotations = await service.list(user.id);
+  const annotations = await service.list(user.id, requestedMode ?? "qiraa");
 
   return Response.json(annotations);
 }
@@ -51,6 +70,14 @@ export async function POST(request: Request) {
     );
   }
 
+  const requestedMode = (body as { mode?: unknown }).mode ?? "qiraa";
+  if (
+    typeof requestedMode !== "string" ||
+    !ANNOTATION_MODES.has(requestedMode)
+  ) {
+    return Response.json({ error: "INVALID_ANNOTATION_MODE" }, { status: 400 });
+  }
+
   const service = new AnnotationService();
 
   try {
@@ -58,6 +85,7 @@ export async function POST(request: Request) {
       userId: user.id,
       ayahId: (body as { ayahId: number }).ayahId,
       content: (body as { content: string }).content,
+      mode: requestedMode,
     });
 
     return Response.json(annotation, { status: 201 });
