@@ -107,7 +107,10 @@ export function MushafLine({
             colorAssignments={colorAssignments}
             previewOriginalOptions={previewOriginalOptions}
             showAllTextOverride={showAllTextOverride}
-            hideText={hideUnrevealedAyahs && !revealedAyahIds.has(ayah.id)}
+            hideText={
+              hideUnrevealedAyahs &&
+              (mode !== "listening" || !revealedAyahIds.has(ayah.id))
+            }
           />
         );
       })}

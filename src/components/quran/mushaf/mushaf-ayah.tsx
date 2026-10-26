@@ -127,11 +127,9 @@ export function MushafAyah({
       className={[
         "inline rounded-md transition-colors",
         selected ? "bg-gray-200/80" : "",
-        ayahHidden ? "opacity-0" : "",
       ]
         .filter(Boolean)
         .join(" ")}
-      style={{ opacity: ayahHidden ? 0 : 1 }}
     >
       <button
         type="button"

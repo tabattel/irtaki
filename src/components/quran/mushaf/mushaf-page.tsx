@@ -454,12 +454,34 @@ export function MushafPage({
   const [secondaryMode, setSecondaryMode] =
     useState<SecondaryMode>("listening");
   const secondaryModeRef = useRef<SecondaryMode>("listening");
-  const [listeningAyahsHidden, setListeningAyahsHidden] = useState(false);
+  const [listeningAyahsHidden, setListeningAyahsHidden] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return (
+        window.localStorage.getItem("irtaki.mushaf.global-text-hidden.v1") ===
+        "true"
+      );
+    } catch {
+      return false;
+    }
+  });
   const [listeningRevealedAyahIds, setListeningRevealedAyahIds] = useState<
     Set<number>
   >(() => new Set());
   const listeningAyahsHiddenRef = useRef(false);
   const audioCurrentAyahIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    listeningAyahsHiddenRef.current = listeningAyahsHidden;
+    try {
+      window.localStorage.setItem(
+        "irtaki.mushaf.global-text-hidden.v1",
+        String(listeningAyahsHidden),
+      );
+    } catch {
+      // Le lecteur reste utilisable sans stockage local.
+    }
+  }, [listeningAyahsHidden]);
   const [modePickerOpen, setModePickerOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [repeatEnabled, setRepeatEnabled] = useState(false);
@@ -766,19 +788,12 @@ export function MushafPage({
   }
 
   function toggleGlobalTextVisibility() {
-    const mode = secondaryMode;
-    const showAllTemporarily = showAllTextByMode[mode] !== true;
+    const nextHidden = !listeningAyahsHidden;
+    listeningAyahsHiddenRef.current = nextHidden;
+    setListeningAyahsHidden(nextHidden);
+    setListeningRevealedAyahIds(new Set());
 
-    // Ne jamais effacer les masquages individuels :
-    // le second clic rétablit exactement leur état précédent.
-    setShowAllTextByMode((current) => ({
-      ...current,
-      [mode]: showAllTemporarily,
-    }));
-
-    showSecondaryMessage(
-      showAllTemporarily ? "إظهار الكل مؤقتاً" : "استعادة الإخفاء السابق",
-    );
+    showSecondaryMessage(nextHidden ? "إخفاء نص الآيات" : "إظهار نص الآيات");
   }
 
   function contextAyahId(): number | undefined {
@@ -828,6 +843,12 @@ export function MushafPage({
     silenceBeforeSelection: "0",
     silenceAfterSelection: "0",
   });
+  const audioPreloadedUrlsRef = useRef<Map<string, string>>(new Map());
+  const audioPreloadedPlayersRef = useRef<Map<string, HTMLAudioElement>>(
+    new Map(),
+  );
+  const audioPreloadInFlightRef = useRef<Set<string>>(new Set());
+  const audioPreloadUnmountedRef = useRef(false);
   const [audioSettingsLoaded, setAudioSettingsLoaded] = useState(false);
   const selectionRepeatRemainingRef = useRef<number | null>(null);
 
@@ -1320,6 +1341,72 @@ export function MushafPage({
     }
 
     return ayahs[0];
+  }
+
+  function activatePreloadedAudio(targetAyah: (typeof ayahs)[number]): boolean {
+    const key = [
+      selectedReciter,
+      targetAyah.surahNumber,
+      targetAyah.number,
+    ].join(":");
+
+    const nextAudio = audioPreloadedPlayersRef.current.get(key);
+
+    if (
+      !nextAudio ||
+      nextAudio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
+    ) {
+      return false;
+    }
+
+    // Respecter les silences volontaires : le basculement immédiat n'est
+    // utilisé que si le silence configuré avant cette ayah vaut zéro.
+    const continuation = readAudioContinuation();
+    const loop = readAudioLoop();
+    const isRangeStart = Boolean(
+      continuation &&
+      loop &&
+      loop.startSurah === targetAyah.surahNumber &&
+      loop.startAyah === targetAyah.number,
+    );
+    const beforeSeconds = Number(
+      isRangeStart
+        ? audioSettingsRef.current.silenceBeforeSelection
+        : audioSettingsRef.current.silenceBeforeAyah,
+    );
+
+    if (beforeSeconds > 0) return false;
+
+    const previousAudio = audioRef.current;
+    if (previousAudio && previousAudio !== nextAudio) {
+      previousAudio.pause();
+    }
+
+    audioPreloadedPlayersRef.current.delete(key);
+    audioRef.current = nextAudio;
+    audioSourceKeyRef.current = key;
+    audioCurrentAyahIdRef.current = targetAyah.id;
+    audioShouldContinueRef.current = false;
+
+    nextAudio.playbackRate = playbackRate;
+    nextAudio.defaultPlaybackRate = playbackRate;
+    setSelectedAyahId(targetAyah.id);
+
+    console.log("[AUDIO][GAPLESS] lecteur préchargé activé", {
+      key,
+      readyState: nextAudio.readyState,
+    });
+
+    void nextAudio.play().then(
+      () => setIsPlaying(true),
+      (error) => {
+        console.warn("[AUDIO][GAPLESS] lecture refusée", error);
+        setIsPlaying(false);
+        showSecondaryMessage("تعذر تشغيل الصوت");
+      },
+    );
+
+    return true;
   }
 
   function getEndedAudioPosition():
@@ -2591,16 +2678,13 @@ export function MushafPage({
         loop: readAudioLoop() ?? null,
       });
 
-      // Silence après l'ayah (ou après la plage), proportionnel à la durée réelle.
+      // Silence après l'ayah (ou après la plage), exprimé en secondes.
       if (!silenceDoneRef.current) {
-        const el = audioRef.current;
-        const duration = el && Number.isFinite(el.duration) ? el.duration : 0;
-        const multiplier = Number(
+        const seconds = Number(
           atRangeEnd
             ? settings.silenceAfterSelection
             : settings.silenceAfterAyah,
         );
-        const seconds = duration * multiplier;
 
         if (seconds > 0) {
           const timer = window.setTimeout(() => {
@@ -2645,6 +2729,7 @@ export function MushafPage({
               replayCurrentAyah();
             } else {
               audioShouldContinueRef.current = true;
+              if (activatePreloadedAudio(startAyahOnPage)) return;
               setSelectedAyahId(startAyahOnPage.id);
             }
             return;
@@ -2718,6 +2803,7 @@ export function MushafPage({
           });
 
           audioShouldContinueRef.current = true;
+          if (activatePreloadedAudio(nextAyah)) return;
           setSelectedAyahId(nextAyah.id);
           return;
         }
@@ -2774,6 +2860,7 @@ export function MushafPage({
 
       if (nextAyah) {
         audioShouldContinueRef.current = true;
+        if (activatePreloadedAudio(nextAyah)) return;
         setSelectedAyahId(nextAyah.id);
         return;
       }
@@ -2830,6 +2917,209 @@ export function MushafPage({
       audio.removeEventListener("error", handleError);
     };
   }, [repeatEnabled, ayahs, pageNumber, riwayaId, selectedAyahId]);
+
+  // Précharger le prochain fichier audio avant la fin de l'ayah courante.
+  // Le Blob évite de dépendre du cache HTTP lorsque la source change.
+  useEffect(() => {
+    audioPreloadUnmountedRef.current = false;
+
+    return () => {
+      audioPreloadUnmountedRef.current = true;
+      for (const url of audioPreloadedUrlsRef.current.values()) {
+        URL.revokeObjectURL(url);
+      }
+      audioPreloadedUrlsRef.current.clear();
+      audioPreloadInFlightRef.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    const continuation = readAudioContinuation();
+    if (!isPlaying && !continuation) return;
+
+    const continuationAyah =
+      continuation?.reciterId === selectedReciter
+        ? ayahs.find(
+            (ayah) =>
+              ayah.surahNumber === continuation.surahNumber &&
+              ayah.number === continuation.ayahNumber,
+          )
+        : undefined;
+
+    const currentAyah = continuationAyah ?? getCurrentAudioAyah();
+    if (!currentAyah) return;
+
+    const preloadAyahAudio = (targetAyah: (typeof ayahs)[number]) => {
+      const key = [
+        selectedReciter,
+        targetAyah.surahNumber,
+        targetAyah.number,
+      ].join(":");
+
+      const readyPlayer = audioPreloadedPlayersRef.current.get(key);
+      if (
+        readyPlayer &&
+        readyPlayer.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA
+      ) {
+        return;
+      }
+
+      if (audioPreloadInFlightRef.current.has(key)) return;
+      audioPreloadInFlightRef.current.add(key);
+
+      const preparePlayer = (url: string): Promise<void> =>
+        new Promise((resolve, reject) => {
+          const player = new Audio();
+          player.preload = "auto";
+
+          let settled = false;
+
+          const cleanupListeners = () => {
+            player.removeEventListener("canplay", handleReady);
+            player.removeEventListener("canplaythrough", handleReady);
+            player.removeEventListener("error", handleError);
+          };
+
+          const handleReady = () => {
+            if (
+              settled ||
+              player.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
+            ) {
+              return;
+            }
+
+            settled = true;
+            cleanupListeners();
+
+            if (audioPreloadUnmountedRef.current) {
+              player.pause();
+              resolve();
+              return;
+            }
+
+            const previous = audioPreloadedPlayersRef.current.get(key);
+            if (previous && previous !== audioRef.current) {
+              previous.pause();
+            }
+
+            audioPreloadedPlayersRef.current.set(key, player);
+            console.log("[AUDIO][PRELOAD_READY]", key, {
+              readyState: player.readyState,
+              duration: player.duration,
+            });
+            resolve();
+          };
+
+          const handleError = () => {
+            if (settled) return;
+            settled = true;
+            cleanupListeners();
+            player.pause();
+            reject(
+              new Error("Le lecteur préchargé n'a pas pu charger l'audio"),
+            );
+          };
+
+          player.addEventListener("canplay", handleReady);
+          player.addEventListener("canplaythrough", handleReady);
+          player.addEventListener("error", handleError);
+          player.src = url;
+          player.load();
+
+          if (player.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+            handleReady();
+          }
+        });
+
+      const cachedUrl = audioPreloadedUrlsRef.current.get(key);
+
+      const sourcePromise: Promise<string | null> = cachedUrl
+        ? Promise.resolve(cachedUrl)
+        : fetch(
+            getAudioUrl(
+              selectedReciter,
+              targetAyah.surahNumber,
+              targetAyah.number,
+            ),
+          )
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`Préchargement HTTP ${response.status}`);
+              }
+              return response.blob();
+            })
+            .then((blob) => {
+              if (audioPreloadUnmountedRef.current) return null;
+
+              const url = URL.createObjectURL(blob);
+              audioPreloadedUrlsRef.current.set(key, url);
+              return url;
+            });
+
+      void sourcePromise
+        .then((url) => {
+          if (!url) return;
+          return preparePlayer(url);
+        })
+        .catch((error) => {
+          console.warn(
+            "[AUDIO] préchargement du lecteur impossible",
+            key,
+            error,
+          );
+        })
+        .finally(() => {
+          audioPreloadInFlightRef.current.delete(key);
+        });
+    };
+
+    // À la fin d'une plage répétée, préparer son début plutôt qu'une
+    // ayah extérieure à la sélection.
+    const loop = readAudioLoop();
+    if (continuation && isAudioEndReached(currentAyah, continuation)) {
+      const repeatTarget =
+        audioSettingsRef.current.selectionRepeat === "n"
+          ? Number.POSITIVE_INFINITY
+          : Number(audioSettingsRef.current.selectionRepeat);
+
+      if (loop && loop.pass < repeatTarget) {
+        const startOnPage = ayahs.find(
+          (ayah) =>
+            ayah.surahNumber === loop.startSurah &&
+            ayah.number === loop.startAyah,
+        );
+
+        if (startOnPage) {
+          preloadAyahAudio(startOnPage);
+        } else {
+          void getAyahsByPage(loop.startPage)
+            .then((startPageAyahs) => {
+              const startAyah = startPageAyahs.find(
+                (ayah) =>
+                  ayah.surahNumber === loop.startSurah &&
+                  ayah.number === loop.startAyah,
+              );
+              if (startAyah) preloadAyahAudio(startAyah);
+            })
+            .catch(() => {});
+        }
+      }
+      return;
+    }
+
+    const currentIndex = ayahs.findIndex((ayah) => ayah.id === currentAyah.id);
+    const nextAyah = ayahs[currentIndex + 1];
+
+    if (nextAyah) {
+      preloadAyahAudio(nextAyah);
+    } else if (pageNumber < TOTAL_PAGES) {
+      void getAyahsByPage(pageNumber + 1)
+        .then((nextPageAyahs) => {
+          if (nextPageAyahs[0]) preloadAyahAudio(nextPageAyahs[0]);
+        })
+        .catch(() => {});
+    }
+  }, [isPlaying, selectedAyahId, selectedReciter, pageNumber, ayahs]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -2897,11 +3187,10 @@ export function MushafPage({
     cancelSilence();
     ayahPlayCountRef.current = 1;
     audio.pause();
-    audio.src = getAudioUrl(
-      selectedReciter,
-      currentAyah.surahNumber,
-      currentAyah.number,
-    );
+    const preloadedAudioUrl = audioPreloadedUrlsRef.current.get(sourceKey);
+    audio.src =
+      preloadedAudioUrl ??
+      getAudioUrl(selectedReciter, currentAyah.surahNumber, currentAyah.number);
     audioSourceKeyRef.current = sourceKey;
     audio.defaultPlaybackRate = playbackRate;
     audio.playbackRate = playbackRate;
@@ -2926,17 +3215,15 @@ export function MushafPage({
         loop.startSurah === currentAyah.surahNumber &&
         loop.startAyah === currentAyah.number,
       );
-      const beforeMultiplier = Number(
+      const beforeSeconds = Number(
         isRangeStart
           ? audioSettingsRef.current.silenceBeforeSelection
           : audioSettingsRef.current.silenceBeforeAyah,
       );
 
-      if (beforeMultiplier > 0) {
+      if (beforeSeconds > 0) {
         const onMetadata = () => {
-          const seconds = Number.isFinite(audio.duration)
-            ? audio.duration * beforeMultiplier
-            : 0;
+          const seconds = beforeSeconds;
           const timer = window.setTimeout(() => {
             silenceCancelRef.current = null;
             startPlayback();
@@ -3063,7 +3350,7 @@ export function MushafPage({
       onPointerCancel={handlePointerCancel}
       onDoubleClick={handleDoubleClick}
     >
-      <audio ref={audioRef} preload="metadata" className="hidden" />
+      <audio ref={audioRef} preload="auto" className="hidden" />
       <header className="mb-6 grid grid-cols-3 items-center gap-2 text-xs text-[var(--muted)] sm:text-sm">
         <span className="text-right tabular-nums">
           صفحة {pageNumber} / {TOTAL_PAGES}
@@ -3117,9 +3404,7 @@ export function MushafPage({
             colorAssignments={colorAssignments}
             previewOriginalOptions={previewOriginalOptions}
             showAllTextOverride={showAllTextByMode[secondaryMode] === true}
-            hideUnrevealedAyahs={
-              secondaryMode === "listening" && listeningAyahsHidden
-            }
+            hideUnrevealedAyahs={listeningAyahsHidden}
             revealedAyahIds={listeningRevealedAyahIds}
           />
         ))}
