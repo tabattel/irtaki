@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useParams, useSearchParams } from "next/navigation";
 
 import { MushafPage } from "@/components/quran/mushaf/mushaf-page";
@@ -29,6 +31,23 @@ export default function MushafPageRoute() {
    * L'identifiant Quranpedia du Mushaf reste interne
    * au backend/layout et n'est PAS exposé dans l'URL.
    */
+  if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > 604) {
+    return (
+      <div
+        className="mx-auto max-w-3xl rounded-xl border border-[var(--border)] p-8 text-center"
+        dir="rtl"
+      >
+        <h1 className="mb-3 text-xl font-bold">رقم الصفحة غير صالح</h1>
+        <p className="mb-4 text-[var(--muted)]">
+          رقم الصفحة يجب أن يكون بين 1 و604.
+        </p>
+        <Link href="/coran/10/page/1" className="underline">
+          العودة إلى الصفحة الأولى
+        </Link>
+      </div>
+    );
+  }
+
   if (riwayaId !== 10) {
     return (
       <div

@@ -2450,7 +2450,10 @@ export function MushafPage({
         </span>
       </header>
 
-      <div className="space-y-1" data-mushaf-lines={layout.lines.length}>
+      <div
+        className="mushaf-hafs-text space-y-1 text-center"
+        data-mushaf-lines={layout.lines.length}
+      >
         {layout.lines.map((line) => (
           <MushafLine
             key={line.line}

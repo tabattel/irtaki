@@ -71,7 +71,7 @@ export function MushafLine({
       className={[
         "w-full text-2xl leading-[2.5] whitespace-nowrap",
         "select-none",
-        line.centered ? "text-center" : "text-right",
+        "text-center",
       ].join(" ")}
       dir="rtl"
       data-mushaf-line
