@@ -62,7 +62,11 @@ type SecondaryMode =
   | "tadabbur"
   | "khatma"
   | "tahajjud"
-  | "progress";
+  | "progress"
+  | "goals"
+  | "history"
+  | "exercises"
+  | "data";
 
 const SECONDARY_MODES: Array<{
   id: SecondaryMode;
@@ -80,6 +84,10 @@ const SECONDARY_MODES: Array<{
   { id: "khatma", label: "الختمة", icon: "📿" },
   { id: "tahajjud", label: "التهجد", icon: "🌙" },
   { id: "progress", label: "المتابعة", icon: "📊" },
+  { id: "goals", label: "الأهداف", icon: "🎯" },
+  { id: "history", label: "السجل", icon: "📅" },
+  { id: "exercises", label: "التمارين", icon: "🧠" },
+  { id: "data", label: "البيانات", icon: "💾" },
 ];
 
 type UnderlineStyle = "single" | "double" | "wavy" | "double-wavy";
@@ -4820,26 +4828,54 @@ export function MushafPage({
               )}
 
               {modePickerOpen && (
-                <div
-                  className="grid grid-cols-2 justify-center gap-2 border-t border-[var(--border)] pt-3 sm:grid-cols-5"
-                  role="menu"
-                >
-                  {SECONDARY_MODES.map((mode) => (
-                    <button
-                      key={mode.id}
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={secondaryMode === mode.id}
-                      className={
-                        secondaryMode === mode.id
-                          ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
-                          : "rounded-lg border px-3 py-2 text-sm"
-                      }
-                      onClick={() => selectSecondaryMode(mode.id)}
+                <div className="space-y-3 border-t border-[var(--border)] pt-3">
+                  <div
+                    className="grid grid-cols-2 justify-center gap-2 sm:grid-cols-5"
+                    role="menu"
+                    aria-label="أنشطة القرآن"
+                  >
+                    {SECONDARY_MODES.slice(0, 10).map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={secondaryMode === mode.id}
+                        className={
+                          secondaryMode === mode.id
+                            ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                            : "rounded-lg border px-3 py-2 text-sm"
+                        }
+                        onClick={() => selectSecondaryMode(mode.id)}
+                      >
+                        {mode.icon} {mode.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="border-t border-[var(--border)] pt-3">
+                    <div
+                      className="grid grid-cols-2 justify-center gap-2 sm:grid-cols-5"
+                      role="menu"
+                      aria-label="أدوات المتابعة"
                     >
-                      {mode.icon} {mode.label}
-                    </button>
-                  ))}
+                      {SECONDARY_MODES.slice(10).map((mode) => (
+                        <button
+                          key={mode.id}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={secondaryMode === mode.id}
+                          className={
+                            secondaryMode === mode.id
+                              ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                              : "rounded-lg border px-3 py-2 text-sm"
+                          }
+                          onClick={() => selectSecondaryMode(mode.id)}
+                        >
+                          {mode.icon} {mode.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 
