@@ -17,6 +17,9 @@ export type LearningGoalStatus =
 export type LearningActivityResultStatus =
   "completed" | "partial" | "failed" | "skipped";
 
+export type LearningActivityAyahTraceStatus =
+  "started" | "completed" | "partial" | "failed" | "skipped";
+
 export type LearningWeekday =
   | "monday"
   | "tuesday"

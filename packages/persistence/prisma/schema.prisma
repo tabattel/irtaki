@@ -79,6 +79,8 @@ model Ayah {
   annotations  Annotation[]
   audioTracks  AudioTrack[]
 
+  activityTraces ActivityAyahTrace[]
+
   @@unique([surahNumber, number])
   @@index([surahNumber])
   @@index([pageNumber])
@@ -286,6 +288,8 @@ model Activity {
   result      ActivityResult?
   progress    ProgressRecord[]
 
+  ayahTraces ActivityAyahTrace[]
+
   @@index([learnerId])
   @@index([goalId])
   @@index([startedAt])
@@ -320,6 +324,32 @@ model ProgressRecord {
   @@index([learnerId, recordedAt])
   @@index([goalId, recordedAt])
   @@index([activityId])
+}
+
+enum ActivityAyahTraceStatus {
+  started
+  completed
+  partial
+  failed
+  skipped
+}
+
+model ActivityAyahTrace {
+  id         String                  @id @default(cuid())
+  activityId String
+  ayahId     Int
+  status     ActivityAyahTraceStatus @default(started)
+  recordedAt DateTime?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  ayah     Ayah     @relation(fields: [ayahId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, ayahId])
+  @@index([ayahId, status])
+  @@index([activityId, status])
+  @@index([recordedAt])
 }
 
 enum GoalAction {

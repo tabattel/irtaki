@@ -11,6 +11,10 @@ describe("AuthService", () => {
         findByEmail: vi.fn(),
         findById: vi.fn(),
       },
+      learnerRepository: {
+        findManyByUserId: vi.fn().mockResolvedValue([]),
+        create: vi.fn(),
+      },
       accountRepository: {
         createCredentialsAccount: vi.fn(),
         findCredentialsByEmail: vi.fn(),
@@ -35,6 +39,7 @@ describe("AuthService", () => {
       dependencies.accountRepository,
       dependencies.passwordHasher,
       dependencies.sessionService as unknown as SessionService,
+      dependencies.learnerRepository as never,
     );
   }
 
@@ -107,6 +112,11 @@ describe("AuthService", () => {
     expect(dependencies.sessionService.createSession).toHaveBeenCalledWith(
       "user-1",
     );
+
+    expect(dependencies.learnerRepository.create).toHaveBeenCalledWith({
+      userId: "user-1",
+      name: "User",
+    });
   });
 
   it("rejects registration when the email already exists", async () => {
@@ -275,6 +285,10 @@ describe("AuthService", () => {
     });
 
     expect(dependencies.userRepository.findById).toHaveBeenCalledWith("user-1");
+    expect(dependencies.learnerRepository.create).toHaveBeenCalledWith({
+      userId: "user-1",
+      name: "User",
+    });
   });
 
   it("returns null when the authenticated user does not exist", async () => {

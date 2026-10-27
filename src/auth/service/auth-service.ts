@@ -1,5 +1,6 @@
 import {
   AccountRepository,
+  LearnerRepository,
   SessionRepository,
   UserRepository,
 } from "@irtaki/persistence";
@@ -22,6 +23,7 @@ export class AuthService {
     private readonly sessionService = new SessionService(
       new SessionRepository(),
     ),
+    private readonly learnerRepository = new LearnerRepository(),
   ) {}
 
   async register(input: {
@@ -58,6 +60,8 @@ export class AuthService {
       email,
       passwordHash,
     });
+
+    await this.ensureDefaultLearner(user.id, user.name);
 
     const result = await this.sessionService.createSession(user.id);
 
@@ -105,6 +109,9 @@ export class AuthService {
       throw new Error("INVALID_CREDENTIALS");
     }
 
+    // Complète également les comptes qui existaient avant les Learners.
+    await this.ensureDefaultLearner(user.id, user.name);
+
     const result = await this.sessionService.createSession(user.id);
 
     return {
@@ -117,6 +124,27 @@ export class AuthService {
       session: result.session,
     };
   }
+  private async ensureDefaultLearner(
+    userId: string,
+    name: string | null,
+  ): Promise<void> {
+    const learners = await this.learnerRepository.findManyByUserId(userId);
+
+    if (
+      learners.some(
+        (learner: { childProfileId: string | null }) =>
+          learner.childProfileId === null,
+      )
+    ) {
+      return;
+    }
+
+    await this.learnerRepository.create({
+      userId,
+      name: name ?? undefined,
+    });
+  }
+
   async getAuthenticatedUser(
     userId: string,
   ): Promise<AuthenticatedUser | null> {
@@ -125,6 +153,9 @@ export class AuthService {
     if (!user) {
       return null;
     }
+
+    // Répare aussi les comptes disposant déjà d'une session active.
+    await this.ensureDefaultLearner(user.id, user.name);
 
     return {
       id: user.id,

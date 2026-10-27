@@ -1,5 +1,6 @@
 import {
   ActivityRepository,
+  ActivityAyahTraceRepository,
   ActivityResultRepository,
   GoalRepository,
   LearnerRepository,
@@ -16,7 +17,10 @@ import { createGoal } from "./use-cases/create-goal";
 import { getNextWork } from "./use-cases/get-next-work";
 import { getProgress } from "./use-cases/get-progress";
 import { recordActivityResult } from "./use-cases/record-activity-result";
+import { recordActivityAyahTraces } from "./use-cases/record-activity-ayah-traces";
 import { startActivity } from "./use-cases/start-activity";
+import { getSurahHistory as getSurahHistoryUseCase } from "./use-cases/get-surah-history";
+import { getActivityHistory as getActivityHistoryUseCase } from "./use-cases/get-activity-history";
 
 export function createLearningEngine() {
   const learnerRepository = createLearningLearnerRepository(
@@ -28,6 +32,8 @@ export function createLearningEngine() {
   const activityRepository = createLearningActivityRepository(
     new ActivityRepository(),
   );
+
+  const activityAyahTraceRepository = new ActivityAyahTraceRepository();
 
   const activityResultRepository = createLearningActivityResultRepository(
     new ActivityResultRepository(),
@@ -54,6 +60,16 @@ export function createLearningEngine() {
         activityRepository,
       }),
 
+    recordActivityAyahTraces: (
+      userId: string,
+      input: Parameters<typeof recordActivityAyahTraces>[1],
+    ) =>
+      recordActivityAyahTraces(userId, input, {
+        learnerRepository,
+        activityRepository,
+        activityAyahTraceRepository,
+      }),
+
     recordActivityResult: (
       learnerId: string,
       input: Parameters<typeof recordActivityResult>[1],
@@ -70,6 +86,21 @@ export function createLearningEngine() {
         },
         recordedAt,
       ),
+
+    getHistoryLearners: (userId: string) =>
+      learnerRepository.findManyByUserId(userId),
+
+    getSurahHistory: (userId: string, learnerId: string, surahNumber: number) =>
+      getSurahHistoryUseCase(userId, learnerId, surahNumber, {
+        learnerRepository,
+        activityAyahTraceRepository,
+      }),
+
+    getActivityHistory: (userId: string, learnerId: string) =>
+      getActivityHistoryUseCase(userId, learnerId, {
+        learnerRepository,
+        activityAyahTraceRepository,
+      }),
 
     getProgress: (learnerId: string, goalId: string, now: Date) =>
       getProgress(learnerId, goalId, now, {

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { AccountPanel } from "./account-panel";
 
 type MainPanel = "goto" | "account" | "settings" | null;
 
@@ -83,6 +84,23 @@ function SettingsIcon() {
     >
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.1h-2.5V20a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1-1.8-1.8.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H6.4v-2.5H6.5a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.8-1.8.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V5h2.5v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1v2.5h-.1a1.7 1.7 0 0 0-1.6 1Z" />
+    </svg>
+  );
+}
+
+function HistoryIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l3 2" />
     </svg>
   );
 }
@@ -210,6 +228,13 @@ export function AppMainMenu({
               <MainMenuLink href="/recherche" label="البحث" onClick={closeMenu}>
                 <SearchIcon />
               </MainMenuLink>
+              <MainMenuLink
+                href="/coran/10/page/605"
+                label="السجل"
+                onClick={closeMenu}
+              >
+                <HistoryIcon />
+              </MainMenuLink>
 
               <MainMenuButton
                 label="انتقل إلى"
@@ -278,18 +303,7 @@ export function AppMainMenu({
                 </div>
               ) : null}
 
-              {panel === "account" ? (
-                <div className="space-y-3 text-sm">
-                  <p className="text-[var(--muted)]">
-                    تسجيل الدخول والملف الشخصي وإدارة الملفات المرتبطة بالحساب.
-                  </p>
-
-                  <div className="grid gap-2">
-                    <PanelButton>الملف الشخصي</PanelButton>
-                    <PanelButton>تسجيل الدخول</PanelButton>
-                  </div>
-                </div>
-              ) : null}
+              {panel === "account" ? <AccountPanel /> : null}
 
               {panel === "settings" ? (
                 <div className="space-y-3 text-sm">

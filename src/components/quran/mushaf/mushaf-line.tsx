@@ -10,6 +10,7 @@ type MushafLineProps = {
   selectedAyahId?: number;
   selectedWords?: Set<string>;
   mode: string;
+  modificationModes: string[];
   textModifications: Record<string, boolean>;
   colorAssignments: Record<string, string>;
   previewOriginalOptions: Record<string, boolean>;
@@ -27,6 +28,7 @@ export function MushafLine({
   selectedAyahId,
   selectedWords,
   mode,
+  modificationModes,
   textModifications,
   colorAssignments,
   previewOriginalOptions,
@@ -73,7 +75,7 @@ export function MushafLine({
   return (
     <div
       className={[
-        "w-full text-2xl leading-[2.5] whitespace-nowrap",
+        "w-full text-xl leading-[1.7] whitespace-nowrap sm:text-2xl sm:leading-[1.9]",
         "select-none",
         "text-center",
       ].join(" ")}
@@ -103,6 +105,7 @@ export function MushafLine({
             selected={ayah.id === selectedAyahId}
             selectedWords={selectedWords}
             mode={mode}
+            modificationModes={modificationModes}
             textModifications={textModifications}
             colorAssignments={colorAssignments}
             previewOriginalOptions={previewOriginalOptions}

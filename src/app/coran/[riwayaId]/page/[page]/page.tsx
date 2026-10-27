@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { useParams, useSearchParams } from "next/navigation";
 
+import { MushafLearnerIndicator } from "@/components/quran/mushaf/mushaf-learner-indicator";
 import { MushafPage } from "@/components/quran/mushaf/mushaf-page";
 
 export default function MushafPageRoute() {
@@ -31,7 +32,7 @@ export default function MushafPageRoute() {
    * L'identifiant Quranpedia du Mushaf reste interne
    * au backend/layout et n'est PAS exposé dans l'URL.
    */
-  if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > 604) {
+  if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > 605) {
     return (
       <div
         className="mx-auto max-w-3xl rounded-xl border border-[var(--border)] p-8 text-center"
@@ -39,7 +40,7 @@ export default function MushafPageRoute() {
       >
         <h1 className="mb-3 text-xl font-bold">رقم الصفحة غير صالح</h1>
         <p className="mb-4 text-[var(--muted)]">
-          رقم الصفحة يجب أن يكون بين 1 و604.
+          رقم الصفحة يجب أن يكون بين 1 و605.
         </p>
         <Link href="/coran/10/page/1" className="underline">
           العودة إلى الصفحة الأولى
@@ -63,8 +64,9 @@ export default function MushafPageRoute() {
 
   return (
     <div className="space-y-6">
-      <header>
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-2" dir="rtl">
         <h1 className="text-2xl font-bold">المصحف — حفص عن عاصم</h1>
+        <MushafLearnerIndicator />
       </header>
 
       <MushafPage

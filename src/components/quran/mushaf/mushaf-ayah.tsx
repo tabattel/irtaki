@@ -7,12 +7,10 @@ type UnderlineStyle = "single" | "double" | "wavy" | "double-wavy";
 
 function resolveUnderlineStyle(
   textModifications: Record<string, boolean>,
-  mode: string,
+  modes: string[],
   target: string,
-  previewOriginal: boolean,
+  previewOriginalOptions: Record<string, boolean>,
 ): UnderlineStyle | null {
-  if (previewOriginal) return null;
-
   const priority: UnderlineStyle[] = [
     "double-wavy",
     "wavy",
@@ -20,16 +18,20 @@ function resolveUnderlineStyle(
     "single",
   ];
 
-  for (const style of priority) {
-    if (textModifications[`${mode}:${target}:underline-${style}`] === true) {
-      return style;
+  for (const mode of modes) {
+    if (previewOriginalOptions[`${mode}:underline`] === true) continue;
+
+    for (const style of priority) {
+      if (textModifications[`${mode}:${target}:underline-${style}`] === true) {
+        return style;
+      }
+    }
+
+    if (textModifications[`${mode}:${target}:underline`] === true) {
+      return "single";
     }
   }
-
-  // Compatibilité avec les soulignements simples déjà sauvegardés.
-  return textModifications[`${mode}:${target}:underline`] === true
-    ? "single"
-    : null;
+  return null;
 }
 
 type MushafAyahProps = {
@@ -39,6 +41,7 @@ type MushafAyahProps = {
   selectedWords?: Set<string>;
   onAyahClick?: (ayah: AyahDto) => void;
   mode: string;
+  modificationModes: string[];
   textModifications: Record<string, boolean>;
   colorAssignments: Record<string, string>;
   previewOriginalOptions: Record<string, boolean>;
@@ -69,6 +72,7 @@ export function MushafAyah({
   selectedWords,
   onAyahClick,
   mode,
+  modificationModes,
   textModifications,
   colorAssignments,
   previewOriginalOptions,
@@ -93,26 +97,40 @@ export function MushafAyah({
       text: word,
     }));
 
-  const ayahColors =
-    previewOriginalOptions[`${mode}:colors`] !== true &&
-    textModifications[`${mode}:ayah:${ayah.id}:colors`] === true;
-  const ayahHighlight =
-    previewOriginalOptions[`${mode}:highlight`] !== true &&
-    textModifications[`${mode}:ayah:${ayah.id}:highlight`] === true;
+  const ayahColors = modificationModes.some(
+    (candidate) =>
+      previewOriginalOptions[`${candidate}:colors`] !== true &&
+      textModifications[`${candidate}:ayah:${ayah.id}:colors`] === true,
+  );
+  const ayahHighlight = modificationModes.some(
+    (candidate) =>
+      previewOriginalOptions[`${candidate}:highlight`] !== true &&
+      textModifications[`${candidate}:ayah:${ayah.id}:highlight`] === true,
+  );
   const ayahUnderlineStyle = resolveUnderlineStyle(
     textModifications,
-    mode,
+    modificationModes,
     `ayah:${ayah.id}`,
-    previewOriginalOptions[`${mode}:underline`] === true,
+    previewOriginalOptions,
   );
-  const ayahColor =
-    previewOriginalOptions[`${mode}:colors`] !== true
-      ? colorAssignments[`${mode}:ayah:${ayah.id}:colors`]
-      : undefined;
-  const ayahHighlightColor =
-    previewOriginalOptions[`${mode}:highlight`] !== true
-      ? colorAssignments[`${mode}:ayah:${ayah.id}:highlight`]
-      : undefined;
+  const ayahColorMode = modificationModes.find(
+    (candidate) =>
+      previewOriginalOptions[`${candidate}:colors`] !== true &&
+      textModifications[`${candidate}:ayah:${ayah.id}:colors`] === true &&
+      colorAssignments[`${candidate}:ayah:${ayah.id}:colors`] !== undefined,
+  );
+  const ayahColor = ayahColorMode
+    ? colorAssignments[`${ayahColorMode}:ayah:${ayah.id}:colors`]
+    : undefined;
+  const ayahHighlightMode = modificationModes.find(
+    (candidate) =>
+      previewOriginalOptions[`${candidate}:highlight`] !== true &&
+      textModifications[`${candidate}:ayah:${ayah.id}:highlight`] === true &&
+      colorAssignments[`${candidate}:ayah:${ayah.id}:highlight`] !== undefined,
+  );
+  const ayahHighlightColor = ayahHighlightMode
+    ? colorAssignments[`${ayahHighlightMode}:ayah:${ayah.id}:highlight`]
+    : undefined;
   const ayahHidden =
     hideText ||
     (!showAllTextOverride &&
@@ -135,34 +153,52 @@ export function MushafAyah({
         type="button"
         onClick={() => onAyahClick?.(ayah)}
         className={[
-          "rounded-md px-1 text-right leading-loose transition",
-          selected ? "border border-black" : "border border-transparent",
+          "inline rounded-md px-1 text-right leading-[1.7] transition sm:leading-[1.9]",
         ].join(" ")}
         aria-label={`آية ${ayah.number}`}
       >
         {renderedWords.map((word, index) => {
           const wordKey = `${word.surah}:${word.ayah}:${word.word}`;
           const selectedWord = selectedWords?.has(wordKey) ?? false;
-          const wordColors =
-            previewOriginalOptions[`${mode}:colors`] !== true &&
-            textModifications[`${mode}:word:${wordKey}:colors`] === true;
-          const wordHighlight =
-            previewOriginalOptions[`${mode}:highlight`] !== true &&
-            textModifications[`${mode}:word:${wordKey}:highlight`] === true;
+          const wordColors = modificationModes.some(
+            (candidate) =>
+              previewOriginalOptions[`${candidate}:colors`] !== true &&
+              textModifications[`${candidate}:word:${wordKey}:colors`] === true,
+          );
+          const wordHighlight = modificationModes.some(
+            (candidate) =>
+              previewOriginalOptions[`${candidate}:highlight`] !== true &&
+              textModifications[`${candidate}:word:${wordKey}:highlight`] ===
+                true,
+          );
           const wordUnderlineStyle = resolveUnderlineStyle(
             textModifications,
-            mode,
+            modificationModes,
             `word:${wordKey}`,
-            previewOriginalOptions[`${mode}:underline`] === true,
+            previewOriginalOptions,
           );
-          const wordColor =
-            previewOriginalOptions[`${mode}:colors`] !== true
-              ? colorAssignments[`${mode}:word:${wordKey}:colors`]
-              : undefined;
-          const wordHighlightColor =
-            previewOriginalOptions[`${mode}:highlight`] !== true
-              ? colorAssignments[`${mode}:word:${wordKey}:highlight`]
-              : undefined;
+          const wordColorMode = modificationModes.find(
+            (candidate) =>
+              previewOriginalOptions[`${candidate}:colors`] !== true &&
+              textModifications[`${candidate}:word:${wordKey}:colors`] ===
+                true &&
+              colorAssignments[`${candidate}:word:${wordKey}:colors`] !==
+                undefined,
+          );
+          const wordColor = wordColorMode
+            ? colorAssignments[`${wordColorMode}:word:${wordKey}:colors`]
+            : undefined;
+          const wordHighlightMode = modificationModes.find(
+            (candidate) =>
+              previewOriginalOptions[`${candidate}:highlight`] !== true &&
+              textModifications[`${candidate}:word:${wordKey}:highlight`] ===
+                true &&
+              colorAssignments[`${candidate}:word:${wordKey}:highlight`] !==
+                undefined,
+          );
+          const wordHighlightColor = wordHighlightMode
+            ? colorAssignments[`${wordHighlightMode}:word:${wordKey}:highlight`]
+            : undefined;
           const wordHidden =
             !showAllTextOverride &&
             textModifications[`${mode}:word:${wordKey}:hidden`] === true;

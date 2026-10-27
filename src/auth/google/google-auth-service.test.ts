@@ -22,6 +22,11 @@ describe("GoogleAuthService", () => {
     revokeSession: vi.fn(),
   };
 
+  const learnerRepository = {
+    findManyByUserId: vi.fn().mockResolvedValue([]),
+    create: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -36,6 +41,7 @@ describe("GoogleAuthService", () => {
       userRepository as never,
       accountRepository as never,
       sessionService as never,
+      learnerRepository as never,
     );
 
     const url = service.getAuthorizationUrl("state-123");
@@ -100,6 +106,7 @@ describe("GoogleAuthService", () => {
       userRepository as never,
       accountRepository as never,
       sessionService as never,
+      learnerRepository as never,
     );
 
     const result = await service.authenticate("authorization-code");
@@ -174,6 +181,7 @@ describe("GoogleAuthService", () => {
       userRepository as never,
       accountRepository as never,
       sessionService as never,
+      learnerRepository as never,
     );
 
     const result = await service.authenticate("authorization-code");
@@ -222,6 +230,7 @@ describe("GoogleAuthService", () => {
       userRepository as never,
       accountRepository as never,
       sessionService as never,
+      learnerRepository as never,
     );
 
     await expect(service.authenticate("authorization-code")).rejects.toThrow(

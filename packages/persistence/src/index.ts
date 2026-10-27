@@ -18,5 +18,10 @@ export { LearnerRepository } from "./repository/learner-repository";
 export { GoalTargetRepository } from "./repository/goal-target-repository";
 export { GoalRepository } from "./repository/goal-repository";
 export { ActivityRepository } from "./repository/activity-repository";
+export { ActivityAyahTraceRepository } from "./repository/activity-ayah-trace-repository";
+export type {
+  ActivityTraceStatus,
+  TrackedActivityAction,
+} from "./repository/activity-ayah-trace-repository";
 export { ActivityResultRepository } from "./repository/activity-result-repository";
 export { ProgressRecordRepository } from "./repository/progress-record-repository";

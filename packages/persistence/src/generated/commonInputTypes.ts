@@ -416,6 +416,23 @@ export type EnumActivityResultStatusWithAggregatesFilter<$PrismaModel = never> =
   _max?: Prisma.NestedEnumActivityResultStatusFilter<$PrismaModel>
 }
 
+export type EnumActivityAyahTraceStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.ActivityAyahTraceStatus | Prisma.EnumActivityAyahTraceStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ActivityAyahTraceStatus[] | Prisma.ListEnumActivityAyahTraceStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ActivityAyahTraceStatus[] | Prisma.ListEnumActivityAyahTraceStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumActivityAyahTraceStatusFilter<$PrismaModel> | $Enums.ActivityAyahTraceStatus
+}
+
+export type EnumActivityAyahTraceStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ActivityAyahTraceStatus | Prisma.EnumActivityAyahTraceStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ActivityAyahTraceStatus[] | Prisma.ListEnumActivityAyahTraceStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ActivityAyahTraceStatus[] | Prisma.ListEnumActivityAyahTraceStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumActivityAyahTraceStatusWithAggregatesFilter<$PrismaModel> | $Enums.ActivityAyahTraceStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumActivityAyahTraceStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumActivityAyahTraceStatusFilter<$PrismaModel>
+}
+
 export type NestedIntFilter<$PrismaModel = never> = {
   equals?: number | Prisma.IntFieldRefInput<$PrismaModel>
   in?: number[] | Prisma.ListIntFieldRefInput<$PrismaModel>
@@ -829,6 +846,23 @@ export type NestedEnumActivityResultStatusWithAggregatesFilter<$PrismaModel = ne
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumActivityResultStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumActivityResultStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumActivityAyahTraceStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.ActivityAyahTraceStatus | Prisma.EnumActivityAyahTraceStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ActivityAyahTraceStatus[] | Prisma.ListEnumActivityAyahTraceStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ActivityAyahTraceStatus[] | Prisma.ListEnumActivityAyahTraceStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumActivityAyahTraceStatusFilter<$PrismaModel> | $Enums.ActivityAyahTraceStatus
+}
+
+export type NestedEnumActivityAyahTraceStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.ActivityAyahTraceStatus | Prisma.EnumActivityAyahTraceStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.ActivityAyahTraceStatus[] | Prisma.ListEnumActivityAyahTraceStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.ActivityAyahTraceStatus[] | Prisma.ListEnumActivityAyahTraceStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumActivityAyahTraceStatusWithAggregatesFilter<$PrismaModel> | $Enums.ActivityAyahTraceStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumActivityAyahTraceStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumActivityAyahTraceStatusFilter<$PrismaModel>
 }
 
 

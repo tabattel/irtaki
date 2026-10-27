@@ -112,3 +112,8 @@ export type ActivityResult = Prisma.ActivityResultModel
  * 
  */
 export type ProgressRecord = Prisma.ProgressRecordModel
+/**
+ * Model ActivityAyahTrace
+ * 
+ */
+export type ActivityAyahTrace = Prisma.ActivityAyahTraceModel

@@ -19,6 +19,10 @@ import {
 import { getMushafPageLayout, type MushafPageLayout } from "@/lib/api/mushaf";
 
 import { MushafLine } from "./mushaf-line";
+import {
+  MushafHistoryContent,
+  type MushafHistoryView,
+} from "./mushaf-history-content";
 
 type MushafPageProps = {
   mushafId: number;
@@ -459,9 +463,13 @@ export function MushafPage({
     }
   }
 
-  const [secondaryMode, setSecondaryMode] =
-    useState<SecondaryMode>("listening");
-  const secondaryModeRef = useRef<SecondaryMode>("listening");
+  const [secondaryMode, setSecondaryMode] = useState<SecondaryMode>(
+    pageNumber === 605 ? "history" : "listening",
+  );
+  const secondaryModeRef = useRef<SecondaryMode>(
+    pageNumber === 605 ? "history" : "listening",
+  );
+  const [historyView, setHistoryView] = useState<MushafHistoryView>("pages");
   const [listeningAyahsHidden, setListeningAyahsHidden] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
@@ -537,6 +545,9 @@ export function MushafPage({
     Record<string, boolean>
   >({});
   const [showAllTextByMode, setShowAllTextByMode] = useState<
+    Record<string, boolean>
+  >({});
+  const [hiddenModificationModes, setHiddenModificationModes] = useState<
     Record<string, boolean>
   >({});
   const [textModifications, setTextModifications] = useState<
@@ -621,6 +632,17 @@ export function MushafPage({
   const [contextMenuMessage, setContextMenuMessage] = useState<string | null>(
     null,
   );
+
+  const visibleModificationModes =
+    secondaryMode === "progress"
+      ? SECONDARY_MODES.filter(
+          (item) => hiddenModificationModes[item.id] !== true,
+        ).map((item) => item.id)
+      : [secondaryMode];
+
+  useEffect(() => {
+    setHiddenModificationModes({});
+  }, [mushafId, riwayaId, pageNumber]);
 
   function toggleOriginalPreview(optionId: string) {
     const key = `${secondaryMode}:${optionId}`;
@@ -864,6 +886,14 @@ export function MushafPage({
     let cancelled = false;
 
     async function load() {
+      if (pageNumber === 605) {
+        setAyahs([]);
+        setLayout(null);
+        setLoading(false);
+        setError(null);
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
@@ -916,7 +946,8 @@ export function MushafPage({
     const savedMode = SECONDARY_MODES.find(
       (candidate) => candidate.id === storedMode,
     )?.id;
-    const initialMode: SecondaryMode = savedMode ?? "listening";
+    const initialMode: SecondaryMode =
+      pageNumber === 605 ? "history" : (savedMode ?? "listening");
 
     secondaryModeRef.current = initialMode;
     setSecondaryMode(initialMode);
@@ -942,7 +973,13 @@ export function MushafPage({
   }, [pageNumber, mushafId, riwayaId]);
 
   function navigatePage(delta: number) {
-    const nextPage = Math.max(1, Math.min(TOTAL_PAGES, pageNumber + delta));
+    const nextPage = Math.max(
+      1,
+      Math.min(
+        secondaryMode === "history" ? 605 : TOTAL_PAGES,
+        pageNumber + delta,
+      ),
+    );
 
     if (nextPage === pageNumber) {
       return;
@@ -1093,7 +1130,9 @@ export function MushafPage({
 
     const ayah = getAyahFromPoint(event.clientX, event.clientY);
 
-    if (!word && !ayah) {
+    // La page 605 n'a ni ayah ni mot, mais doit conserver
+    // les gestes de navigation et d'ouverture des menus du Mushaf.
+    if (!word && !ayah && pageNumber !== 605) {
       return;
     }
 
@@ -2536,6 +2575,8 @@ export function MushafPage({
   }, [mushafId, riwayaId]);
 
   function selectSecondaryMode(mode: SecondaryMode) {
+    let targetPage =
+      mode === "history" ? 605 : pageNumber === 605 ? 1 : pageNumber;
     try {
       window.localStorage.setItem(
         `irtaki.mushaf.mode.${mushafId}.${riwayaId}`,
@@ -2553,12 +2594,16 @@ export function MushafPage({
       const savedPage = Number(
         window.localStorage.getItem(getModePositionKey(mode)),
       );
-      const targetPage =
-        Number.isInteger(savedPage) &&
-        savedPage >= 1 &&
-        savedPage <= TOTAL_PAGES
-          ? savedPage
-          : pageNumber;
+      targetPage =
+        mode === "history"
+          ? 605
+          : Number.isInteger(savedPage) &&
+              savedPage >= 1 &&
+              savedPage <= TOTAL_PAGES
+            ? savedPage
+            : pageNumber === 605
+              ? 1
+              : pageNumber;
 
       // Recharger la sélection indépendante du mode choisi.
       restoreModeSelection(mode, targetPage);
@@ -2567,16 +2612,16 @@ export function MushafPage({
       setSecondaryMode(mode);
       setModePickerOpen(false);
       setReciterPickerOpen(false);
-
-      if (targetPage !== pageNumber) {
-        router.push(`/coran/${riwayaId}/page/${targetPage}`);
-      }
     } catch {
       // Si le stockage est indisponible, conserver la navigation normale.
       secondaryModeRef.current = mode;
       setSecondaryMode(mode);
       setModePickerOpen(false);
       setReciterPickerOpen(false);
+    }
+
+    if (targetPage !== pageNumber) {
+      router.push(`/coran/${riwayaId}/page/${targetPage}`);
     }
 
     showSecondaryMessage(
@@ -3315,7 +3360,15 @@ export function MushafPage({
     ayahs,
   ]);
 
-  if (pageNumber < 1 || pageNumber > TOTAL_PAGES) {
+  useEffect(() => {
+    if (pageNumber !== 605) return;
+    secondaryModeRef.current = "history";
+    setSecondaryMode("history");
+    setModePickerOpen(false);
+    setReciterPickerOpen(false);
+  }, [pageNumber]);
+
+  if (pageNumber < 1 || (pageNumber > TOTAL_PAGES && pageNumber !== 605)) {
     return (
       <p className="rounded-lg border border-[var(--border)] p-6 text-center">
         Page invalide.
@@ -3323,7 +3376,7 @@ export function MushafPage({
     );
   }
 
-  if (loading || !layout) {
+  if (pageNumber !== 605 && (loading || !layout)) {
     return (
       <div
         className="mx-auto max-w-3xl rounded-xl border border-[var(--border)] p-8 text-center"
@@ -3334,7 +3387,7 @@ export function MushafPage({
     );
   }
 
-  if (error) {
+  if (pageNumber !== 605 && error) {
     return (
       <p
         role="alert"
@@ -3349,7 +3402,7 @@ export function MushafPage({
 
   return (
     <article
-      className="mx-auto max-w-3xl touch-none rounded-xl border border-[var(--border)] bg-[var(--background)] p-5 select-none sm:p-8"
+      className={`mx-auto max-w-3xl ${"touch-none"} rounded-xl border border-[var(--border)] bg-[var(--background)] p-2 select-none sm:p-8`}
       dir="rtl"
       data-mushaf-page={pageNumber}
       onPointerDown={handlePointerDown}
@@ -3359,9 +3412,9 @@ export function MushafPage({
       onDoubleClick={handleDoubleClick}
     >
       <audio ref={audioRef} preload="auto" className="hidden" />
-      <header className="mb-6 grid grid-cols-3 items-center gap-2 text-xs text-[var(--muted)] sm:text-sm">
+      <header className="mb-3 grid grid-cols-3 items-center gap-1 text-xs text-[var(--muted)] sm:mb-6 sm:gap-2 sm:text-sm">
         <span className="text-right tabular-nums">
-          صفحة {pageNumber} / {TOTAL_PAGES}
+          صفحة {pageNumber} / {pageNumber === 605 ? 605 : TOTAL_PAGES}
         </span>
         <span className="text-center font-medium">
           {[...new Set(ayahs.map((ayah) => ayah.surahNumber))]
@@ -3395,28 +3448,36 @@ export function MushafPage({
         </span>
       </header>
 
-      <div
-        className="mushaf-hafs-text space-y-1 text-center"
-        data-mushaf-lines={layout.lines.length}
-      >
-        {layout.lines.map((line) => (
-          <MushafLine
-            key={line.line}
-            line={line}
-            ayahs={ayahs}
-            surahNames={surahNames}
-            selectedAyahId={selectedAyahId}
-            selectedWords={selectedWords}
-            mode={secondaryMode}
-            textModifications={textModifications}
-            colorAssignments={colorAssignments}
-            previewOriginalOptions={previewOriginalOptions}
-            showAllTextOverride={showAllTextByMode[secondaryMode] === true}
-            hideUnrevealedAyahs={listeningAyahsHidden}
-            revealedAyahIds={listeningRevealedAyahIds}
-          />
-        ))}
-      </div>
+      {pageNumber === 605 ? (
+        <MushafHistoryContent
+          view={historyView}
+          onViewChange={setHistoryView}
+        />
+      ) : (
+        <div
+          className="mushaf-hafs-text space-y-0 text-center sm:space-y-1"
+          data-mushaf-lines={layout!.lines.length}
+        >
+          {layout!.lines.map((line) => (
+            <MushafLine
+              key={line.line}
+              line={line}
+              ayahs={ayahs}
+              surahNames={surahNames}
+              selectedAyahId={selectedAyahId}
+              selectedWords={selectedWords}
+              mode={secondaryMode}
+              modificationModes={visibleModificationModes}
+              textModifications={textModifications}
+              colorAssignments={colorAssignments}
+              previewOriginalOptions={previewOriginalOptions}
+              showAllTextOverride={showAllTextByMode[secondaryMode] === true}
+              hideUnrevealedAyahs={listeningAyahsHidden}
+              revealedAyahIds={listeningRevealedAyahIds}
+            />
+          ))}
+        </div>
+      )}
 
       {menu ? (
         <div
@@ -4041,76 +4102,121 @@ export function MushafPage({
                   </>
                 )}
 
-                {secondaryMode === "progress" && (
-                  <>
-                    <button
-                      type="button"
-                      className="rounded-lg border px-3 py-2"
-                      aria-label="الأهداف"
-                      onClick={() => showSecondaryMessage("الأهداف")}
-                    >
-                      🎯
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg border px-3 py-2"
-                      aria-label="الأنشطة"
-                      onClick={() => showSecondaryMessage("الأنشطة")}
-                    >
-                      📋
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg border px-3 py-2"
-                      aria-label="السجل"
-                      onClick={() => showSecondaryMessage("السجل")}
-                    >
-                      🕘
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg border px-3 py-2"
-                      aria-label="التقدم"
-                      onClick={() => showSecondaryMessage("التقدم")}
-                    >
-                      📈
-                    </button>
-                  </>
-                )}
+                {secondaryMode === "progress" && <></>}
 
                 {secondaryMode !== "listening" &&
-                  secondaryMode !== "recitation" && (
-                    <>
-                      {[
-                        { id: "colors", label: "تلوين", icon: "🎨" },
-                        { id: "underline", label: "تسطير", icon: "〰️" },
-                        { id: "highlight", label: "تظليل", icon: "🖍️" },
-                      ].map((option) => {
-                        const key = `${secondaryMode}:${option.id}`;
-                        const previewingOriginal =
-                          previewOriginalOptions[key] === true;
-                        const enabled = !previewingOriginal;
+                secondaryMode === "progress" ? (
+                  <div
+                    className="flex max-w-full flex-wrap items-center gap-2"
+                    role="group"
+                    aria-label="إظهار وإخفاء تعديلات الأوضاع"
+                  >
+                    {SECONDARY_MODES.filter(
+                      (item) =>
+                        ![
+                          "progress",
+                          "goals",
+                          "data",
+                          "history",
+                          "exercises",
+                        ].includes(item.id),
+                    ).map((item) => {
+                      const visible = hiddenModificationModes[item.id] !== true;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          role="menuitemcheckbox"
+                          aria-checked={visible}
+                          aria-pressed={visible}
+                          aria-label={`${item.label}: ${visible ? "إخفاء التعديلات" : "إظهار التعديلات"}`}
+                          title={`${item.label}: ${visible ? "إخفاء تعديلات الوضع" : "إظهار تعديلات الوضع"}`}
+                          className={
+                            visible
+                              ? "shrink-0 rounded-lg border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                              : "shrink-0 rounded-lg border px-2 py-2 text-sm"
+                          }
+                          onClick={() =>
+                            setHiddenModificationModes((current) => ({
+                              ...current,
+                              [item.id]: current[item.id] !== true,
+                            }))
+                          }
+                        >
+                          {item.icon}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : secondaryMode !== "recitation" &&
+                  secondaryMode !== "history" ? (
+                  <>
+                    {[
+                      { id: "colors", label: "تلوين", icon: "🎨" },
+                      { id: "underline", label: "تسطير", icon: "〰️" },
+                      { id: "highlight", label: "تظليل", icon: "🖍️" },
+                    ].map((option) => {
+                      const key = `${secondaryMode}:${option.id}`;
+                      const previewingOriginal =
+                        previewOriginalOptions[key] === true;
+                      const enabled = !previewingOriginal;
 
-                        return (
-                          <button
-                            key={option.id}
-                            type="button"
-                            aria-label={`اختصار سريع: ${option.label}`}
-                            title={`${option.label}: ${previewingOriginal ? "الأصل معروض" : "عرض الأصل"}`}
-                            aria-pressed={previewingOriginal}
-                            className={
-                              enabled
-                                ? "rounded-lg border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
-                                : "rounded-lg border px-2 py-2 text-sm"
-                            }
-                            onClick={() => toggleOriginalPreview(option.id)}
-                          >
-                            {option.icon} {option.label}
-                          </button>
-                        );
-                      })}
-                    </>
-                  )}
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          aria-label={`اختصار سريع: ${option.label}`}
+                          title={`${option.label}: ${previewingOriginal ? "الأصل معروض" : "عرض الأصل"}`}
+                          aria-pressed={previewingOriginal}
+                          className={
+                            enabled
+                              ? "rounded-lg border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                              : "rounded-lg border px-2 py-2 text-sm"
+                          }
+                          onClick={() => toggleOriginalPreview(option.id)}
+                        >
+                          {option.icon} {option.label}
+                        </button>
+                      );
+                    })}
+                  </>
+                ) : null}
+
+                {secondaryMode === "history" && (
+                  <div
+                    className="flex flex-wrap items-center justify-center gap-1"
+                    role="group"
+                    aria-label="اختيار عرض السجل"
+                  >
+                    {[
+                      { id: "day", label: "اليوم", view: "day" },
+                      { id: "ayahs", label: "آية", view: "ayahs" },
+                      { id: "pages", label: "صفحة", view: "pages" },
+                      { id: "activity", label: "النشاط", view: "activity" },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={
+                          historyView === item.view
+                            ? "rounded-lg border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                            : "rounded-lg border px-2 py-2 text-sm"
+                        }
+                        aria-pressed={historyView === item.view}
+                        aria-label={`history-view-${item.id}`}
+                        title={item.label}
+                        onClick={() => {
+                          setMoreMenuOpen(false);
+                          setModePickerOpen(false);
+                          setReciterPickerOpen(false);
+                          setHistoryView(item.view as MushafHistoryView);
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <button
                   type="button"

@@ -43,6 +43,17 @@ export const AccountProvider = {
 export type AccountProvider = (typeof AccountProvider)[keyof typeof AccountProvider]
 
 
+export const ActivityAyahTraceStatus = {
+  started: 'started',
+  completed: 'completed',
+  partial: 'partial',
+  failed: 'failed',
+  skipped: 'skipped'
+} as const
+
+export type ActivityAyahTraceStatus = (typeof ActivityAyahTraceStatus)[keyof typeof ActivityAyahTraceStatus]
+
+
 export const GoalAction = {
   read: 'read',
   listen: 'listen',

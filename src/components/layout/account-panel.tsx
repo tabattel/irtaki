@@ -1,0 +1,331 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { ChildAccountsPanel } from "./child-accounts-panel";
+import type { FormEvent } from "react";
+
+type AuthUser = {
+  id?: string;
+  email?: string | null;
+  name?: string | null;
+};
+
+type AuthPayload = {
+  user?: AuthUser | null;
+  error?: string;
+};
+
+type FormMode = "login" | "register";
+
+const errorMessages: Record<string, string> = {
+  INVALID_CREDENTIALS: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+  EMAIL_ALREADY_EXISTS: "هذا البريد الإلكتروني مسجّل بالفعل.",
+  INVALID_REQUEST: "يرجى إدخال البريد الإلكتروني وكلمة المرور.",
+};
+
+async function readCurrentUser(): Promise<AuthUser | null> {
+  const response = await fetch("/api/auth/session", {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("SESSION_UNAVAILABLE");
+  }
+
+  const payload = (await response.json()) as AuthPayload;
+  return payload.user ?? null;
+}
+
+export function AccountPanel() {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [mode, setMode] = useState<FormMode>("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    void readCurrentUser()
+      .then((currentUser) => {
+        if (active) {
+          setUser(currentUser);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setMessage("تعذّر التحقق من الجلسة. يمكنك تسجيل الدخول.");
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setCheckingSession(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage("");
+
+    try {
+      const endpoint =
+        mode === "login" ? "/api/auth/login" : "/api/auth/register";
+
+      const body =
+        mode === "register"
+          ? {
+              name: name.trim() || undefined,
+              email: email.trim(),
+              password,
+            }
+          : {
+              email: email.trim(),
+              password,
+            };
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const result = (await response.json()) as AuthPayload;
+
+      if (!response.ok) {
+        setMessage(
+          errorMessages[result.error ?? ""] ??
+            "تعذّر إتمام العملية. حاول مرة أخرى.",
+        );
+        return;
+      }
+
+      // التحقق من الكوكي والجلسة عبر المسار الحقيقي، لا عبر نجاح POST فقط.
+      const currentUser = await readCurrentUser();
+
+      if (!currentUser) {
+        setUser(null);
+        setMessage(
+          "لم يتم التعرّف على الجلسة بعد العملية. تحقّق من الخادم ثم أعد المحاولة.",
+        );
+        return;
+      }
+
+      setUser(currentUser);
+      setName("");
+      setPassword("");
+      setMessage(
+        mode === "login"
+          ? "تم تسجيل الدخول بنجاح."
+          : "تم إنشاء الحساب الرئيسي بنجاح.",
+      );
+    } catch {
+      setMessage("تعذّر الاتصال بالخادم. تحقق من تشغيل التطبيق وحاول مجددًا.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleLogout() {
+    setBusy(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("LOGOUT_FAILED");
+      }
+
+      setUser(null);
+      setMode("login");
+      setPassword("");
+      setMessage("تم تسجيل الخروج.");
+    } catch {
+      setMessage("تعذّر تسجيل الخروج. حاول مرة أخرى.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const fieldClass =
+    "mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-base text-[var(--foreground)]";
+
+  return (
+    <section className="space-y-4 text-sm" dir="rtl" aria-live="polite">
+      <h3 className="font-semibold">الحساب الرئيسي</h3>
+
+      {checkingSession ? (
+        <p className="text-[var(--muted)]">جارٍ التحقق من الحساب...</p>
+      ) : user ? (
+        <div className="space-y-3">
+          <p className="font-medium">
+            <span aria-hidden="true" className="text-green-600">
+              ✓{" "}
+            </span>
+            الحساب الرئيسي متصل
+          </p>
+
+          <p>{user.name?.trim() || user.email || "الحساب الرئيسي"}</p>
+
+          {user.email ? (
+            <p className="text-[var(--muted)]" dir="ltr">
+              {user.email}
+            </p>
+          ) : null}
+
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void handleLogout()}
+            className="rounded-lg border border-[var(--border)] px-4 py-2 font-medium disabled:opacity-50"
+          >
+            {busy ? "جارٍ التنفيذ..." : "تسجيل الخروج"}
+          </button>
+          <ChildAccountsPanel />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-[var(--muted)]">
+            سجّل الدخول إلى حسابك الرئيسي أو أنشئ حسابًا لإدارة ملفات الحساب.
+          </p>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              aria-pressed={mode === "login"}
+              onClick={() => {
+                setMode("login");
+                setMessage("");
+              }}
+              className={`rounded-lg border border-[var(--border)] px-3 py-2 ${
+                mode === "login" ? "font-semibold" : "text-[var(--muted)]"
+              }`}
+            >
+              تسجيل الدخول
+            </button>
+
+            <button
+              type="button"
+              aria-pressed={mode === "register"}
+              onClick={() => {
+                setMode("register");
+                setMessage("");
+              }}
+              className={`rounded-lg border border-[var(--border)] px-3 py-2 ${
+                mode === "register" ? "font-semibold" : "text-[var(--muted)]"
+              }`}
+            >
+              إنشاء الحساب الرئيسي
+            </button>
+          </div>
+
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              window.location.assign("/api/auth/google");
+            }}
+            className="flex w-full items-center justify-center gap-3 rounded-lg border border-[var(--border)] px-4 py-3 font-medium disabled:opacity-50"
+          >
+            <svg aria-hidden="true" viewBox="0 0 48 48" className="h-5 w-5">
+              <path
+                fill="#EA4335"
+                d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 3.07 13.22l7.98 6.19C12.94 13.72 18.01 9.5 24 9.5Z"
+              />
+              <path
+                fill="#4285F4"
+                d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.74 7.18l7.72 5.99c4.51-4.17 7.06-10.31 7.06-17.64Z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M10.05 28.59A14.4 14.4 0 0 1 9.27 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78l7.49-6.19Z"
+              />
+              <path
+                fill="#34A853"
+                d="M24 48c6.48 0 11.93-2.13 15.91-5.81l-7.72-5.99c-2.14 1.43-4.88 2.28-8.19 2.28-5.99 0-11.06-4.22-12.95-9.91l-7.98 6.19C6.51 43.62 14.62 48 24 48Z"
+              />
+            </svg>
+            متابعة باستخدام Google
+          </button>
+
+          <p className="text-center text-xs text-[var(--muted)]">
+            أو باستخدام البريد الإلكتروني وكلمة المرور
+          </p>
+
+          <form
+            className="space-y-3"
+            onSubmit={(event) => void handleSubmit(event)}
+          >
+            {mode === "register" ? (
+              <label className="block">
+                الاسم
+                <input
+                  className={fieldClass}
+                  type="text"
+                  autoComplete="name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </label>
+            ) : null}
+
+            <label className="block">
+              البريد الإلكتروني
+              <input
+                className={fieldClass}
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </label>
+
+            <label className="block">
+              كلمة المرور
+              <input
+                className={fieldClass}
+                type="password"
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-lg border border-[var(--border)] px-4 py-2 font-semibold disabled:opacity-50"
+            >
+              {busy
+                ? "جارٍ التنفيذ..."
+                : mode === "login"
+                  ? "تسجيل الدخول"
+                  : "إنشاء الحساب"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {message ? (
+        <p className="text-[var(--muted)]" role="status">
+          {message}
+        </p>
+      ) : null}
+    </section>
+  );
+}

@@ -415,7 +415,8 @@ export const ModelName = {
   GoalTarget: 'GoalTarget',
   Activity: 'Activity',
   ActivityResult: 'ActivityResult',
-  ProgressRecord: 'ProgressRecord'
+  ProgressRecord: 'ProgressRecord',
+  ActivityAyahTrace: 'ActivityAyahTrace'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -431,7 +432,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "qiraa" | "riwaya" | "tariq" | "mushaf" | "surah" | "ayah" | "reciter" | "audioTrack" | "annotation" | "user" | "account" | "session" | "childProfile" | "learner" | "goal" | "goalTarget" | "activity" | "activityResult" | "progressRecord"
+    modelProps: "qiraa" | "riwaya" | "tariq" | "mushaf" | "surah" | "ayah" | "reciter" | "audioTrack" | "annotation" | "user" | "account" | "session" | "childProfile" | "learner" | "goal" | "goalTarget" | "activity" | "activityResult" | "progressRecord" | "activityAyahTrace"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1841,6 +1842,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ActivityAyahTrace: {
+      payload: Prisma.$ActivityAyahTracePayload<ExtArgs>
+      fields: Prisma.ActivityAyahTraceFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ActivityAyahTraceFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActivityAyahTracePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ActivityAyahTraceFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActivityAyahTracePayload>
+        }
+        findFirst: {
+          args: Prisma.ActivityAyahTraceFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActivityAyahTracePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ActivityAyahTraceFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActivityAyahTracePayload>
+        }
+        findMany: {
+          args: Prisma.ActivityAyahTraceFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActivityAyahTracePayload>[]
+        }
+        create: {
+          args: Prisma.ActivityAyahTraceCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActivityAyahTracePayload>
+        }
+        createMany: {
+          args: Prisma.ActivityAyahTraceCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ActivityAyahTraceCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActivityAyahTracePayload>[]
+        }
+        delete: {
+          args: Prisma.ActivityAyahTraceDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActivityAyahTracePayload>
+        }
+        update: {
+          args: Prisma.ActivityAyahTraceUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActivityAyahTracePayload>
+        }
+        deleteMany: {
+          args: Prisma.ActivityAyahTraceDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ActivityAyahTraceUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ActivityAyahTraceUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActivityAyahTracePayload>[]
+        }
+        upsert: {
+          args: Prisma.ActivityAyahTraceUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ActivityAyahTracePayload>
+        }
+        aggregate: {
+          args: Prisma.ActivityAyahTraceAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateActivityAyahTrace>
+        }
+        groupBy: {
+          args: Prisma.ActivityAyahTraceGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ActivityAyahTraceGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ActivityAyahTraceCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ActivityAyahTraceCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2131,6 +2206,19 @@ export const ProgressRecordScalarFieldEnum = {
 export type ProgressRecordScalarFieldEnum = (typeof ProgressRecordScalarFieldEnum)[keyof typeof ProgressRecordScalarFieldEnum]
 
 
+export const ActivityAyahTraceScalarFieldEnum = {
+  id: 'id',
+  activityId: 'activityId',
+  ayahId: 'ayahId',
+  status: 'status',
+  recordedAt: 'recordedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ActivityAyahTraceScalarFieldEnum = (typeof ActivityAyahTraceScalarFieldEnum)[keyof typeof ActivityAyahTraceScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -2379,6 +2467,20 @@ export type ListEnumActivityResultStatusFieldRefInput<$PrismaModel> = FieldRefIn
 
 
 /**
+ * Reference to a field of type 'ActivityAyahTraceStatus'
+ */
+export type EnumActivityAyahTraceStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActivityAyahTraceStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'ActivityAyahTraceStatus[]'
+ */
+export type ListEnumActivityAyahTraceStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActivityAyahTraceStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -2561,6 +2663,7 @@ export type GlobalOmitConfig = {
   activity?: Prisma.ActivityOmit
   activityResult?: Prisma.ActivityResultOmit
   progressRecord?: Prisma.ProgressRecordOmit
+  activityAyahTrace?: Prisma.ActivityAyahTraceOmit
 }
 
 /* Types for Logging */

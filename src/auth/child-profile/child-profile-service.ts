@@ -1,4 +1,4 @@
-import { ChildProfileRepository } from "@irtaki/persistence";
+import { ChildProfileRepository, LearnerRepository } from "@irtaki/persistence";
 
 export type ChildProfile = {
   id: string;
@@ -11,6 +11,7 @@ export type ChildProfile = {
 export class ChildProfileService {
   constructor(
     private readonly childProfileRepository = new ChildProfileRepository(),
+    private readonly learnerRepository = new LearnerRepository(),
   ) {}
 
   async create(input: { userId: string; name: string }): Promise<ChildProfile> {
@@ -20,14 +21,61 @@ export class ChildProfileService {
       throw new Error("INVALID_CHILD_PROFILE_NAME");
     }
 
-    return this.childProfileRepository.create({
+    const profile = await this.childProfileRepository.create({
       userId: input.userId,
       name,
     });
+
+    await this.ensureLearnerForChildProfile(profile);
+
+    return profile;
+  }
+
+  private async ensureLearnerForChildProfile(
+    profile: ChildProfile,
+  ): Promise<void> {
+    const existing = await this.learnerRepository.findByChildProfileId(
+      profile.id,
+      profile.userId,
+    );
+
+    if (existing) {
+      if (existing.name !== profile.name) {
+        await this.learnerRepository.update(existing.id, profile.userId, {
+          name: profile.name,
+        });
+      }
+      return;
+    }
+
+    try {
+      await this.learnerRepository.create({
+        userId: profile.userId,
+        childProfileId: profile.id,
+        name: profile.name,
+      });
+    } catch (error) {
+      // childProfileId est unique. Ne tolérer une course concurrente
+      // que si un autre appel a effectivement créé le lien.
+      const concurrent = await this.learnerRepository.findByChildProfileId(
+        profile.id,
+        profile.userId,
+      );
+
+      if (!concurrent) {
+        throw error;
+      }
+    }
   }
 
   async list(userId: string): Promise<ChildProfile[]> {
-    return this.childProfileRepository.findManyByUserId(userId);
+    const profiles = await this.childProfileRepository.findManyByUserId(userId);
+
+    for (const profile of profiles) {
+      await this.ensureLearnerForChildProfile(profile);
+    }
+
+    return profiles;
   }
 
   async get(input: {
@@ -60,11 +108,15 @@ export class ChildProfileService {
       throw new Error("CHILD_PROFILE_NOT_FOUND");
     }
 
-    return this.childProfileRepository.update(
+    const updated = await this.childProfileRepository.update(
       input.childProfileId,
       input.userId,
       { name },
     );
+
+    await this.ensureLearnerForChildProfile(updated);
+
+    return updated;
   }
 
   async delete(input: {

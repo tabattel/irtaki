@@ -11,12 +11,21 @@ describe("ChildProfileService", () => {
     delete: vi.fn(),
   };
 
+  const learnerRepository = {
+    findByChildProfileId: vi.fn().mockResolvedValue(null),
+    create: vi.fn(),
+    update: vi.fn(),
+  };
+
   let service: ChildProfileService;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    service = new ChildProfileService(repository as never);
+    service = new ChildProfileService(
+      repository as never,
+      learnerRepository as never,
+    );
   });
 
   it("creates a child profile with a trimmed name", async () => {
@@ -39,6 +48,12 @@ describe("ChildProfileService", () => {
     });
 
     expect(result.name).toBe("Ahmed");
+
+    expect(learnerRepository.create).toHaveBeenCalledWith({
+      userId: "user-1",
+      childProfileId: "child-1",
+      name: "Ahmed",
+    });
   });
 
   it("rejects an empty name", async () => {

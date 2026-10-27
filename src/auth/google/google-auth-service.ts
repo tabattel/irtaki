@@ -1,4 +1,8 @@
-import { AccountRepository, UserRepository } from "@irtaki/persistence";
+import {
+  AccountRepository,
+  LearnerRepository,
+  UserRepository,
+} from "@irtaki/persistence";
 
 import { normalizeEmail } from "../email/normalize-email";
 import { SessionService } from "../session/session-service";
@@ -22,6 +26,7 @@ export class GoogleAuthService {
     private readonly userRepository = new UserRepository(),
     private readonly accountRepository = new AccountRepository(),
     private readonly sessionService = new SessionService(),
+    private readonly learnerRepository = new LearnerRepository(),
   ) {}
 
   getAuthorizationUrl(state: string): string {
@@ -127,6 +132,8 @@ export class GoogleAuthService {
       throw new Error("GOOGLE_USER_NOT_FOUND");
     }
 
+    await this.ensureDefaultLearner(user.id, user.name);
+
     const session = await this.sessionService.createSession(user.id);
 
     return {
@@ -137,5 +144,26 @@ export class GoogleAuthService {
       },
       token: session.token,
     };
+  }
+
+  private async ensureDefaultLearner(
+    userId: string,
+    name: string | null,
+  ): Promise<void> {
+    const learners = await this.learnerRepository.findManyByUserId(userId);
+
+    if (
+      learners.some(
+        (learner: { childProfileId: string | null }) =>
+          learner.childProfileId === null,
+      )
+    ) {
+      return;
+    }
+
+    await this.learnerRepository.create({
+      userId,
+      name: name ?? undefined,
+    });
   }
 }

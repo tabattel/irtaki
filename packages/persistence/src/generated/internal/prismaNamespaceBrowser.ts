@@ -69,7 +69,8 @@ export const ModelName = {
   GoalTarget: 'GoalTarget',
   Activity: 'Activity',
   ActivityResult: 'ActivityResult',
-  ProgressRecord: 'ProgressRecord'
+  ProgressRecord: 'ProgressRecord',
+  ActivityAyahTrace: 'ActivityAyahTrace'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -337,6 +338,19 @@ export const ProgressRecordScalarFieldEnum = {
 } as const
 
 export type ProgressRecordScalarFieldEnum = (typeof ProgressRecordScalarFieldEnum)[keyof typeof ProgressRecordScalarFieldEnum]
+
+
+export const ActivityAyahTraceScalarFieldEnum = {
+  id: 'id',
+  activityId: 'activityId',
+  ayahId: 'ayahId',
+  status: 'status',
+  recordedAt: 'recordedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ActivityAyahTraceScalarFieldEnum = (typeof ActivityAyahTraceScalarFieldEnum)[keyof typeof ActivityAyahTraceScalarFieldEnum]
 
 
 export const SortOrder = {

@@ -260,6 +260,7 @@ export type ActivityWhereInput = {
   goal?: Prisma.XOR<Prisma.GoalNullableScalarRelationFilter, Prisma.GoalWhereInput> | null
   result?: Prisma.XOR<Prisma.ActivityResultNullableScalarRelationFilter, Prisma.ActivityResultWhereInput> | null
   progress?: Prisma.ProgressRecordListRelationFilter
+  ayahTraces?: Prisma.ActivityAyahTraceListRelationFilter
 }
 
 export type ActivityOrderByWithRelationInput = {
@@ -277,6 +278,7 @@ export type ActivityOrderByWithRelationInput = {
   goal?: Prisma.GoalOrderByWithRelationInput
   result?: Prisma.ActivityResultOrderByWithRelationInput
   progress?: Prisma.ProgressRecordOrderByRelationAggregateInput
+  ayahTraces?: Prisma.ActivityAyahTraceOrderByRelationAggregateInput
 }
 
 export type ActivityWhereUniqueInput = Prisma.AtLeast<{
@@ -297,6 +299,7 @@ export type ActivityWhereUniqueInput = Prisma.AtLeast<{
   goal?: Prisma.XOR<Prisma.GoalNullableScalarRelationFilter, Prisma.GoalWhereInput> | null
   result?: Prisma.XOR<Prisma.ActivityResultNullableScalarRelationFilter, Prisma.ActivityResultWhereInput> | null
   progress?: Prisma.ProgressRecordListRelationFilter
+  ayahTraces?: Prisma.ActivityAyahTraceListRelationFilter
 }, "id">
 
 export type ActivityOrderByWithAggregationInput = {
@@ -346,6 +349,7 @@ export type ActivityCreateInput = {
   goal?: Prisma.GoalCreateNestedOneWithoutActivitiesInput
   result?: Prisma.ActivityResultCreateNestedOneWithoutActivityInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutActivityInput
 }
 
 export type ActivityUncheckedCreateInput = {
@@ -361,6 +365,7 @@ export type ActivityUncheckedCreateInput = {
   updatedAt?: Date | string
   result?: Prisma.ActivityResultUncheckedCreateNestedOneWithoutActivityInput
   progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedCreateNestedManyWithoutActivityInput
 }
 
 export type ActivityUpdateInput = {
@@ -376,6 +381,7 @@ export type ActivityUpdateInput = {
   goal?: Prisma.GoalUpdateOneWithoutActivitiesNestedInput
   result?: Prisma.ActivityResultUpdateOneWithoutActivityNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutActivityNestedInput
 }
 
 export type ActivityUncheckedUpdateInput = {
@@ -391,6 +397,7 @@ export type ActivityUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   result?: Prisma.ActivityResultUncheckedUpdateOneWithoutActivityNestedInput
   progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedUpdateManyWithoutActivityNestedInput
 }
 
 export type ActivityCreateManyInput = {
@@ -611,6 +618,20 @@ export type ActivityUpdateOneWithoutProgressNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ActivityUpdateToOneWithWhereWithoutProgressInput, Prisma.ActivityUpdateWithoutProgressInput>, Prisma.ActivityUncheckedUpdateWithoutProgressInput>
 }
 
+export type ActivityCreateNestedOneWithoutAyahTracesInput = {
+  create?: Prisma.XOR<Prisma.ActivityCreateWithoutAyahTracesInput, Prisma.ActivityUncheckedCreateWithoutAyahTracesInput>
+  connectOrCreate?: Prisma.ActivityCreateOrConnectWithoutAyahTracesInput
+  connect?: Prisma.ActivityWhereUniqueInput
+}
+
+export type ActivityUpdateOneRequiredWithoutAyahTracesNestedInput = {
+  create?: Prisma.XOR<Prisma.ActivityCreateWithoutAyahTracesInput, Prisma.ActivityUncheckedCreateWithoutAyahTracesInput>
+  connectOrCreate?: Prisma.ActivityCreateOrConnectWithoutAyahTracesInput
+  upsert?: Prisma.ActivityUpsertWithoutAyahTracesInput
+  connect?: Prisma.ActivityWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ActivityUpdateToOneWithWhereWithoutAyahTracesInput, Prisma.ActivityUpdateWithoutAyahTracesInput>, Prisma.ActivityUncheckedUpdateWithoutAyahTracesInput>
+}
+
 export type ActivityCreateWithoutLearnerInput = {
   id?: string
   action: $Enums.GoalAction
@@ -623,6 +644,7 @@ export type ActivityCreateWithoutLearnerInput = {
   goal?: Prisma.GoalCreateNestedOneWithoutActivitiesInput
   result?: Prisma.ActivityResultCreateNestedOneWithoutActivityInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutActivityInput
 }
 
 export type ActivityUncheckedCreateWithoutLearnerInput = {
@@ -637,6 +659,7 @@ export type ActivityUncheckedCreateWithoutLearnerInput = {
   updatedAt?: Date | string
   result?: Prisma.ActivityResultUncheckedCreateNestedOneWithoutActivityInput
   progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedCreateNestedManyWithoutActivityInput
 }
 
 export type ActivityCreateOrConnectWithoutLearnerInput = {
@@ -693,6 +716,7 @@ export type ActivityCreateWithoutGoalInput = {
   learner: Prisma.LearnerCreateNestedOneWithoutActivitiesInput
   result?: Prisma.ActivityResultCreateNestedOneWithoutActivityInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutActivityInput
 }
 
 export type ActivityUncheckedCreateWithoutGoalInput = {
@@ -707,6 +731,7 @@ export type ActivityUncheckedCreateWithoutGoalInput = {
   updatedAt?: Date | string
   result?: Prisma.ActivityResultUncheckedCreateNestedOneWithoutActivityInput
   progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedCreateNestedManyWithoutActivityInput
 }
 
 export type ActivityCreateOrConnectWithoutGoalInput = {
@@ -747,6 +772,7 @@ export type ActivityCreateWithoutResultInput = {
   learner: Prisma.LearnerCreateNestedOneWithoutActivitiesInput
   goal?: Prisma.GoalCreateNestedOneWithoutActivitiesInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutActivityInput
 }
 
 export type ActivityUncheckedCreateWithoutResultInput = {
@@ -761,6 +787,7 @@ export type ActivityUncheckedCreateWithoutResultInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedCreateNestedManyWithoutActivityInput
 }
 
 export type ActivityCreateOrConnectWithoutResultInput = {
@@ -791,6 +818,7 @@ export type ActivityUpdateWithoutResultInput = {
   learner?: Prisma.LearnerUpdateOneRequiredWithoutActivitiesNestedInput
   goal?: Prisma.GoalUpdateOneWithoutActivitiesNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutActivityNestedInput
 }
 
 export type ActivityUncheckedUpdateWithoutResultInput = {
@@ -805,6 +833,7 @@ export type ActivityUncheckedUpdateWithoutResultInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedUpdateManyWithoutActivityNestedInput
 }
 
 export type ActivityCreateWithoutProgressInput = {
@@ -819,6 +848,7 @@ export type ActivityCreateWithoutProgressInput = {
   learner: Prisma.LearnerCreateNestedOneWithoutActivitiesInput
   goal?: Prisma.GoalCreateNestedOneWithoutActivitiesInput
   result?: Prisma.ActivityResultCreateNestedOneWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutActivityInput
 }
 
 export type ActivityUncheckedCreateWithoutProgressInput = {
@@ -833,6 +863,7 @@ export type ActivityUncheckedCreateWithoutProgressInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   result?: Prisma.ActivityResultUncheckedCreateNestedOneWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedCreateNestedManyWithoutActivityInput
 }
 
 export type ActivityCreateOrConnectWithoutProgressInput = {
@@ -863,6 +894,7 @@ export type ActivityUpdateWithoutProgressInput = {
   learner?: Prisma.LearnerUpdateOneRequiredWithoutActivitiesNestedInput
   goal?: Prisma.GoalUpdateOneWithoutActivitiesNestedInput
   result?: Prisma.ActivityResultUpdateOneWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutActivityNestedInput
 }
 
 export type ActivityUncheckedUpdateWithoutProgressInput = {
@@ -877,6 +909,83 @@ export type ActivityUncheckedUpdateWithoutProgressInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   result?: Prisma.ActivityResultUncheckedUpdateOneWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedUpdateManyWithoutActivityNestedInput
+}
+
+export type ActivityCreateWithoutAyahTracesInput = {
+  id?: string
+  action: $Enums.GoalAction
+  startedAt: Date | string
+  endedAt?: Date | string | null
+  durationSec?: number | null
+  notes?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  learner: Prisma.LearnerCreateNestedOneWithoutActivitiesInput
+  goal?: Prisma.GoalCreateNestedOneWithoutActivitiesInput
+  result?: Prisma.ActivityResultCreateNestedOneWithoutActivityInput
+  progress?: Prisma.ProgressRecordCreateNestedManyWithoutActivityInput
+}
+
+export type ActivityUncheckedCreateWithoutAyahTracesInput = {
+  id?: string
+  learnerId: string
+  goalId?: string | null
+  action: $Enums.GoalAction
+  startedAt: Date | string
+  endedAt?: Date | string | null
+  durationSec?: number | null
+  notes?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  result?: Prisma.ActivityResultUncheckedCreateNestedOneWithoutActivityInput
+  progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutActivityInput
+}
+
+export type ActivityCreateOrConnectWithoutAyahTracesInput = {
+  where: Prisma.ActivityWhereUniqueInput
+  create: Prisma.XOR<Prisma.ActivityCreateWithoutAyahTracesInput, Prisma.ActivityUncheckedCreateWithoutAyahTracesInput>
+}
+
+export type ActivityUpsertWithoutAyahTracesInput = {
+  update: Prisma.XOR<Prisma.ActivityUpdateWithoutAyahTracesInput, Prisma.ActivityUncheckedUpdateWithoutAyahTracesInput>
+  create: Prisma.XOR<Prisma.ActivityCreateWithoutAyahTracesInput, Prisma.ActivityUncheckedCreateWithoutAyahTracesInput>
+  where?: Prisma.ActivityWhereInput
+}
+
+export type ActivityUpdateToOneWithWhereWithoutAyahTracesInput = {
+  where?: Prisma.ActivityWhereInput
+  data: Prisma.XOR<Prisma.ActivityUpdateWithoutAyahTracesInput, Prisma.ActivityUncheckedUpdateWithoutAyahTracesInput>
+}
+
+export type ActivityUpdateWithoutAyahTracesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  action?: Prisma.EnumGoalActionFieldUpdateOperationsInput | $Enums.GoalAction
+  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  learner?: Prisma.LearnerUpdateOneRequiredWithoutActivitiesNestedInput
+  goal?: Prisma.GoalUpdateOneWithoutActivitiesNestedInput
+  result?: Prisma.ActivityResultUpdateOneWithoutActivityNestedInput
+  progress?: Prisma.ProgressRecordUpdateManyWithoutActivityNestedInput
+}
+
+export type ActivityUncheckedUpdateWithoutAyahTracesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  learnerId?: Prisma.StringFieldUpdateOperationsInput | string
+  goalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  action?: Prisma.EnumGoalActionFieldUpdateOperationsInput | $Enums.GoalAction
+  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  result?: Prisma.ActivityResultUncheckedUpdateOneWithoutActivityNestedInput
+  progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutActivityNestedInput
 }
 
 export type ActivityCreateManyLearnerInput = {
@@ -903,6 +1012,7 @@ export type ActivityUpdateWithoutLearnerInput = {
   goal?: Prisma.GoalUpdateOneWithoutActivitiesNestedInput
   result?: Prisma.ActivityResultUpdateOneWithoutActivityNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutActivityNestedInput
 }
 
 export type ActivityUncheckedUpdateWithoutLearnerInput = {
@@ -917,6 +1027,7 @@ export type ActivityUncheckedUpdateWithoutLearnerInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   result?: Prisma.ActivityResultUncheckedUpdateOneWithoutActivityNestedInput
   progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedUpdateManyWithoutActivityNestedInput
 }
 
 export type ActivityUncheckedUpdateManyWithoutLearnerInput = {
@@ -955,6 +1066,7 @@ export type ActivityUpdateWithoutGoalInput = {
   learner?: Prisma.LearnerUpdateOneRequiredWithoutActivitiesNestedInput
   result?: Prisma.ActivityResultUpdateOneWithoutActivityNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutActivityNestedInput
 }
 
 export type ActivityUncheckedUpdateWithoutGoalInput = {
@@ -969,6 +1081,7 @@ export type ActivityUncheckedUpdateWithoutGoalInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   result?: Prisma.ActivityResultUncheckedUpdateOneWithoutActivityNestedInput
   progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedUpdateManyWithoutActivityNestedInput
 }
 
 export type ActivityUncheckedUpdateManyWithoutGoalInput = {
@@ -990,10 +1103,12 @@ export type ActivityUncheckedUpdateManyWithoutGoalInput = {
 
 export type ActivityCountOutputType = {
   progress: number
+  ayahTraces: number
 }
 
 export type ActivityCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   progress?: boolean | ActivityCountOutputTypeCountProgressArgs
+  ayahTraces?: boolean | ActivityCountOutputTypeCountAyahTracesArgs
 }
 
 /**
@@ -1013,6 +1128,13 @@ export type ActivityCountOutputTypeCountProgressArgs<ExtArgs extends runtime.Typ
   where?: Prisma.ProgressRecordWhereInput
 }
 
+/**
+ * ActivityCountOutputType without action
+ */
+export type ActivityCountOutputTypeCountAyahTracesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ActivityAyahTraceWhereInput
+}
+
 
 export type ActivitySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1029,6 +1151,7 @@ export type ActivitySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   goal?: boolean | Prisma.Activity$goalArgs<ExtArgs>
   result?: boolean | Prisma.Activity$resultArgs<ExtArgs>
   progress?: boolean | Prisma.Activity$progressArgs<ExtArgs>
+  ayahTraces?: boolean | Prisma.Activity$ayahTracesArgs<ExtArgs>
   _count?: boolean | Prisma.ActivityCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["activity"]>
 
@@ -1081,6 +1204,7 @@ export type ActivityInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   goal?: boolean | Prisma.Activity$goalArgs<ExtArgs>
   result?: boolean | Prisma.Activity$resultArgs<ExtArgs>
   progress?: boolean | Prisma.Activity$progressArgs<ExtArgs>
+  ayahTraces?: boolean | Prisma.Activity$ayahTracesArgs<ExtArgs>
   _count?: boolean | Prisma.ActivityCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ActivityIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1099,6 +1223,7 @@ export type $ActivityPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     goal: Prisma.$GoalPayload<ExtArgs> | null
     result: Prisma.$ActivityResultPayload<ExtArgs> | null
     progress: Prisma.$ProgressRecordPayload<ExtArgs>[]
+    ayahTraces: Prisma.$ActivityAyahTracePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1509,6 +1634,7 @@ export interface Prisma__ActivityClient<T, Null = never, ExtArgs extends runtime
   goal<T extends Prisma.Activity$goalArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Activity$goalArgs<ExtArgs>>): Prisma.Prisma__GoalClient<runtime.Types.Result.GetResult<Prisma.$GoalPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   result<T extends Prisma.Activity$resultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Activity$resultArgs<ExtArgs>>): Prisma.Prisma__ActivityResultClient<runtime.Types.Result.GetResult<Prisma.$ActivityResultPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   progress<T extends Prisma.Activity$progressArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Activity$progressArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProgressRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  ayahTraces<T extends Prisma.Activity$ayahTracesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Activity$ayahTracesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActivityAyahTracePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2008,6 +2134,30 @@ export type Activity$progressArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.ProgressRecordScalarFieldEnum | Prisma.ProgressRecordScalarFieldEnum[]
+}
+
+/**
+ * Activity.ayahTraces
+ */
+export type Activity$ayahTracesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ActivityAyahTrace
+   */
+  select?: Prisma.ActivityAyahTraceSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ActivityAyahTrace
+   */
+  omit?: Prisma.ActivityAyahTraceOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ActivityAyahTraceInclude<ExtArgs> | null
+  where?: Prisma.ActivityAyahTraceWhereInput
+  orderBy?: Prisma.ActivityAyahTraceOrderByWithRelationInput | Prisma.ActivityAyahTraceOrderByWithRelationInput[]
+  cursor?: Prisma.ActivityAyahTraceWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ActivityAyahTraceScalarFieldEnum | Prisma.ActivityAyahTraceScalarFieldEnum[]
 }
 
 /**
