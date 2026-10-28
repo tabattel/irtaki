@@ -54,15 +54,43 @@ export function MushafLearnerIndicator() {
           // L'affichage reste utilisable si le stockage local est indisponible.
         }
 
+        const mainLearner = available.find(
+          (learner) => learner.childProfileId === null,
+        );
+
+        if (mainLearner) {
+          try {
+            window.localStorage.setItem("irtaki.mainLearnerId", mainLearner.id);
+          } catch {
+            // Le choix reste utilisable pendant la session.
+          }
+        }
+
         const current =
           available.find((learner) => learner.id === rememberedId) ??
-          available.find((learner) => learner.childProfileId === null) ??
+          mainLearner ??
           available[0] ??
           null;
+
+        if (current) {
+          try {
+            window.localStorage.setItem(ACTIVE_LEARNER_KEY, current.id);
+          } catch {
+            // Le choix reste utilisable pendant la session.
+          }
+        }
 
         if (mounted) {
           setLearners(available);
           setSelectedId(current?.id ?? null);
+
+          if (current) {
+            window.dispatchEvent(
+              new CustomEvent("irtaki:active-learner-changed", {
+                detail: current.id,
+              }),
+            );
+          }
         }
       } catch {
         if (mounted) {
@@ -73,22 +101,37 @@ export function MushafLearnerIndicator() {
       }
     }
 
+    function syncActiveLearner(event: Event) {
+      let nextId =
+        event instanceof CustomEvent && typeof event.detail === "string"
+          ? event.detail
+          : null;
+
+      if (!nextId) {
+        try {
+          nextId = window.localStorage.getItem(ACTIVE_LEARNER_KEY);
+        } catch {
+          // Conserver la sélection actuelle si le stockage est indisponible.
+        }
+      }
+
+      if (nextId) setSelectedId(nextId);
+    }
+
+    window.addEventListener("irtaki:active-learner-changed", syncActiveLearner);
+    window.addEventListener("storage", syncActiveLearner);
+
     void loadLearners();
 
     return () => {
       mounted = false;
+      window.removeEventListener(
+        "irtaki:active-learner-changed",
+        syncActiveLearner,
+      );
+      window.removeEventListener("storage", syncActiveLearner);
     };
   }, []);
-
-  function selectLearner(id: string) {
-    setSelectedId(id);
-
-    try {
-      window.localStorage.setItem(ACTIVE_LEARNER_KEY, id);
-    } catch {
-      // La sélection reste active dans l'interface jusqu'au rechargement.
-    }
-  }
 
   const selectedLearner = learners?.find(
     (learner) => learner.id === selectedId,
@@ -107,8 +150,14 @@ export function MushafLearnerIndicator() {
       {learners === null ? (
         <span className="text-[var(--muted)]">جارٍ تحميل المستخدم...</span>
       ) : unauthenticated ? (
-        <span className="text-[var(--muted)]">
-          يرجى تسجيل الدخول لعرض المستخدم الحالي
+        <span className="inline-flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-300">
+          <span
+            aria-hidden="true"
+            className="text-amber-600 dark:text-amber-400"
+          >
+            ⚠️
+          </span>
+          <span>يرجى تسجيل الدخول</span>
         </span>
       ) : loadError ? (
         <span className="text-[var(--muted)]">
@@ -121,32 +170,10 @@ export function MushafLearnerIndicator() {
         </span>
       ) : (
         <>
-          <label
-            htmlFor="irtaki-current-learner"
-            className="text-[var(--muted)]"
-          >
-            المستخدم الحالي:
-          </label>
           <span className="font-semibold text-green-600" aria-hidden="true">
             ✓
           </span>
-          {learners.length === 1 ? (
-            <span className="font-semibold">{displayName}</span>
-          ) : (
-            <select
-              id="irtaki-current-learner"
-              className="max-w-full rounded-md border border-[var(--border)] bg-transparent px-2 py-1 font-semibold"
-              value={selectedId ?? ""}
-              onChange={(event) => selectLearner(event.target.value)}
-            >
-              {learners.map((learner) => (
-                <option key={learner.id} value={learner.id}>
-                  {learner.name?.trim() ||
-                    (learner.childProfileId ? "متعلم" : "الحساب الرئيسي")}
-                </option>
-              ))}
-            </select>
-          )}
+          <span className="font-semibold">{displayName}</span>
         </>
       )}
     </div>

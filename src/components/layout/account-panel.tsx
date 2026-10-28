@@ -1,5 +1,7 @@
 "use client";
 
+import { AccountActiveLearnerSwitcher } from "@/components/layout/account-active-learner-switcher";
+
 import { useEffect, useState } from "react";
 import { ChildAccountsPanel } from "./child-accounts-panel";
 import type { FormEvent } from "react";
@@ -45,6 +47,8 @@ export function AccountPanel() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [editingOwnerName, setEditingOwnerName] = useState(false);
+  const [ownerNameDraft, setOwnerNameDraft] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -134,6 +138,51 @@ export function AccountPanel() {
     }
   }
 
+  async function handleOwnerNameSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedName = ownerNameDraft.trim();
+
+    if (!trimmedName || trimmedName.length > 100) {
+      setMessage("يرجى إدخال اسم صالح لا يتجاوز 100 حرف.");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/auth/account", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmedName }),
+      });
+
+      const result = (await response.json()) as AuthPayload;
+
+      if (!response.ok || !result.user) {
+        setMessage(
+          result.error === "UNAUTHORIZED"
+            ? "يرجى تسجيل الدخول مجددًا."
+            : result.error === "INVALID_OWNER_NAME"
+              ? "يرجى إدخال اسم صالح لا يتجاوز 100 حرف."
+              : "تعذّر تحديث اسم صاحب الحساب الرئيسي.",
+        );
+        return;
+      }
+
+      setUser(result.user);
+      setOwnerNameDraft(result.user.name?.trim() ?? trimmedName);
+      setEditingOwnerName(false);
+      setMessage("تم تحديث اسم صاحب الحساب الرئيسي.");
+      window.dispatchEvent(new Event("irtaki:owner-name-changed"));
+    } catch {
+      setMessage("تعذّر الاتصال بالخادم. حاول مرة أخرى.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleLogout() {
     setBusy(true);
     setMessage("");
@@ -162,40 +211,106 @@ export function AccountPanel() {
     "mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-base text-[var(--foreground)]";
 
   return (
-    <section className="space-y-4 text-sm" dir="rtl" aria-live="polite">
-      <h3 className="font-semibold">الحساب الرئيسي</h3>
+    <section
+      className="irtaki-account-panel w-full min-w-0 space-y-2 text-sm sm:space-y-3"
+      dir="rtl"
+      aria-live="polite"
+    >
+      <h3 className="font-semibold">الحسابات</h3>
 
       {checkingSession ? (
         <p className="text-[var(--muted)]">جارٍ التحقق من الحساب...</p>
       ) : user ? (
-        <div className="space-y-3">
-          <p className="font-medium">
-            <span aria-hidden="true" className="text-green-600">
-              ✓{" "}
-            </span>
-            الحساب الرئيسي متصل
-          </p>
-
-          <p>{user.name?.trim() || user.email || "الحساب الرئيسي"}</p>
-
-          {user.email ? (
-            <p className="text-[var(--muted)]" dir="ltr">
-              {user.email}
+        <div className="space-y-3 sm:space-y-4">
+          <section className="min-w-0 space-y-2 rounded-lg border border-[var(--border)] p-2 sm:p-3">
+            <h4 className="font-semibold">الحساب الرئيسي</h4>
+            <p className="font-medium">
+              <span aria-hidden="true" className="text-green-600">
+                ✓{" "}
+              </span>
+              الحساب الرئيسي متصل
             </p>
-          ) : null}
 
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void handleLogout()}
-            className="rounded-lg border border-[var(--border)] px-4 py-2 font-medium disabled:opacity-50"
-          >
-            {busy ? "جارٍ التنفيذ..." : "تسجيل الخروج"}
-          </button>
+            {editingOwnerName ? (
+              <form
+                className="space-y-3"
+                onSubmit={(event) => void handleOwnerNameSubmit(event)}
+              >
+                <label className="block">
+                  اسم صاحب الحساب الرئيسي
+                  <input
+                    className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-base text-[var(--foreground)]"
+                    type="text"
+                    autoComplete="name"
+                    maxLength={100}
+                    required
+                    autoFocus
+                    value={ownerNameDraft}
+                    onChange={(event) => setOwnerNameDraft(event.target.value)}
+                  />
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 font-semibold disabled:opacity-50"
+                  >
+                    {busy ? "جارٍ الحفظ..." : "حفظ الاسم"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setEditingOwnerName(false);
+                      setOwnerNameDraft(user.name?.trim() ?? "");
+                    }}
+                    className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 disabled:opacity-50"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-medium">
+                  {user.name?.trim() || "لم يتم تحديد اسم صاحب الحساب"}
+                </p>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setOwnerNameDraft(user.name?.trim() ?? "");
+                    setEditingOwnerName(true);
+                    setMessage("");
+                  }}
+                  className="min-h-11 rounded-lg border border-[var(--border)] px-4 py-2 font-medium disabled:opacity-50"
+                >
+                  تعديل
+                </button>
+              </div>
+            )}
+
+            {user.email ? (
+              <p className="max-w-full break-all text-[var(--muted)]" dir="ltr">
+                {user.email}
+              </p>
+            ) : null}
+
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handleLogout()}
+              className="rounded-lg border border-[var(--border)] px-4 py-2 font-medium disabled:opacity-50"
+            >
+              {busy ? "جارٍ التنفيذ..." : "تسجيل الخروج"}
+            </button>
+          </section>
           <ChildAccountsPanel />
+          <AccountActiveLearnerSwitcher />
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <p className="text-[var(--muted)]">
             سجّل الدخول إلى حسابك الرئيسي أو أنشئ حسابًا لإدارة ملفات الحساب.
           </p>

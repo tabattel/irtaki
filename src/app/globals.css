@@ -100,3 +100,91 @@ a {
   mask-size: 12px 8px;
   pointer-events: none;
 }
+
+/* IRTAKI MOBILE-FIRST RESPONSIVE BASE */
+html {
+  max-width: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+
+main,
+section,
+article,
+aside,
+nav,
+header,
+footer,
+form,
+[role="dialog"] {
+  min-width: 0;
+}
+
+img,
+picture,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea {
+  min-width: 0;
+}
+
+pre,
+table {
+  max-width: 100%;
+}
+
+.irtaki-account-panel {
+  width: 100%;
+  min-width: 0;
+}
+
+.irtaki-account-panel p,
+.irtaki-account-panel label {
+  overflow-wrap: anywhere;
+}
+
+.irtaki-account-panel button {
+  min-height: 44px;
+  max-width: 100%;
+}
+
+.irtaki-account-panel input:not([type="checkbox"]):not([type="radio"]),
+.irtaki-account-panel select,
+.irtaki-account-panel textarea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+@media (max-width: 360px) {
+  .irtaki-account-panel .grid.grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

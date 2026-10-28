@@ -63,7 +63,10 @@ export const GoalAction = {
   tajwid: 'tajwid',
   tadabbur: 'tadabbur',
   talkin: 'talkin',
-  tathbit: 'tathbit'
+  tathbit: 'tathbit',
+  qiraa: 'qiraa',
+  khatma: 'khatma',
+  tahajjud: 'tahajjud'
 } as const
 
 export type GoalAction = (typeof GoalAction)[keyof typeof GoalAction]

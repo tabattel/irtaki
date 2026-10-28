@@ -122,7 +122,7 @@ function CloseIcon() {
 }
 
 const iconButtonClass =
-  "flex h-11 w-11 items-center justify-center rounded-lg text-[var(--foreground)] transition hover:bg-[var(--surface)] focus-visible:outline-2 focus-visible:outline-offset-2";
+  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--foreground)] transition hover:bg-[var(--surface)] focus-visible:outline-2 focus-visible:outline-offset-2 sm:h-11 sm:w-11";
 
 function MainMenuLink({
   href,
@@ -206,20 +206,20 @@ export function AppMainMenu({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/20"
+      className="fixed inset-0 z-50 overflow-hidden overscroll-contain bg-black/20"
       role="presentation"
       onClick={closeMenu}
     >
       <div
-        className="border-b border-[var(--border)] bg-[var(--background)] shadow-xl"
+        className="max-h-[100dvh] w-full max-w-[100vw] min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain border-b border-[var(--border)] bg-[var(--background)] shadow-xl"
         dir="rtl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-3">
+        <div className="mx-auto w-full max-w-7xl min-w-0 px-2 py-1.5 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center justify-between gap-1">
             <nav
               aria-label="القائمة الرئيسية"
-              className="flex min-h-12 items-center gap-1"
+              className="flex min-h-9 min-w-0 flex-nowrap items-center gap-0"
             >
               <MainMenuLink href="/" label="الرئيسية" onClick={closeMenu}>
                 <HomeIcon />
@@ -270,7 +270,7 @@ export function AppMainMenu({
           </div>
 
           {panel ? (
-            <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--background)] p-4">
+            <div className="mt-2 min-w-0 rounded-lg border border-[var(--border)] bg-[var(--background)] p-2 sm:rounded-xl sm:p-4">
               <div className="mb-3">
                 <h2 className="font-semibold">
                   {panel === "goto"

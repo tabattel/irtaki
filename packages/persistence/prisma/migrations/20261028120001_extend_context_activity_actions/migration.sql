@@ -1,0 +1,3 @@
+ALTER TYPE "GoalAction" ADD VALUE IF NOT EXISTS 'qiraa';
+ALTER TYPE "GoalAction" ADD VALUE IF NOT EXISTS 'khatma';
+ALTER TYPE "GoalAction" ADD VALUE IF NOT EXISTS 'tahajjud';

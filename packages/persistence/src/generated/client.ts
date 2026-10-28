@@ -112,6 +112,11 @@ export type ChildProfile = Prisma.ChildProfileModel
  */
 export type Learner = Prisma.LearnerModel
 /**
+ * Model LearnerPreference
+ * 
+ */
+export type LearnerPreference = Prisma.LearnerPreferenceModel
+/**
  * Model Goal
  * 
  */

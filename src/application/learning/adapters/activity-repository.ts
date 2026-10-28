@@ -20,5 +20,13 @@ export function createLearningActivityRepository(
     async findById(id: string, learnerId: string) {
       return repository.findById(id, learnerId);
     },
+
+    async update(
+      id: string,
+      learnerId: string,
+      input: { endedAt?: Date | null; durationSec?: number | null },
+    ) {
+      return repository.update(id, learnerId, input);
+    },
   };
 }

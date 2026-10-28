@@ -411,6 +411,7 @@ export const ModelName = {
   Session: 'Session',
   ChildProfile: 'ChildProfile',
   Learner: 'Learner',
+  LearnerPreference: 'LearnerPreference',
   Goal: 'Goal',
   GoalTarget: 'GoalTarget',
   Activity: 'Activity',
@@ -432,7 +433,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "qiraa" | "riwaya" | "tariq" | "mushaf" | "surah" | "ayah" | "reciter" | "audioTrack" | "annotation" | "user" | "account" | "session" | "childProfile" | "learner" | "goal" | "goalTarget" | "activity" | "activityResult" | "progressRecord" | "activityAyahTrace"
+    modelProps: "qiraa" | "riwaya" | "tariq" | "mushaf" | "surah" | "ayah" | "reciter" | "audioTrack" | "annotation" | "user" | "account" | "session" | "childProfile" | "learner" | "learnerPreference" | "goal" | "goalTarget" | "activity" | "activityResult" | "progressRecord" | "activityAyahTrace"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1472,6 +1473,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    LearnerPreference: {
+      payload: Prisma.$LearnerPreferencePayload<ExtArgs>
+      fields: Prisma.LearnerPreferenceFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LearnerPreferenceFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearnerPreferencePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LearnerPreferenceFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearnerPreferencePayload>
+        }
+        findFirst: {
+          args: Prisma.LearnerPreferenceFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearnerPreferencePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LearnerPreferenceFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearnerPreferencePayload>
+        }
+        findMany: {
+          args: Prisma.LearnerPreferenceFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearnerPreferencePayload>[]
+        }
+        create: {
+          args: Prisma.LearnerPreferenceCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearnerPreferencePayload>
+        }
+        createMany: {
+          args: Prisma.LearnerPreferenceCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LearnerPreferenceCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearnerPreferencePayload>[]
+        }
+        delete: {
+          args: Prisma.LearnerPreferenceDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearnerPreferencePayload>
+        }
+        update: {
+          args: Prisma.LearnerPreferenceUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearnerPreferencePayload>
+        }
+        deleteMany: {
+          args: Prisma.LearnerPreferenceDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LearnerPreferenceUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LearnerPreferenceUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearnerPreferencePayload>[]
+        }
+        upsert: {
+          args: Prisma.LearnerPreferenceUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LearnerPreferencePayload>
+        }
+        aggregate: {
+          args: Prisma.LearnerPreferenceAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLearnerPreference>
+        }
+        groupBy: {
+          args: Prisma.LearnerPreferenceGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LearnerPreferenceGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LearnerPreferenceCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LearnerPreferenceCountAggregateOutputType> | number
+        }
+      }
+    }
     Goal: {
       payload: Prisma.$GoalPayload<ExtArgs>
       fields: Prisma.GoalFieldRefs
@@ -2125,6 +2200,17 @@ export const LearnerScalarFieldEnum = {
 export type LearnerScalarFieldEnum = (typeof LearnerScalarFieldEnum)[keyof typeof LearnerScalarFieldEnum]
 
 
+export const LearnerPreferenceScalarFieldEnum = {
+  id: 'id',
+  learnerId: 'learnerId',
+  preferences: 'preferences',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LearnerPreferenceScalarFieldEnum = (typeof LearnerPreferenceScalarFieldEnum)[keyof typeof LearnerPreferenceScalarFieldEnum]
+
+
 export const GoalScalarFieldEnum = {
   id: 'id',
   learnerId: 'learnerId',
@@ -2227,6 +2313,13 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
@@ -2241,6 +2334,15 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
 
@@ -2344,6 +2446,20 @@ export type EnumAccountProviderFieldRefInput<$PrismaModel> = FieldRefInputType<$
  * Reference to a field of type 'AccountProvider[]'
  */
 export type ListEnumAccountProviderFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AccountProvider[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Json'
+ */
+export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+/**
+ * Reference to a field of type 'QueryMode'
+ */
+export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 
@@ -2658,6 +2774,7 @@ export type GlobalOmitConfig = {
   session?: Prisma.SessionOmit
   childProfile?: Prisma.ChildProfileOmit
   learner?: Prisma.LearnerOmit
+  learnerPreference?: Prisma.LearnerPreferenceOmit
   goal?: Prisma.GoalOmit
   goalTarget?: Prisma.GoalTargetOmit
   activity?: Prisma.ActivityOmit

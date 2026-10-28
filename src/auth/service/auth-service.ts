@@ -124,6 +124,42 @@ export class AuthService {
       session: result.session,
     };
   }
+  async updateOwnerName(
+    userId: string,
+    rawName: string,
+  ): Promise<AuthenticatedUser> {
+    const name = rawName.trim();
+
+    if (!name || name.length > 100) {
+      throw new Error("INVALID_OWNER_NAME");
+    }
+
+    const existing = await this.userRepository.findById(userId);
+    if (!existing) {
+      throw new Error("USER_NOT_FOUND");
+    }
+
+    const user = await this.userRepository.updateName(userId, name);
+
+    await this.ensureDefaultLearner(user.id, name);
+
+    const learners = await this.learnerRepository.findManyByUserId(user.id);
+    const mainLearner = learners.find(
+      (learner: { childProfileId: string | null }) =>
+        learner.childProfileId === null,
+    );
+
+    if (mainLearner) {
+      await this.learnerRepository.update(mainLearner.id, user.id, { name });
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    };
+  }
+
   private async ensureDefaultLearner(
     userId: string,
     name: string | null,

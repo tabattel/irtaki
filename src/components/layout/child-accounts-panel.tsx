@@ -12,8 +12,19 @@ type ProfilesPayload = {
   error?: string;
 };
 
+type LearnerOption = {
+  id: string;
+  name: string | null;
+  childProfileId: string | null;
+};
+
+const ACTIVE_LEARNER_KEY = "irtaki.activeLearnerId";
+const ACTIVE_LEARNER_EVENT = "irtaki:active-learner-changed";
+
 export function ChildAccountsPanel() {
   const [profiles, setProfiles] = useState<ChildProfile[]>([]);
+  const [learners, setLearners] = useState<LearnerOption[]>([]);
+  const [activeLearnerId, setActiveLearnerId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -24,9 +35,11 @@ export function ChildAccountsPanel() {
   async function loadProfiles() {
     setLoading(true);
     try {
-      const response = await fetch("/api/child-profiles", {
-        cache: "no-store",
-      });
+      const [response, learnersResponse] = await Promise.all([
+        fetch("/api/child-profiles", { cache: "no-store" }),
+        fetch("/api/history", { cache: "no-store" }),
+      ]);
+
       const payload = (await response.json()) as ProfilesPayload;
 
       if (!response.ok) {
@@ -37,7 +50,51 @@ export function ChildAccountsPanel() {
         );
       }
 
+      if (!learnersResponse.ok) {
+        throw new Error(
+          learnersResponse.status === 401
+            ? "يرجى تسجيل الدخول مجددًا."
+            : "تعذّر تحميل قائمة المستخدمين.",
+        );
+      }
+
+      const learnersPayload = (await learnersResponse.json()) as {
+        learners?: LearnerOption[];
+      };
+
+      const availableLearners = Array.isArray(learnersPayload.learners)
+        ? learnersPayload.learners
+        : [];
+
       setProfiles(Array.isArray(payload.profiles) ? payload.profiles : []);
+      setLearners(availableLearners);
+
+      let rememberedId: string | null = null;
+      try {
+        rememberedId = window.localStorage.getItem(ACTIVE_LEARNER_KEY);
+      } catch {
+        // La sélection reste utilisable sans stockage local.
+      }
+
+      const current =
+        availableLearners.find((learner) => learner.id === rememberedId) ??
+        availableLearners.find((learner) => learner.childProfileId === null) ??
+        availableLearners[0] ??
+        null;
+
+      setActiveLearnerId(current?.id ?? null);
+
+      if (current) {
+        try {
+          window.localStorage.setItem(ACTIVE_LEARNER_KEY, current.id);
+        } catch {
+          // La sélection reste active pendant la session.
+        }
+
+        window.dispatchEvent(
+          new CustomEvent(ACTIVE_LEARNER_EVENT, { detail: current.id }),
+        );
+      }
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "تعذّر تحميل حسابات الأطفال.",
@@ -50,6 +107,51 @@ export function ChildAccountsPanel() {
   useEffect(() => {
     void loadProfiles();
   }, []);
+
+  function activateLearner(id: string) {
+    setActiveLearnerId(id);
+
+    try {
+      window.localStorage.setItem(ACTIVE_LEARNER_KEY, id);
+    } catch {
+      // La sélection reste active pendant la session.
+    }
+
+    window.dispatchEvent(new CustomEvent(ACTIVE_LEARNER_EVENT, { detail: id }));
+  }
+
+  async function refreshLearners() {
+    try {
+      const response = await fetch("/api/history", { cache: "no-store" });
+      if (!response.ok) return;
+
+      const payload = (await response.json()) as {
+        learners?: LearnerOption[];
+      };
+      const available = Array.isArray(payload.learners) ? payload.learners : [];
+      setLearners(available);
+
+      let rememberedId: string | null = null;
+      try {
+        rememberedId = window.localStorage.getItem(ACTIVE_LEARNER_KEY);
+      } catch {
+        // Utiliser le profil principal comme solution de repli.
+      }
+
+      const current =
+        available.find((learner) => learner.id === rememberedId) ??
+        available.find((learner) => learner.childProfileId === null) ??
+        available[0] ??
+        null;
+
+      setActiveLearnerId(current?.id ?? null);
+      if (current && current.id !== rememberedId) {
+        activateLearner(current.id);
+      }
+    } catch {
+      // Ne pas bloquer la gestion des profils si le rafraîchissement échoue.
+    }
+  }
 
   async function createProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -85,6 +187,7 @@ export function ChildAccountsPanel() {
       }
 
       setProfiles((current) => [...current, payload.profile!]);
+      await refreshLearners();
       setName("");
       setMessage("تم إنشاء حساب الطفل.");
     } catch (error) {
@@ -134,6 +237,7 @@ export function ChildAccountsPanel() {
           profile.id === id ? payload.profile! : profile,
         ),
       );
+      await refreshLearners();
       setEditingId(null);
       setEditingName("");
       setMessage("تم تحديث حساب الطفل.");
@@ -172,9 +276,22 @@ export function ChildAccountsPanel() {
         );
       }
 
+      const deletedLearner = learners.find(
+        (learner) => learner.childProfileId === profile.id,
+      );
+      const mainLearner = learners.find(
+        (learner) => learner.childProfileId === null,
+      );
+
+      if (deletedLearner?.id === activeLearnerId && mainLearner) {
+        activateLearner(mainLearner.id);
+      }
+
       setProfiles((current) =>
         current.filter((item) => item.id !== profile.id),
       );
+      await refreshLearners();
+
       if (editingId === profile.id) {
         setEditingId(null);
         setEditingName("");
@@ -193,8 +310,8 @@ export function ChildAccountsPanel() {
     "w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2";
 
   return (
-    <section className="space-y-3 border-t border-[var(--border)] pt-4">
-      <h4 className="font-semibold">حسابات الأطفال المرتبطة بالحساب الرئيسي</h4>
+    <section className="min-w-0 space-y-2 border-t border-[var(--border)] pt-2 sm:pt-4">
+      <h4 className="font-semibold">حسابات الأطفال</h4>
 
       {loading ? (
         <p className="text-[var(--muted)]">جارٍ تحميل حسابات الأطفال...</p>
@@ -203,11 +320,11 @@ export function ChildAccountsPanel() {
           {profiles.length === 0 ? (
             <p className="text-[var(--muted)]">لا توجد حسابات أطفال مسجّلة.</p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {profiles.map((profile) => (
                 <li
                   key={profile.id}
-                  className="space-y-2 rounded-lg border border-[var(--border)] p-3"
+                  className="min-w-0 space-y-2 rounded-lg border border-[var(--border)] p-2 sm:p-3"
                 >
                   {editingId === profile.id ? (
                     <div className="space-y-2">

@@ -25,3 +25,5 @@ export type {
 } from "./repository/activity-ayah-trace-repository";
 export { ActivityResultRepository } from "./repository/activity-result-repository";
 export { ProgressRecordRepository } from "./repository/progress-record-repository";
+
+export { LearnerPreferenceRepository } from "./repository/learner-preference-repository";

@@ -179,26 +179,6 @@ export class ActivityAyahTraceRepository {
             learnerId,
           },
         },
-        OR: [
-          {
-            status: {
-              in: ["completed", "partial"],
-            },
-          },
-          {
-            activity: {
-              is: {
-                result: {
-                  is: {
-                    status: {
-                      in: ["completed", "partial"],
-                    },
-                  },
-                },
-              },
-            },
-          },
-        ],
       },
       select: {
         activityId: true,

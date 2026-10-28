@@ -46,6 +46,51 @@ type MenuState = null | {
   wordKeys?: string[];
 };
 
+type TrackedTaskAction =
+  | "talkin"
+  | "memorize"
+  | "tathbit"
+  | "revise"
+  | "tadabbur"
+  | "qiraa"
+  | "listen"
+  | "recite"
+  | "khatma"
+  | "tahajjud";
+
+const TRACKED_TASK_OPTIONS: Array<{
+  action: TrackedTaskAction;
+  label: string;
+}> = [
+  { action: "talkin", label: "التلقين" },
+  { action: "memorize", label: "الحفظ" },
+  { action: "tathbit", label: "التثبيت" },
+  { action: "revise", label: "المراجعة" },
+  { action: "tadabbur", label: "التدبر" },
+  { action: "qiraa", label: "القراءة" },
+  { action: "listen", label: "الاستماع" },
+  { action: "recite", label: "التلاوة" },
+  { action: "khatma", label: "الختمة" },
+  { action: "tahajjud", label: "التهجد" },
+];
+
+const TRACKED_TASK_LABELS: Record<TrackedTaskAction, string> = {
+  talkin: "التلقين",
+  memorize: "الحفظ",
+  tathbit: "التثبيت",
+  revise: "المراجعة",
+  tadabbur: "التدبر",
+  qiraa: "القراءة",
+  listen: "الاستماع",
+  recite: "التلاوة",
+  khatma: "الختمة",
+  tahajjud: "التهجد",
+};
+
+function activeTaskStorageKey(learnerId: string): string {
+  return `irtaki.learning.active-task.v1.${learnerId}`;
+}
+
 type MushafAnnotation = {
   id: string;
   ayahId: number;
@@ -159,6 +204,253 @@ const UNDERLINE_STYLE_OPTIONS: {
 const TOTAL_PAGES = 604;
 const LONG_PRESS_MS = 550;
 
+const ACTIVE_LEARNER_STORAGE_KEY = "irtaki.activeLearnerId";
+const MAIN_LEARNER_STORAGE_KEY = "irtaki.mainLearnerId";
+
+function getStoredActiveLearnerId(): string | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    return window.localStorage.getItem(ACTIVE_LEARNER_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function getScopedMushafKey(key: string): string {
+  const learnerId = getStoredActiveLearnerId();
+  return learnerId ? `${key}.learner.${learnerId}` : key;
+}
+
+function getMushafStorageItem(key: string): string | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const learnerId = getStoredActiveLearnerId();
+    if (!learnerId) return window.localStorage.getItem(key);
+
+    const scopedKey = `${key}.learner.${learnerId}`;
+    const scopedValue = window.localStorage.getItem(scopedKey);
+    if (scopedValue !== null) return scopedValue;
+
+    // Les anciennes préférences partagées sont reprises uniquement
+    // par le profil principal, jamais par un profil enfant.
+    const mainLearnerId = window.localStorage.getItem(MAIN_LEARNER_STORAGE_KEY);
+
+    if (mainLearnerId === learnerId) {
+      const legacyValue = window.localStorage.getItem(key);
+      if (legacyValue !== null) {
+        window.localStorage.setItem(scopedKey, legacyValue);
+        return legacyValue;
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function setMushafStorageItem(key: string, value: string): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(getScopedMushafKey(key), value);
+  } catch {
+    // Le Mushaf reste utilisable si le stockage local est indisponible.
+  }
+
+  const learnerId = getStoredActiveLearnerId();
+
+  if (learnerId && isCloudMushafPreferenceKey(key)) {
+    window.dispatchEvent(
+      new CustomEvent(MUSHAF_PREFERENCE_CHANGED_EVENT, {
+        detail: learnerId,
+      }),
+    );
+  }
+}
+
+function getMushafSessionStorageItem(key: string): string | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    return window.sessionStorage.getItem(getScopedMushafKey(key));
+  } catch {
+    return null;
+  }
+}
+
+function setMushafSessionStorageItem(key: string, value: string): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.setItem(getScopedMushafKey(key), value);
+  } catch {
+    // La lecture audio reste utilisable sans stockage de session.
+  }
+}
+
+function removeMushafSessionStorageItem(key: string): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.removeItem(getScopedMushafKey(key));
+  } catch {
+    // Ignorer l'indisponibilité du stockage.
+  }
+}
+
+const MUSHAF_PREFERENCE_CHANGED_EVENT = "irtaki:mushaf-preference-changed";
+let cloudSyncReadyLearnerId: string | null = null;
+
+function isCloudMushafPreferenceKey(key: string): boolean {
+  return (
+    (key.startsWith("irtaki.mushaf.") || key.startsWith("irtaki.audio.")) &&
+    !key.includes(".learner.")
+  );
+}
+
+function getScopedMushafPreferencesSnapshot(
+  learnerId: string,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  if (typeof window === "undefined") return result;
+
+  const suffix = `.learner.${learnerId}`;
+
+  try {
+    // Importer les anciennes clés uniquement dans le profil principal.
+    const mainLearnerId = window.localStorage.getItem("irtaki.mainLearnerId");
+
+    if (mainLearnerId === learnerId) {
+      const legacyKeys: string[] = [];
+
+      for (let index = 0; index < window.localStorage.length; index += 1) {
+        const key = window.localStorage.key(index);
+        if (
+          key &&
+          isCloudMushafPreferenceKey(key) &&
+          !key.includes(".learner.")
+        ) {
+          legacyKeys.push(key);
+        }
+      }
+
+      for (const key of legacyKeys) {
+        const scopedKey = `${key}${suffix}`;
+
+        if (window.localStorage.getItem(scopedKey) === null) {
+          const legacyValue = window.localStorage.getItem(key);
+          if (legacyValue !== null) {
+            window.localStorage.setItem(scopedKey, legacyValue);
+          }
+        }
+      }
+    }
+
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const storedKey = window.localStorage.key(index);
+      if (!storedKey || !storedKey.endsWith(suffix)) continue;
+
+      const key = storedKey.slice(0, -suffix.length);
+      if (!isCloudMushafPreferenceKey(key)) continue;
+
+      const value = window.localStorage.getItem(storedKey);
+      if (value !== null) result[key] = value;
+    }
+  } catch {
+    // La préférence locale reste utilisable si le stockage est indisponible.
+  }
+
+  return result;
+}
+
+function areMushafPreferenceMapsEqual(
+  left: Record<string, string>,
+  right: Record<string, string>,
+): boolean {
+  const leftKeys = Object.keys(left).sort();
+  const rightKeys = Object.keys(right).sort();
+
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every(
+      (key, index) => key === rightKeys[index] && left[key] === right[key],
+    )
+  );
+}
+
+function normalizeCloudMushafPreferences(
+  value: unknown,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return result;
+  }
+
+  for (const [key, item] of Object.entries(value)) {
+    if (isCloudMushafPreferenceKey(key) && typeof item === "string") {
+      result[key] = item;
+    }
+  }
+
+  return result;
+}
+
+function replaceScopedMushafPreferences(
+  learnerId: string,
+  preferences: Record<string, string>,
+): boolean {
+  if (typeof window === "undefined") return false;
+
+  const current = getScopedMushafPreferencesSnapshot(learnerId);
+  if (areMushafPreferenceMapsEqual(current, preferences)) return false;
+
+  const suffix = `.learner.${learnerId}`;
+
+  try {
+    const removeKeys: string[] = [];
+
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const storedKey = window.localStorage.key(index);
+      if (!storedKey || !storedKey.endsWith(suffix)) continue;
+
+      const baseKey = storedKey.slice(0, -suffix.length);
+      if (isCloudMushafPreferenceKey(baseKey)) removeKeys.push(storedKey);
+    }
+
+    for (const key of removeKeys) {
+      window.localStorage.removeItem(key);
+    }
+
+    for (const [key, value] of Object.entries(preferences)) {
+      if (isCloudMushafPreferenceKey(key) && typeof value === "string") {
+        window.localStorage.setItem(`${key}${suffix}`, value);
+      }
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function saveCloudMushafSnapshot(learnerId: string): Promise<void> {
+  const preferences = getScopedMushafPreferencesSnapshot(learnerId);
+
+  const response = await fetch("/api/learner-preferences", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ learnerId, preferences }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`MUSHAF_PREFERENCES_SAVE_FAILED_${response.status}`);
+  }
+}
+
 const AUDIO_RECITER_STORAGE_KEY = "irtaki.audio.reciter";
 const AUDIO_CONTINUATION_STORAGE_KEY = "irtaki.audio.continuation";
 const AUDIO_RATE_STORAGE_KEY = "irtaki.audio.playback-rate";
@@ -192,6 +484,208 @@ export function MushafPage({
   pageNumber,
   selectedAyahId: externalSelectedAyahId,
 }: MushafPageProps) {
+  useEffect(() => {
+    let cancelled = false;
+    let activeLearnerId = getStoredActiveLearnerId();
+    let loadingLearnerId: string | null = null;
+    let requestVersion = 0;
+    let saveTimer: number | null = null;
+
+    async function hydrateLearnerPreferences(learnerId: string) {
+      if (loadingLearnerId === learnerId) return;
+
+      loadingLearnerId = learnerId;
+      const version = ++requestVersion;
+      cloudSyncReadyLearnerId = null;
+
+      try {
+        const response = await fetch(
+          `/api/learner-preferences?learnerId=${encodeURIComponent(learnerId)}`,
+          { cache: "no-store" },
+        );
+
+        if (!response.ok) {
+          console.warn("Préférences cloud indisponibles :", response.status);
+          return;
+        }
+
+        const payload = (await response.json()) as {
+          preferences?: unknown;
+        };
+
+        const remote = normalizeCloudMushafPreferences(payload.preferences);
+        const local = getScopedMushafPreferencesSnapshot(learnerId);
+
+        if (Object.keys(remote).length > 0) {
+          const changed = replaceScopedMushafPreferences(learnerId, remote);
+
+          if (changed) {
+            // Limiter le rechargement à une fois par version distante et par profil.
+            const fingerprintSource = Object.entries(remote)
+              .sort(([left], [right]) => left.localeCompare(right))
+              .map(([key, value]) => `${key}\\u0000${value}\\u0001`)
+              .join("");
+
+            let fingerprint = 2166136261;
+            for (let index = 0; index < fingerprintSource.length; index++) {
+              fingerprint ^= fingerprintSource.charCodeAt(index);
+              fingerprint = Math.imul(fingerprint, 16777619);
+            }
+
+            const reloadMarker = `${fingerprint >>> 0}:${Object.keys(remote).length}`;
+            const reloadKey = `irtaki.cloud-preferences-reloaded.${learnerId}`;
+            let alreadyReloaded = false;
+
+            try {
+              alreadyReloaded =
+                window.sessionStorage.getItem(reloadKey) === reloadMarker;
+
+              if (!alreadyReloaded) {
+                window.sessionStorage.setItem(reloadKey, reloadMarker);
+              }
+            } catch (error) {
+              console.warn("Marqueur de synchronisation indisponible :", error);
+            }
+
+            if (!alreadyReloaded) {
+              window.location.reload();
+              return;
+            }
+          }
+        } else if (Object.keys(local).length > 0) {
+          // Première synchronisation : conserver et sauvegarder le profil local.
+          try {
+            await saveCloudMushafSnapshot(learnerId);
+          } catch (error) {
+            console.warn("Première sauvegarde cloud impossible :", error);
+          }
+        }
+
+        if (
+          !cancelled &&
+          version === requestVersion &&
+          getStoredActiveLearnerId() === learnerId
+        ) {
+          cloudSyncReadyLearnerId = learnerId;
+        }
+      } catch (error) {
+        console.warn("Synchronisation des préférences indisponible :", error);
+      } finally {
+        if (loadingLearnerId === learnerId) loadingLearnerId = null;
+      }
+    }
+
+    function scheduleSave(learnerId: string) {
+      if (saveTimer !== null) window.clearTimeout(saveTimer);
+
+      saveTimer = window.setTimeout(() => {
+        saveTimer = null;
+
+        if (
+          cancelled ||
+          cloudSyncReadyLearnerId !== learnerId ||
+          getStoredActiveLearnerId() !== learnerId
+        ) {
+          return;
+        }
+
+        void saveCloudMushafSnapshot(learnerId).catch((error) => {
+          console.warn("Sauvegarde des préférences impossible :", error);
+        });
+      }, 600);
+    }
+
+    function handlePreferenceChange(event: Event) {
+      const learnerId =
+        event instanceof CustomEvent && typeof event.detail === "string"
+          ? event.detail
+          : null;
+
+      if (!learnerId || cloudSyncReadyLearnerId !== learnerId) return;
+      if (getStoredActiveLearnerId() !== learnerId) return;
+
+      scheduleSave(learnerId);
+    }
+
+    function handleActiveLearnerChange(event: Event) {
+      let nextId =
+        event instanceof CustomEvent && typeof event.detail === "string"
+          ? event.detail
+          : null;
+
+      if (!nextId) nextId = getStoredActiveLearnerId();
+      if (!nextId) return;
+
+      if (!activeLearnerId) {
+        activeLearnerId = nextId;
+        void hydrateLearnerPreferences(nextId);
+        return;
+      }
+
+      if (nextId !== activeLearnerId) {
+        const previousId = activeLearnerId;
+        const canFlushPrevious = cloudSyncReadyLearnerId === previousId;
+
+        activeLearnerId = nextId;
+        cloudSyncReadyLearnerId = null;
+        requestVersion += 1;
+
+        const flushPrevious = canFlushPrevious
+          ? saveCloudMushafSnapshot(previousId).catch((error) => {
+              console.warn(
+                "Sauvegarde avant changement de profil impossible :",
+                error,
+              );
+            })
+          : Promise.resolve();
+
+        void flushPrevious.finally(() => {
+          if (!cancelled) window.location.reload();
+        });
+        return;
+      }
+
+      if (cloudSyncReadyLearnerId !== nextId && loadingLearnerId !== nextId) {
+        void hydrateLearnerPreferences(nextId);
+      }
+    }
+
+    window.addEventListener(
+      MUSHAF_PREFERENCE_CHANGED_EVENT,
+      handlePreferenceChange,
+    );
+    window.addEventListener(
+      "irtaki:active-learner-changed",
+      handleActiveLearnerChange,
+    );
+    window.addEventListener("storage", handleActiveLearnerChange);
+    window.addEventListener("online", () => {
+      const learnerId = getStoredActiveLearnerId();
+      if (learnerId && cloudSyncReadyLearnerId !== learnerId) {
+        void hydrateLearnerPreferences(learnerId);
+      }
+    });
+
+    if (activeLearnerId) {
+      void hydrateLearnerPreferences(activeLearnerId);
+    }
+
+    return () => {
+      cancelled = true;
+      if (saveTimer !== null) window.clearTimeout(saveTimer);
+
+      window.removeEventListener(
+        MUSHAF_PREFERENCE_CHANGED_EVENT,
+        handlePreferenceChange,
+      );
+      window.removeEventListener(
+        "irtaki:active-learner-changed",
+        handleActiveLearnerChange,
+      );
+      window.removeEventListener("storage", handleActiveLearnerChange);
+    };
+  }, []);
+
   const router = useRouter();
 
   const [ayahs, setAyahs] = useState<AyahDto[]>([]);
@@ -241,9 +735,7 @@ export function MushafPage({
     let restored: Record<string, string> = {};
 
     try {
-      const raw = window.localStorage.getItem(
-        "irtaki.mushaf.color-palette-labels.v1",
-      );
+      const raw = getMushafStorageItem("irtaki.mushaf.color-palette-labels.v1");
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
         if (
@@ -286,7 +778,7 @@ export function MushafPage({
   useEffect(() => {
     if (!colorPaletteLabelsLoaded) return;
     try {
-      window.localStorage.setItem(
+      setMushafStorageItem(
         "irtaki.mushaf.color-palette-labels.v1",
         JSON.stringify(colorPaletteLabels),
       );
@@ -299,7 +791,7 @@ export function MushafPage({
     let restored: Record<string, string> = {};
 
     try {
-      const raw = window.localStorage.getItem(colorAssignmentStorageKey);
+      const raw = getMushafStorageItem(colorAssignmentStorageKey);
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
         if (
@@ -326,7 +818,7 @@ export function MushafPage({
     if (colorAssignmentsLoadedFor !== colorAssignmentStorageKey) return;
 
     try {
-      window.localStorage.setItem(
+      setMushafStorageItem(
         colorAssignmentStorageKey,
         JSON.stringify(colorAssignments),
       );
@@ -474,8 +966,7 @@ export function MushafPage({
     if (typeof window === "undefined") return false;
     try {
       return (
-        window.localStorage.getItem("irtaki.mushaf.global-text-hidden.v1") ===
-        "true"
+        getMushafStorageItem("irtaki.mushaf.global-text-hidden.v1") === "true"
       );
     } catch {
       return false;
@@ -490,7 +981,7 @@ export function MushafPage({
   useEffect(() => {
     listeningAyahsHiddenRef.current = listeningAyahsHidden;
     try {
-      window.localStorage.setItem(
+      setMushafStorageItem(
         "irtaki.mushaf.global-text-hidden.v1",
         String(listeningAyahsHidden),
       );
@@ -508,9 +999,7 @@ export function MushafPage({
       return "hafs-afassi";
     }
 
-    return (
-      window.localStorage.getItem(AUDIO_RECITER_STORAGE_KEY) ?? "hafs-afassi"
-    );
+    return getMushafStorageItem(AUDIO_RECITER_STORAGE_KEY) ?? "hafs-afassi";
   });
   const [audioStartSurah, setAudioStartSurah] = useState("");
   const [audioStartAyah, setAudioStartAyah] = useState("");
@@ -573,7 +1062,7 @@ export function MushafPage({
     };
 
     try {
-      const raw = window.localStorage.getItem(
+      const raw = getMushafStorageItem(
         "irtaki.mushaf.context-menu-settings.v1",
       );
 
@@ -612,7 +1101,7 @@ export function MushafPage({
     if (!contextSettingsReady) return;
 
     try {
-      window.localStorage.setItem(
+      setMushafStorageItem(
         "irtaki.mushaf.context-menu-settings.v1",
         JSON.stringify({
           textModifications,
@@ -629,6 +1118,10 @@ export function MushafPage({
     annotationOptions,
     showAllTextByMode,
   ]);
+  const [taskMenuOpen, setTaskMenuOpen] = useState(false);
+  const [taskBusy, setTaskBusy] = useState(false);
+  const [taskError, setTaskError] = useState<string | null>(null);
+  const [activeTask, setActiveTask] = useState<ActiveLearningTask | null>(null);
   const [contextMenuMessage, setContextMenuMessage] = useState<string | null>(
     null,
   );
@@ -938,7 +1431,7 @@ export function MushafPage({
     let storedMode: string | null = null;
 
     try {
-      storedMode = window.localStorage.getItem(storageKey);
+      storedMode = getMushafStorageItem(storageKey);
     } catch {
       // Utiliser le mode par défaut si le stockage est indisponible.
     }
@@ -954,7 +1447,7 @@ export function MushafPage({
 
     if (!savedMode) {
       try {
-        window.localStorage.setItem(storageKey, initialMode);
+        setMushafStorageItem(storageKey, initialMode);
       } catch {
         // Le lecteur reste utilisable sans stockage local.
       }
@@ -963,7 +1456,7 @@ export function MushafPage({
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(
+      setMushafStorageItem(
         `irtaki.mushaf.position.${mushafId}.${riwayaId}.${secondaryModeRef.current}`,
         String(pageNumber),
       );
@@ -1028,6 +1521,202 @@ export function MushafPage({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [pageNumber, selectedAyahId]);
+
+  useEffect(() => {
+    const restoreActiveTask = () => {
+      const learnerId = getStoredActiveLearnerId();
+      if (!learnerId) {
+        setActiveTask(null);
+        return;
+      }
+
+      try {
+        const raw = window.sessionStorage.getItem(
+          activeTaskStorageKey(learnerId),
+        );
+        if (!raw) {
+          setActiveTask(null);
+          return;
+        }
+
+        const parsed: unknown = JSON.parse(raw);
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          "learnerId" in parsed &&
+          "activityId" in parsed &&
+          "action" in parsed &&
+          "startedAt" in parsed &&
+          "ayahIds" in parsed &&
+          parsed.learnerId === learnerId &&
+          typeof parsed.activityId === "string" &&
+          typeof parsed.startedAt === "string" &&
+          Array.isArray(parsed.ayahIds) &&
+          TRACKED_TASK_OPTIONS.some((option) => option.action === parsed.action)
+        ) {
+          setActiveTask(parsed as ActiveLearningTask);
+        } else {
+          setActiveTask(null);
+        }
+      } catch {
+        setActiveTask(null);
+      }
+    };
+
+    restoreActiveTask();
+    window.addEventListener("irtaki:active-learner-changed", restoreActiveTask);
+    window.addEventListener("storage", restoreActiveTask);
+
+    return () => {
+      window.removeEventListener(
+        "irtaki:active-learner-changed",
+        restoreActiveTask,
+      );
+      window.removeEventListener("storage", restoreActiveTask);
+    };
+  }, []);
+
+  function getTaskAyahIds(): number[] {
+    if (!menu) return [];
+
+    if (menu.type === "ayah") {
+      const id = menu.ayahId ?? selectedAyahId;
+      return typeof id === "number" && ayahs.some((ayah) => ayah.id === id)
+        ? [id]
+        : [];
+    }
+
+    if (menu.type !== "selection") return [];
+
+    const keys = menu.wordKeys?.length ? menu.wordKeys : [...selectedWords];
+    const selectedKeys = new Set(keys);
+    const ids = new Set<number>();
+
+    document
+      .querySelectorAll<HTMLElement>("[data-word-key][data-mushaf-word]")
+      .forEach((wordElement) => {
+        const wordKey = wordElement.dataset.wordKey;
+        if (!wordKey || !selectedKeys.has(wordKey)) return;
+
+        const ayahElement = wordElement.closest<HTMLElement>("[data-ayah-id]");
+        const ayahId = Number(ayahElement?.dataset.ayahId);
+        if (Number.isInteger(ayahId) && ayahId > 0) ids.add(ayahId);
+      });
+
+    return [...ids];
+  }
+
+  async function completeContextTask(action: TrackedTaskAction) {
+    const learnerId = getStoredActiveLearnerId();
+
+    if (!learnerId) {
+      setTaskError("اختر المستخدم الحالي أولاً");
+      return;
+    }
+
+    const ayahIds = getTaskAyahIds();
+    if (ayahIds.length === 0) {
+      setTaskError("حدد آية أو كلمات من المصحف أولاً");
+      return;
+    }
+
+    setTaskBusy(true);
+    setTaskError(null);
+
+    try {
+      let requestBody: Record<string, unknown>;
+      let finishingExistingActivity = false;
+
+      const sameActiveTask =
+        activeTask !== null &&
+        activeTask !== undefined &&
+        activeTask.action === action &&
+        activeTask.ayahIds.length === ayahIds.length &&
+        activeTask.ayahIds.every((id) => ayahIds.includes(id));
+
+      if (sameActiveTask && activeTask) {
+        requestBody = {
+          intent: "finish",
+          learnerId,
+          activityId: activeTask.activityId,
+          status: "completed",
+        };
+        finishingExistingActivity = true;
+      } else {
+        requestBody = {
+          intent: "complete",
+          learnerId,
+          action,
+          ayahIds,
+        };
+      }
+
+      const response = await fetch("/api/learning/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        throw new Error("تعذر تسجيل النشاط");
+      }
+
+      if (finishingExistingActivity) {
+        setActiveTask(null);
+        try {
+          window.sessionStorage.removeItem(activeTaskStorageKey(learnerId));
+        } catch {
+          // L'activité est déjà clôturée côté serveur.
+        }
+      }
+
+      setTaskMenuOpen(false);
+      showSecondaryMessage("اكتمل النشاط");
+    } catch {
+      setTaskError("تعذر تسجيل النشاط");
+    } finally {
+      setTaskBusy(false);
+    }
+  }
+
+  function renderTaskControls() {
+    const learnerId = getStoredActiveLearnerId();
+
+    return (
+      <div
+        className="mt-2 flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3 rounded-lg border p-3"
+        role="group"
+        aria-label="نشاط"
+      >
+        <div className="font-semibold">نشاط</div>
+
+        <div className="flex flex-wrap gap-2">
+          {TRACKED_TASK_OPTIONS.map((option) => (
+            <button
+              key={option.action}
+              type="button"
+              className="rounded-lg border px-3 py-2 text-right"
+              disabled={taskBusy || !learnerId}
+              onClick={() => void completeContextTask(option.action)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        {taskBusy && (
+          <p className="text-sm" role="status">
+            جارٍ تسجيل النشاط…
+          </p>
+        )}
+        {taskError && (
+          <p className="text-sm" role="alert">
+            {taskError}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   function getWordFromPoint(x: number, y: number): WordSelection | null {
     const element = document.elementFromPoint(x, y);
@@ -1363,11 +2052,11 @@ export function MushafPage({
   }
 
   useEffect(() => {
-    window.localStorage.setItem(AUDIO_RECITER_STORAGE_KEY, selectedReciter);
+    setMushafStorageItem(AUDIO_RECITER_STORAGE_KEY, selectedReciter);
   }, [selectedReciter]);
 
   useEffect(() => {
-    const stored = Number(window.localStorage.getItem(AUDIO_RATE_STORAGE_KEY));
+    const stored = Number(getMushafStorageItem(AUDIO_RATE_STORAGE_KEY));
 
     if (Number.isFinite(stored) && stored >= 0.25 && stored <= 4) {
       setPlaybackRate(stored);
@@ -1506,7 +2195,7 @@ export function MushafPage({
   }
 
   function readAudioContinuation(): AudioContinuation | undefined {
-    const raw = window.sessionStorage.getItem(AUDIO_CONTINUATION_STORAGE_KEY);
+    const raw = getMushafSessionStorageItem(AUDIO_CONTINUATION_STORAGE_KEY);
 
     if (!raw) {
       return undefined;
@@ -1540,14 +2229,14 @@ export function MushafPage({
   }
 
   function writeAudioContinuation(continuation: AudioContinuation) {
-    window.sessionStorage.setItem(
+    setMushafSessionStorageItem(
       AUDIO_CONTINUATION_STORAGE_KEY,
       JSON.stringify(continuation),
     );
   }
 
   function clearAudioContinuation() {
-    window.sessionStorage.removeItem(AUDIO_CONTINUATION_STORAGE_KEY);
+    removeMushafSessionStorageItem(AUDIO_CONTINUATION_STORAGE_KEY);
   }
 
   function isAudioEndReached(
@@ -1570,7 +2259,7 @@ export function MushafPage({
 
   function readAudioLoop(): AudioLoop | undefined {
     try {
-      const raw = window.sessionStorage.getItem(AUDIO_LOOP_STORAGE_KEY);
+      const raw = getMushafSessionStorageItem(AUDIO_LOOP_STORAGE_KEY);
       if (!raw) return undefined;
       const l = JSON.parse(raw) as Partial<AudioLoop>;
       if (
@@ -1593,11 +2282,11 @@ export function MushafPage({
   }
 
   function writeAudioLoop(loop: AudioLoop) {
-    window.sessionStorage.setItem(AUDIO_LOOP_STORAGE_KEY, JSON.stringify(loop));
+    setMushafSessionStorageItem(AUDIO_LOOP_STORAGE_KEY, JSON.stringify(loop));
   }
 
   function clearAudioLoop() {
-    window.sessionStorage.removeItem(AUDIO_LOOP_STORAGE_KEY);
+    removeMushafSessionStorageItem(AUDIO_LOOP_STORAGE_KEY);
   }
 
   function cancelSilence() {
@@ -1650,7 +2339,7 @@ export function MushafPage({
       return;
     }
 
-    window.sessionStorage.removeItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY);
+    removeMushafSessionStorageItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY);
     cancelSilence();
     audio.pause();
     setIsPlaying(false);
@@ -1688,7 +2377,7 @@ export function MushafPage({
     setPlaybackRate(nextRate);
 
     if (audioRef.current) {
-      window.localStorage.setItem(AUDIO_RATE_STORAGE_KEY, String(nextRate));
+      setMushafStorageItem(AUDIO_RATE_STORAGE_KEY, String(nextRate));
       audioRef.current.playbackRate = nextRate;
     }
 
@@ -2348,7 +3037,7 @@ export function MushafPage({
 
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(AUDIO_SETTINGS_STORAGE_KEY);
+      const raw = getMushafStorageItem(AUDIO_SETTINGS_STORAGE_KEY);
       if (raw) {
         const saved = JSON.parse(raw) as Record<string, unknown>;
         const pick = (
@@ -2405,7 +3094,7 @@ export function MushafPage({
     }
 
     try {
-      window.localStorage.setItem(
+      setMushafStorageItem(
         AUDIO_SETTINGS_STORAGE_KEY,
         JSON.stringify(audioSettingsRef.current),
       );
@@ -2439,7 +3128,7 @@ export function MushafPage({
 
   function saveModeSelection(mode: SecondaryMode) {
     try {
-      window.localStorage.setItem(
+      setMushafStorageItem(
         getModeSelectionKey(mode),
         JSON.stringify({
           startSurah: audioStartSurah,
@@ -2462,7 +3151,7 @@ export function MushafPage({
     let saved: Record<string, unknown> = {};
 
     try {
-      const raw = window.localStorage.getItem(getModeSelectionKey(mode));
+      const raw = getMushafStorageItem(getModeSelectionKey(mode));
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
@@ -2578,22 +3267,17 @@ export function MushafPage({
     let targetPage =
       mode === "history" ? 605 : pageNumber === 605 ? 1 : pageNumber;
     try {
-      window.localStorage.setItem(
-        `irtaki.mushaf.mode.${mushafId}.${riwayaId}`,
-        mode,
-      );
+      setMushafStorageItem(`irtaki.mushaf.mode.${mushafId}.${riwayaId}`, mode);
 
       // Sauvegarder indépendamment la sélection et la position du mode quitté.
       saveModeSelection(secondaryModeRef.current);
-      window.localStorage.setItem(
+      setMushafStorageItem(
         getModePositionKey(secondaryModeRef.current),
         String(pageNumber),
       );
 
       // Restaurer la dernière position du mode demandé, si elle existe.
-      const savedPage = Number(
-        window.localStorage.getItem(getModePositionKey(mode)),
-      );
+      const savedPage = Number(getMushafStorageItem(getModePositionKey(mode)));
       targetPage =
         mode === "history"
           ? 605
@@ -2920,7 +3604,7 @@ export function MushafPage({
 
       if (pageNumber < TOTAL_PAGES) {
         audioShouldContinueRef.current = true;
-        window.sessionStorage.setItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY, "1");
+        setMushafSessionStorageItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY, "1");
         router.push(`/coran/${riwayaId}/page/${pageNumber + 1}`);
         return;
       }
@@ -3226,9 +3910,9 @@ export function MushafPage({
     }
 
     const autoplayNext =
-      window.sessionStorage.getItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY) === "1";
+      getMushafSessionStorageItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY) === "1";
 
-    window.sessionStorage.removeItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY);
+    removeMushafSessionStorageItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY);
 
     const shouldResume =
       audioShouldContinueRef.current ||
@@ -3512,6 +4196,18 @@ export function MushafPage({
                 >
                   🎧 استماع
                 </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  aria-expanded={taskMenuOpen}
+                  aria-haspopup="true"
+                  onClick={() => {
+                    setTaskError(null);
+                    setTaskMenuOpen((open) => !open);
+                  }}
+                >
+                  📋 نشاط
+                </button>
                 <MushafColorPalette
                   action="colors"
                   mode={secondaryMode}
@@ -3645,6 +4341,7 @@ export function MushafPage({
                 </button>
               </div>
               {contextAudioTarget === "ayah" && renderContextAudioControls()}
+              {taskMenuOpen && renderTaskControls()}
             </div>
           )}
 
@@ -5054,6 +5751,18 @@ export function MushafPage({
                 >
                   🎧 استماع
                 </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  aria-expanded={taskMenuOpen}
+                  aria-haspopup="true"
+                  onClick={() => {
+                    setTaskError(null);
+                    setTaskMenuOpen((open) => !open);
+                  }}
+                >
+                  📋 نشاط
+                </button>
                 <MushafColorPalette
                   action="colors"
                   mode={secondaryMode}
@@ -5152,6 +5861,7 @@ export function MushafPage({
               </div>
               {contextAudioTarget === "selection" &&
                 renderContextAudioControls()}
+              {taskMenuOpen && renderTaskControls()}
             </div>
           )}
           {contextMenuMessage ? (

@@ -19,6 +19,7 @@ import { getProgress } from "./use-cases/get-progress";
 import { recordActivityResult } from "./use-cases/record-activity-result";
 import { recordActivityAyahTraces } from "./use-cases/record-activity-ayah-traces";
 import { startActivity } from "./use-cases/start-activity";
+import { finishActivity as finishActivityUseCase } from "./use-cases/finish-activity";
 import { getSurahHistory as getSurahHistoryUseCase } from "./use-cases/get-surah-history";
 import { getActivityHistory as getActivityHistoryUseCase } from "./use-cases/get-activity-history";
 
@@ -86,6 +87,25 @@ export function createLearningEngine() {
         },
         recordedAt,
       ),
+
+    finishActivity: (
+      userId: string,
+      input: Parameters<typeof finishActivityUseCase>[1],
+      endedAt?: Date,
+    ) =>
+      finishActivityUseCase(
+        userId,
+        input,
+        {
+          learnerRepository,
+          activityRepository,
+          activityAyahTraceRepository,
+        },
+        endedAt,
+      ),
+
+    findUnknownAyahIds: (ayahIds: number[]) =>
+      activityAyahTraceRepository.findUnknownAyahIds(ayahIds),
 
     getHistoryLearners: (userId: string) =>
       learnerRepository.findManyByUserId(userId),

@@ -10,6 +10,7 @@ describe("AuthService", () => {
         create: vi.fn(),
         findByEmail: vi.fn(),
         findById: vi.fn(),
+        updateName: vi.fn(),
       },
       learnerRepository: {
         findManyByUserId: vi.fn().mockResolvedValue([]),

@@ -65,6 +65,7 @@ export const ModelName = {
   Session: 'Session',
   ChildProfile: 'ChildProfile',
   Learner: 'Learner',
+  LearnerPreference: 'LearnerPreference',
   Goal: 'Goal',
   GoalTarget: 'GoalTarget',
   Activity: 'Activity',
@@ -259,6 +260,17 @@ export const LearnerScalarFieldEnum = {
 export type LearnerScalarFieldEnum = (typeof LearnerScalarFieldEnum)[keyof typeof LearnerScalarFieldEnum]
 
 
+export const LearnerPreferenceScalarFieldEnum = {
+  id: 'id',
+  learnerId: 'learnerId',
+  preferences: 'preferences',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LearnerPreferenceScalarFieldEnum = (typeof LearnerPreferenceScalarFieldEnum)[keyof typeof LearnerPreferenceScalarFieldEnum]
+
+
 export const GoalScalarFieldEnum = {
   id: 'id',
   learnerId: 'learnerId',
@@ -361,6 +373,13 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
@@ -375,4 +394,13 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
