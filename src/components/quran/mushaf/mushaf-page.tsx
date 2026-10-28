@@ -23,6 +23,7 @@ import {
   MushafHistoryContent,
   type MushafHistoryView,
 } from "./mushaf-history-content";
+import { recordMushafActionJournalEvent } from "./mushaf-action-journal";
 
 type MushafPageProps = {
   mushafId: number;
@@ -944,6 +945,12 @@ export function MushafPage({
         annotation,
         ...current.filter((item) => item.id !== annotation.id),
       ]);
+      journalMushafAction(
+        "comment",
+        "تعليق",
+        [`ayah:${annotation.ayahId}`],
+        content,
+      );
       setAnnotationContent("");
       setAnnotationStatus("تم حفظ الملاحظة.");
     } catch (error) {
@@ -962,6 +969,63 @@ export function MushafPage({
     pageNumber === 605 ? "history" : "listening",
   );
   const [historyView, setHistoryView] = useState<MushafHistoryView>("pages");
+
+  function journalReferencesForTargets(targets: string[]): string[] {
+    const references = targets.map((target) => {
+      const wordMatch = target.match(/^word:(\d+)[:/.-](\d+)[:/.-]\d+$/);
+      if (wordMatch) return `${wordMatch[1]}:${wordMatch[2]}`;
+
+      const ayahMatch = target.match(/^ayah:(\d+)$/);
+      if (ayahMatch) {
+        const id = Number(ayahMatch[1]);
+        const candidate = ayahs.find((item) => item.id === id) as
+          (Record<string, unknown> & { id: number }) | undefined;
+
+        if (candidate) {
+          const surahValue =
+            candidate.surahNumber ??
+            (typeof candidate.surah === "object" && candidate.surah !== null
+              ? (candidate.surah as Record<string, unknown>).number
+              : undefined);
+          const ayahValue =
+            candidate.numberInSurah ?? candidate.ayahNumber ?? candidate.number;
+
+          if (
+            typeof surahValue === "number" &&
+            typeof ayahValue === "number" &&
+            surahValue >= 1 &&
+            surahValue <= 114 &&
+            ayahValue >= 1
+          ) {
+            return `${surahValue}:${ayahValue}`;
+          }
+        }
+
+        return `معرّف الآية ${id}`;
+      }
+
+      return target;
+    });
+
+    return [...new Set(references)];
+  }
+
+  function journalMushafAction(
+    action: string,
+    label: string,
+    targets: string[],
+    details?: string,
+  ) {
+    const references = journalReferencesForTargets(targets);
+    if (references.length === 0) return;
+
+    recordMushafActionJournalEvent({
+      action,
+      label,
+      references,
+      ...(details ? { details } : {}),
+    });
+  }
   const [listeningAyahsHidden, setListeningAyahsHidden] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
@@ -1194,6 +1258,7 @@ export function MushafPage({
         }
         return next;
       });
+      journalMushafAction("text-modification", "تعديل النص", targets, action);
       setContextMenuMessage(null);
       return;
     }
@@ -1209,6 +1274,12 @@ export function MushafPage({
       }
       return next;
     });
+    journalMushafAction(
+      "text-modification",
+      allEnabled ? "إلغاء تعديل النص" : "تعديل النص",
+      targets,
+      action,
+    );
     setContextMenuMessage(null);
   }
 
@@ -1245,10 +1316,34 @@ export function MushafPage({
       return next;
     });
 
+    journalMushafAction(
+      "underline",
+      allEnabled ? "إزالة التسطير" : "تسطير",
+      targets,
+      style,
+    );
     setContextMenuMessage(null);
   }
 
   function applyContextColor(action: "colors" | "highlight", color: string) {
+    const activeColorButton =
+      typeof document !== "undefined"
+        ? (document.activeElement?.closest(
+            'button[aria-label^="Appliquer la couleur"]',
+          ) as HTMLButtonElement | null)
+        : null;
+
+    const rectangleLabels = activeColorButton
+      ? Array.from(activeColorButton.querySelectorAll("span"))
+          .map((element) => element.textContent?.trim() ?? "")
+          .filter(Boolean)
+      : [];
+
+    const rectangleName =
+      rectangleLabels.length > 0
+        ? rectangleLabels[rectangleLabels.length - 1]
+        : "";
+
     const targets: string[] = [];
 
     if (menu?.type === "ayah") {
@@ -1297,6 +1392,19 @@ export function MushafPage({
       }
       return next;
     });
+
+    journalMushafAction(
+      action === "colors" ? "color" : "highlight",
+      removeColor
+        ? action === "colors"
+          ? "إلغاء اللون"
+          : "إلغاء التظليل"
+        : action === "colors"
+          ? "تلوين"
+          : "تظليل",
+      targets,
+      rectangleName || "اسم المستطيل غير متاح",
+    );
 
     setOpenColorPaletteAction(null);
     setContextMenuMessage(
@@ -4887,8 +4995,9 @@ export function MushafPage({
                   >
                     {[
                       { id: "day", label: "اليوم", view: "day" },
-                      { id: "ayahs", label: "آية", view: "ayahs" },
-                      { id: "pages", label: "صفحة", view: "pages" },
+                      { id: "ayahs", label: "الآية", view: "ayahs" },
+                      { id: "pages", label: "الصفحة", view: "pages" },
+                      { id: "action", label: "الإجراء", view: "action" },
                       { id: "activity", label: "النشاط", view: "activity" },
                     ].map((item) => (
                       <button

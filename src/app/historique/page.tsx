@@ -31,6 +31,7 @@ type HistoryRecord = {
 
 type TableRow = {
   key: string;
+  surahNumber?: number;
   reference?: string;
   page?: number;
   pages?: string;
@@ -50,14 +51,14 @@ const VIEWS: { id: HistoryView; label: string }[] = [
 // Les valeurs internes correspondent aux actions disponibles dans les traces.
 const MODES = [
   { value: "listen", label: "استماع" },
-  { value: "read", label: "قراء" },
+  { value: "read", label: "قراءة" },
   { value: "memorize", label: "حفظ" },
   { value: "recite", label: "تلاوة" },
   { value: "tathbit", label: "تثبيت" },
   { value: "tahajjud", label: "تهجد" },
   { value: "revise", label: "مراجعة" },
   { value: "khatma", label: "ختمة" },
-  { value: "tadabbur", label: "تدبير" },
+  { value: "tadabbur", label: "تدبر" },
   { value: "talkin", label: "تلقين" },
 ] as const;
 
@@ -65,6 +66,15 @@ const DISPLAYED_ACTIONS = new Set<string>(MODES.map((mode) => mode.value));
 
 function actionLabel(action: string): string {
   return MODES.find((mode) => mode.value === action)?.label ?? action;
+}
+
+function surahLabel(surahNumber: number, surahs: SurahOption[]): string {
+  const name = surahs
+    .find((surah) => surah.number === surahNumber)
+    ?.name?.trim();
+  return name && /[\u0600-\u06FF]/.test(name)
+    ? `${name} (${surahNumber})`
+    : `السورة رقم ${surahNumber}`;
 }
 
 function extractArray<T>(value: unknown, keys: string[]): T[] {
@@ -95,7 +105,7 @@ function formatDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
 
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat("ar-DZ", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
@@ -103,8 +113,11 @@ function formatDate(value: string): string {
 
 function formatDay(value: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return "—";
-  const [year, month, day] = value.split("-");
-  return `${day}/${month}/${year}`;
+  const date = new Date(`${value}T12:00:00`);
+  return new Intl.DateTimeFormat("ar-DZ", {
+    dateStyle: "short",
+    calendar: "gregory",
+  }).format(date);
 }
 
 function compactNumbers(numbers: number[]): string {
@@ -153,18 +166,6 @@ function latestDate(records: HistoryRecord[]): string {
       record.occurredAt > latest ? record.occurredAt : latest,
     records[0]?.occurredAt ?? "",
   );
-}
-
-function verseRange(records: HistoryRecord[]): string {
-  const groups = groupRecords(records, (record) => String(record.surahNumber));
-
-  return groups
-    .sort((a, b) => Number(a.key) - Number(b.key))
-    .map(
-      ({ key, records: grouped }) =>
-        `${key}:${compactNumbers(grouped.map((record) => record.ayahNumber))}`,
-    )
-    .join(" ؛ ");
 }
 
 function pageRange(records: HistoryRecord[]): string {
@@ -420,18 +421,22 @@ export default function HistoryPage() {
     if (view === "ayahs") {
       return groupRecords(
         filteredRecords,
-        (record) =>
-          `${record.surahNumber}:${record.ayahNumber}:${record.action}`,
+        (record) => `${record.surahNumber}:${record.action}`,
       )
         .map(({ key, records: grouped }) => ({
           key,
-          reference: `${grouped[0].surahNumber}:${grouped[0].ayahNumber}`,
-          page: grouped[0].pageNumber,
+          surahNumber: grouped[0].surahNumber,
+          reference: compactNumbers(grouped.map((record) => record.ayahNumber)),
+          pages: pageRange(grouped),
           action: grouped[0].action,
           date: latestDate(grouped),
           count: sessionCount(grouped),
         }))
-        .sort((a, b) => b.date.localeCompare(a.date));
+        .sort(
+          (a, b) =>
+            (a.surahNumber ?? 0) - (b.surahNumber ?? 0) ||
+            a.action.localeCompare(b.action),
+        );
     }
 
     if (view === "pages") {
@@ -457,7 +462,8 @@ export default function HistoryPage() {
       )
         .map(({ key, records: grouped }) => ({
           key,
-          reference: verseRange(grouped),
+          surahNumber: grouped[0].surahNumber,
+          reference: compactNumbers(grouped.map((record) => record.ayahNumber)),
           pages: pageRange(grouped),
           action: grouped[0].action,
           date: latestDate(grouped),
@@ -473,7 +479,8 @@ export default function HistoryPage() {
     )
       .map(({ key, records: grouped }) => ({
         key,
-        reference: verseRange(grouped),
+        surahNumber: grouped[0].surahNumber,
+        reference: compactNumbers(grouped.map((record) => record.ayahNumber)),
         pages: pageRange(grouped),
         action: grouped[0].action,
         date: localDayKey(latestDate(grouped)),
@@ -484,21 +491,21 @@ export default function HistoryPage() {
 
   const emptyMessage =
     view === "ayahs"
-      ? "Aucune trace de verset enregistrée pour ce filtre."
+      ? "لا توجد آثار مسجّلة للآيات وفق هذا التصفية."
       : view === "pages"
-        ? "Aucune séance avec des versets tracés pour cette page."
+        ? "لا توجد جلسات تتضمن آيات مسجّلة في هذه الصفحة."
         : view === "activity"
-          ? "Aucune séance enregistrée pour ce mode."
-          : "Aucune séance enregistrée pour cette date.";
+          ? "لا توجد جلسات مسجّلة لهذا النشاط."
+          : "لا توجد جلسات مسجّلة في هذا اليوم.";
 
   return (
     <section dir="rtl" className="space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold">📅 السجل — Historique</h1>
+          <h1 className="text-2xl font-bold">📅 السجل</h1>
           <p className="text-sm text-[var(--muted-foreground)]">
-            Tableaux des tâches enregistrées : numéros, plages de versets, dates
-            et répétitions, sans texte coranique.
+            سجل الأنشطة المسجّلة: أرقام الآيات والصفحات والتواريخ وعدد
+            التكرارات، دون عرض النص القرآني.
           </p>
         </div>
         <button
@@ -552,13 +559,13 @@ export default function HistoryPage() {
 
       {view === "ayahs" && (
         <label className="block max-w-xl space-y-2">
-          <span className="text-sm font-medium">السورة — Sourate</span>
+          <span className="text-sm font-medium">السورة</span>
           <select
             className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] p-3"
             value={surahFilter}
             onChange={(event) => setSurahFilter(event.target.value)}
           >
-            <option value="all">كل السور — Toutes les sourates</option>
+            <option value="all">جميع السور</option>
             {surahs.map((surah) => (
               <option key={surah.number} value={surah.number}>
                 {surah.number}.{" "}
@@ -574,7 +581,7 @@ export default function HistoryPage() {
 
       {view === "pages" && (
         <label className="block max-w-xl space-y-2">
-          <span className="text-sm font-medium">الصفحة — Page</span>
+          <span className="text-sm font-medium">الصفحة</span>
           <select
             className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] p-3"
             value={pageFilter}
@@ -623,7 +630,7 @@ export default function HistoryPage() {
               className="text-sm underline"
               onClick={() => setDayFilter("")}
             >
-              Toutes les dates
+              كل التواريخ
             </button>
           )}
         </label>
@@ -631,7 +638,7 @@ export default function HistoryPage() {
 
       {(optionsLoading || recordsLoading) && (
         <p role="status" className="text-sm">
-          Chargement de l’historique…
+          جارٍ تحميل السجل…
         </p>
       )}
 
@@ -646,7 +653,7 @@ export default function HistoryPage() {
 
       {!optionsLoading && learners.length === 0 && !error && (
         <p className="rounded-lg border border-[var(--border)] p-4">
-          Aucun apprenant disponible pour ce compte.
+          لا يوجد مستخدم متاح لهذا الحساب.
         </p>
       )}
 
@@ -658,13 +665,16 @@ export default function HistoryPage() {
                 {view === "ayahs" && (
                   <>
                     <th scope="col" className="p-3">
-                      الآية
+                      السورة
                     </th>
                     <th scope="col" className="p-3">
-                      الصفحة
+                      أرقام الآيات
                     </th>
                     <th scope="col" className="p-3">
-                      المهمة
+                      الصفحات
+                    </th>
+                    <th scope="col" className="p-3">
+                      النشاط
                     </th>
                     <th scope="col" className="p-3">
                       آخر تاريخ
@@ -693,7 +703,10 @@ export default function HistoryPage() {
                 {view === "activity" && (
                   <>
                     <th scope="col" className="p-3">
-                      نوع النشاط
+                      النشاط
+                    </th>
+                    <th scope="col" className="p-3">
+                      السورة
                     </th>
                     <th scope="col" className="p-3">
                       أرقام الآيات
@@ -715,13 +728,16 @@ export default function HistoryPage() {
                       التاريخ
                     </th>
                     <th scope="col" className="p-3">
+                      السورة
+                    </th>
+                    <th scope="col" className="p-3">
                       أرقام الآيات
                     </th>
                     <th scope="col" className="p-3">
                       أرقام الصفحات
                     </th>
                     <th scope="col" className="p-3">
-                      نوع النشاط
+                      النشاط
                     </th>
                     <th scope="col" className="p-3">
                       عدد الآيات
@@ -738,8 +754,11 @@ export default function HistoryPage() {
                 >
                   {view === "ayahs" && (
                     <>
+                      <td className="p-3">
+                        {surahLabel(row.surahNumber ?? 0, surahs)}
+                      </td>
                       <td className="p-3 tabular-nums">{row.reference}</td>
-                      <td className="p-3 tabular-nums">{row.page}</td>
+                      <td className="p-3 tabular-nums">{row.pages}</td>
                       <td className="p-3">{actionLabel(row.action)}</td>
                       <td className="p-3">{formatDate(row.date)}</td>
                       <td className="p-3 tabular-nums">{row.count}</td>
@@ -756,6 +775,9 @@ export default function HistoryPage() {
                   {view === "activity" && (
                     <>
                       <td className="p-3">{actionLabel(row.action)}</td>
+                      <td className="p-3">
+                        {surahLabel(row.surahNumber ?? 0, surahs)}
+                      </td>
                       <td className="p-3 tabular-nums">{row.reference}</td>
                       <td className="p-3 tabular-nums">{row.pages}</td>
                       <td className="p-3">{formatDate(row.date)}</td>
@@ -765,6 +787,9 @@ export default function HistoryPage() {
                   {view === "day" && (
                     <>
                       <td className="p-3">{formatDay(row.date)}</td>
+                      <td className="p-3">
+                        {surahLabel(row.surahNumber ?? 0, surahs)}
+                      </td>
                       <td className="p-3 tabular-nums">{row.reference}</td>
                       <td className="p-3 tabular-nums">{row.pages}</td>
                       <td className="p-3">{actionLabel(row.action)}</td>
@@ -775,7 +800,10 @@ export default function HistoryPage() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-6 text-center text-sm">
+                  <td
+                    colSpan={view === "pages" ? 4 : 6}
+                    className="p-6 text-center text-sm"
+                  >
                     {emptyMessage}
                   </td>
                 </tr>
