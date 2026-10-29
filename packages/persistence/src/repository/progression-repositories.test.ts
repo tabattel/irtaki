@@ -176,13 +176,19 @@ describe("progression repositories", () => {
       parentGoalId: goalId,
     });
 
-    await expect(
-      goalRepository.findMainGoalsByLearnerId(learnerId),
-    ).resolves.toHaveLength(1);
+    const allGoals = await goalRepository.findManyByLearnerId(learnerId);
+    expect(allGoals).toHaveLength(2);
+    expect(allGoals.find((item) => item.id === goalId)?.target).toMatchObject({
+      scope: "quran",
+    });
 
-    await expect(
-      goalRepository.findSubGoals(goalId),
-    ).resolves.toHaveLength(1);
+    const mainGoals = await goalRepository.findMainGoalsByLearnerId(learnerId);
+    expect(mainGoals).toHaveLength(1);
+    expect(mainGoals[0]?.target).toMatchObject({ scope: "quran" });
+
+    const subGoals = await goalRepository.findSubGoals(goalId);
+    expect(subGoals).toHaveLength(1);
+    expect(subGoals[0]?.target).toBeNull();
   });
 
   it("creates an activity and its result", async () => {

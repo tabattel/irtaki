@@ -1,4 +1,6 @@
 "use client";
+import { calculateRecordedPagePercentage } from "@/application/learning/page-line-progress";
+import { reconstructMissingPageLineMetadata } from "@/lib/mushaf/reconstruct-page-line-metadata";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -27,6 +29,8 @@ type HistoryRecord = {
   pageNumber: number;
   occurredAt: string;
   startedAt: string;
+  lineNumbers?: number[];
+  pageLineCount?: number | null;
 };
 
 type TableRow = {
@@ -38,6 +42,7 @@ type TableRow = {
   action: string;
   date: string;
   count: number;
+  percentage?: number | null;
 };
 
 const VIEWS: { id: HistoryView; label: string }[] = [
@@ -65,6 +70,7 @@ const MODES = [
 const DISPLAYED_ACTIONS = new Set<string>(MODES.map((mode) => mode.value));
 
 function actionLabel(action: string): string {
+  if (action === "qiraa") return "القراءة";
   return MODES.find((mode) => mode.value === action)?.label ?? action;
 }
 
@@ -346,7 +352,7 @@ export default function HistoryPage() {
           throw new Error("Le format de l’historique est invalide.");
         }
 
-        if (active) setRecords(incoming as HistoryRecord[]);
+        if (active) setRecords(await reconstructMissingPageLineMetadata(incoming as HistoryRecord[]));
       } catch (loadError) {
         if (active) {
           setRecords([]);
@@ -450,6 +456,7 @@ export default function HistoryPage() {
           action: grouped[0].action,
           date: latestDate(grouped),
           count: sessionCount(grouped),
+          percentage: calculateRecordedPagePercentage(grouped),
         }))
         .sort((a, b) => b.date.localeCompare(a.date));
     }
@@ -690,6 +697,9 @@ export default function HistoryPage() {
                       الصفحة
                     </th>
                     <th scope="col" className="p-3">
+                      النسبة
+                    </th>
+                    <th scope="col" className="p-3">
                       المهمة
                     </th>
                     <th scope="col" className="p-3">
@@ -767,6 +777,9 @@ export default function HistoryPage() {
                   {view === "pages" && (
                     <>
                       <td className="p-3 tabular-nums">{row.page}</td>
+                      <td className="p-3 tabular-nums">
+                        {row.percentage == null ? "—" : `${row.percentage}%`}
+                      </td>
                       <td className="p-3">{actionLabel(row.action)}</td>
                       <td className="p-3">{formatDate(row.date)}</td>
                       <td className="p-3 tabular-nums">{row.count}</td>
@@ -801,7 +814,7 @@ export default function HistoryPage() {
               {rows.length === 0 && (
                 <tr>
                   <td
-                    colSpan={view === "pages" ? 4 : 6}
+                    colSpan={view === "pages" ? 5 : 6}
                     className="p-6 text-center text-sm"
                   >
                     {emptyMessage}

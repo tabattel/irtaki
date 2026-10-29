@@ -47,6 +47,21 @@ function createDependencies() {
         id: "result-1",
         ...baseInput,
       }),
+      createWithProgress: vi.fn().mockResolvedValue({
+        activityResult: {
+          id: "result-1",
+          ...baseInput,
+        },
+        progressRecord: {
+          id: "progress-1",
+          learnerId: "learner-1",
+          goalId: "goal-1",
+          activityId: "activity-1",
+          recordedAt,
+          quantity: 2,
+          unit: "page",
+        },
+      }),
     },
     progressRecordRepository: {
       create: vi.fn().mockResolvedValue({
@@ -73,11 +88,9 @@ describe("recordActivityResult", () => {
       recordedAt,
     );
 
-    expect(dependencies.activityResultRepository.create).toHaveBeenCalledWith(
-      baseInput,
-    );
-
-    expect(dependencies.progressRecordRepository.create).toHaveBeenCalledWith({
+    expect(
+      dependencies.activityResultRepository.createWithProgress,
+    ).toHaveBeenCalledWith(baseInput, {
       learnerId: "learner-1",
       goalId: "goal-1",
       activityId: "activity-1",
@@ -85,6 +98,8 @@ describe("recordActivityResult", () => {
       quantity: 2,
       unit: "page",
     });
+
+    expect(dependencies.progressRecordRepository.create).not.toHaveBeenCalled();
 
     expect(result.progressRecord).not.toBeNull();
   });
@@ -100,7 +115,20 @@ describe("recordActivityResult", () => {
 
     await recordActivityResult("learner-1", input, dependencies, recordedAt);
 
-    expect(dependencies.progressRecordRepository.create).toHaveBeenCalled();
+    expect(
+      dependencies.activityResultRepository.createWithProgress,
+    ).toHaveBeenCalledWith(
+      input,
+      expect.objectContaining({
+        learnerId: "learner-1",
+        goalId: "goal-1",
+        activityId: "activity-1",
+        recordedAt,
+        quantity: 1,
+        unit: "page",
+      }),
+    );
+
   });
 
   it("n'ajoute pas failed à la progression", async () => {
@@ -123,6 +151,10 @@ describe("recordActivityResult", () => {
       input,
     );
 
+    expect(
+      dependencies.activityResultRepository.createWithProgress,
+    ).not.toHaveBeenCalled();
+
     expect(dependencies.progressRecordRepository.create).not.toHaveBeenCalled();
 
     expect(result.progressRecord).toBeNull();
@@ -143,6 +175,14 @@ describe("recordActivityResult", () => {
       dependencies,
       recordedAt,
     );
+
+    expect(dependencies.activityResultRepository.create).toHaveBeenCalledWith(
+      input,
+    );
+
+    expect(
+      dependencies.activityResultRepository.createWithProgress,
+    ).not.toHaveBeenCalled();
 
     expect(dependencies.progressRecordRepository.create).not.toHaveBeenCalled();
 

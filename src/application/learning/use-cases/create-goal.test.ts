@@ -33,6 +33,118 @@ function createDependencies() {
 }
 
 describe("createGoal", () => {
+  it("accepte les trois actions supplémentaires définies dans Prisma", async () => {
+    const dependencies = createDependencies();
+
+    for (const action of ["qiraa", "khatma", "tahajjud"] as const) {
+      await createGoal(
+        "user-1",
+        { ...baseInput, action },
+        dependencies,
+      );
+    }
+
+    expect(dependencies.goalRepository.create).toHaveBeenCalledTimes(3);
+  });
+
+  it("transmet une cible valide au repository", async () => {
+    const dependencies = createDependencies();
+    const target = {
+      scope: "page_range" as const,
+      startValue: "1",
+      endValue: "5",
+    };
+    const input = { ...baseInput, target };
+
+    await createGoal("user-1", input, dependencies);
+
+    expect(dependencies.goalRepository.create).toHaveBeenCalledWith(input);
+  });
+
+  it("refuse une cible de plage sans bornes", async () => {
+    const dependencies = createDependencies();
+
+    await expect(
+      createGoal(
+        "user-1",
+        {
+          ...baseInput,
+          target: { scope: "page_range" },
+        },
+        dependencies,
+      ),
+    ).rejects.toThrow(
+      "Goal target range requires startValue and endValue",
+    );
+
+    expect(dependencies.goalRepository.create).not.toHaveBeenCalled();
+  });
+
+  it("refuse des bornes de plage non entières ou non positives", async () => {
+    const dependencies = createDependencies();
+
+    await expect(
+      createGoal(
+        "user-1",
+        {
+          ...baseInput,
+          target: {
+            scope: "page_range",
+            startValue: "1",
+            endValue: "0",
+          },
+        },
+        dependencies,
+      ),
+    ).rejects.toThrow(
+      "Goal target range values must be positive integers",
+    );
+
+    expect(dependencies.goalRepository.create).not.toHaveBeenCalled();
+  });
+
+  it("refuse une plage dont la borne de début dépasse la borne de fin", async () => {
+    const dependencies = createDependencies();
+
+    await expect(
+      createGoal(
+        "user-1",
+        {
+          ...baseInput,
+          target: {
+            scope: "ayah_range",
+            startValue: "10",
+            endValue: "3",
+          },
+        },
+        dependencies,
+      ),
+    ).rejects.toThrow(
+      "Goal target startValue must not exceed endValue",
+    );
+
+    expect(dependencies.goalRepository.create).not.toHaveBeenCalled();
+  });
+
+  it("refuse un périmètre de cible inconnu", async () => {
+    const dependencies = createDependencies();
+
+    await expect(
+      createGoal(
+        "user-1",
+        {
+          ...baseInput,
+          target: {
+            scope: "unknown_scope",
+          } as unknown as NonNullable<CreateGoalInput["target"]>,
+        },
+        dependencies,
+      ),
+    ).rejects.toThrow("Goal target scope is invalid");
+
+    expect(dependencies.goalRepository.create).not.toHaveBeenCalled();
+  });
+
   it("crée un objectif pour un learner appartenant à l'utilisateur", async () => {
     const dependencies = createDependencies();
 

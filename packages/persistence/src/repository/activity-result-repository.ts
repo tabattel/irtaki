@@ -1,5 +1,5 @@
 import { prisma } from "../client/prisma";
-import type { ActivityResult } from "../generated/client";
+import type { ActivityResult, ProgressRecord } from "../generated/client";
 
 export class ActivityResultRepository {
   async create(input: {
@@ -16,6 +16,47 @@ export class ActivityResultRepository {
         quantity: input.quantity,
         unit: input.unit,
       },
+    });
+  }
+
+  async createWithProgress(
+    input: {
+      activityId: string;
+      status: "completed" | "partial" | "failed" | "skipped";
+      quantity: string | number;
+      unit: "quran" | "surah" | "ayah" | "page" | "juz" | "hizb" | "nisf" | "roboa";
+    },
+    progressInput: {
+      learnerId: string;
+      goalId: string;
+      activityId: string;
+      recordedAt: Date;
+      quantity: string | number;
+      unit: "quran" | "surah" | "ayah" | "page" | "juz" | "hizb" | "nisf" | "roboa";
+    },
+  ): Promise<{ activityResult: ActivityResult; progressRecord: ProgressRecord }> {
+    return prisma.$transaction(async (transaction) => {
+      const activityResult = await transaction.activityResult.create({
+        data: {
+          activityId: input.activityId,
+          status: input.status,
+          quantity: input.quantity,
+          unit: input.unit,
+        },
+      });
+
+      const progressRecord = await transaction.progressRecord.create({
+        data: {
+          learnerId: progressInput.learnerId,
+          goalId: progressInput.goalId,
+          activityId: progressInput.activityId,
+          recordedAt: progressInput.recordedAt,
+          quantity: progressInput.quantity,
+          unit: progressInput.unit,
+        },
+      });
+
+      return { activityResult, progressRecord };
     });
   }
 

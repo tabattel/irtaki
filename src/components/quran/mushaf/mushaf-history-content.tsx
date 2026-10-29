@@ -1,4 +1,6 @@
 "use client";
+import { calculateRecordedPagePercentage } from "@/application/learning/page-line-progress";
+import { reconstructMissingPageLineMetadata } from "@/lib/mushaf/reconstruct-page-line-metadata";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -30,6 +32,8 @@ type HistoryRecord = {
   pageNumber: number;
   occurredAt: string;
   startedAt: string;
+  lineNumbers?: number[];
+  pageLineCount?: number | null;
 };
 
 type HistoryRow = {
@@ -41,6 +45,7 @@ type HistoryRow = {
   action: string;
   date: string;
   count: number;
+  percentage?: number | null;
 };
 
 type Props = {
@@ -86,6 +91,7 @@ function formatDay(value: string): string {
 }
 
 function actionLabel(value: string): string {
+  if (value === "qiraa") return "القراءة";
   return ACTIONS[value] ?? value;
 }
 
@@ -658,7 +664,7 @@ export function MushafHistoryContent({ view, onViewChange }: Props) {
           throw new Error("تنسيق بيانات السجل غير صالح.");
         }
 
-        if (active) setRecords(incoming as HistoryRecord[]);
+        if (active) setRecords(await reconstructMissingPageLineMetadata(incoming as HistoryRecord[]));
       } catch (loadError) {
         if (active) {
           setRecords([]);
@@ -726,6 +732,10 @@ export function MushafHistoryContent({ view, onViewChange }: Props) {
           pages,
           action: first?.action ?? "—",
           date: view === "day" ? key.split(":")[0] : latest,
+          percentage:
+            view === "pages"
+              ? calculateRecordedPagePercentage(group)
+              : null,
           count:
             view === "pages" || view === "ayahs"
               ? new Set(group.map((record) => record.activityId)).size
@@ -963,6 +973,9 @@ export function MushafHistoryContent({ view, onViewChange }: Props) {
                         الصفحة
                       </th>
                       <th scope="col" className="p-3">
+                        النسبة
+                      </th>
+                      <th scope="col" className="p-3">
                         المهمة
                       </th>
                       <th scope="col" className="p-3">
@@ -1050,6 +1063,7 @@ export function MushafHistoryContent({ view, onViewChange }: Props) {
                     {view === "pages" && (
                       <>
                         <td className="p-3 tabular-nums">{row.page}</td>
+                        <td className="p-3 tabular-nums">{row.percentage == null ? "—" : `${row.percentage}%`}</td>
                         <td className="p-3">{actionLabel(row.action)}</td>
                         <td className="p-3">{formatDate(row.date)}</td>
                         <td className="p-3 tabular-nums">{row.count}</td>
@@ -1098,7 +1112,7 @@ export function MushafHistoryContent({ view, onViewChange }: Props) {
                 {rows.length === 0 && (
                   <tr>
                     <td
-                      colSpan={view === "pages" ? 4 : 6}
+                      colSpan={view === "pages" ? 5 : 6}
                       className="p-6 text-center text-sm"
                     >
                       {emptyMessage}

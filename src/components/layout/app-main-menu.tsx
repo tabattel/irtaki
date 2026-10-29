@@ -228,6 +228,20 @@ export function AppMainMenu({
               <MainMenuLink href="/recherche" label="البحث" onClick={closeMenu}>
                 <SearchIcon />
               </MainMenuLink>
+              <MainMenuLink href="/objectifs" label="الأهداف" onClick={closeMenu}>
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path d="M5 5h14v14H5z" />
+                  <path d="m8 12 2.5 2.5L16 9" />
+                </svg>
+              </MainMenuLink>
+
               <MainMenuLink
                 href="/coran/10/page/605"
                 label="السجل"

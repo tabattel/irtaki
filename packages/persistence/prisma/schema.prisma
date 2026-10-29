@@ -311,7 +311,7 @@ model ActivityResult {
   id         String               @id @default(cuid())
   activityId String               @unique
   status     ActivityResultStatus
-  quantity   Decimal              @db.Decimal(10, 2)
+  quantity   Decimal      @db.Decimal(10, 4)
   unit       ProgressUnit
   createdAt  DateTime             @default(now())
   updatedAt  DateTime             @updatedAt
@@ -325,7 +325,7 @@ model ProgressRecord {
   goalId     String?
   activityId String?
   recordedAt DateTime     @default(now())
-  quantity   Decimal      @db.Decimal(10, 2)
+  quantity   Decimal      @db.Decimal(10, 4)
   unit       ProgressUnit
   createdAt  DateTime     @default(now())
 
@@ -352,6 +352,9 @@ model ActivityAyahTrace {
   ayahId     Int
   status     ActivityAyahTraceStatus @default(started)
   recordedAt DateTime?
+  lineNumbers Int[] @default([])
+  pageLineCount Int?
+  mushafPageNumber Int?
   createdAt  DateTime                @default(now())
   updatedAt  DateTime                @updatedAt
 

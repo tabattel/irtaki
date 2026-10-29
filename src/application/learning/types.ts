@@ -9,7 +9,10 @@ export type LearningGoalAction =
   | "tajwid"
   | "tadabbur"
   | "talkin"
-  | "tathbit";
+  | "tathbit"
+  | "qiraa"
+  | "khatma"
+  | "tahajjud";
 
 export type LearningGoalStatus =
   "draft" | "active" | "paused" | "completed" | "cancelled" | "archived";
@@ -32,9 +35,28 @@ export type LearningWeekday =
 export type LearningProgressUnit =
   "quran" | "surah" | "ayah" | "page" | "juz" | "hizb" | "nisf" | "roboa";
 
+export type LearningGoalTargetScope =
+  | "quran"
+  | "surah"
+  | "juz"
+  | "hizb"
+  | "nisf"
+  | "roboa"
+  | "page"
+  | "page_range"
+  | "ayah"
+  | "ayah_range";
+
+export type LearningGoalTarget = {
+  scope: LearningGoalTargetScope;
+  startValue: string | null;
+  endValue: string | null;
+};
+
 export type LearningGoal = {
   id: string;
   title: string;
+  target?: LearningGoalTarget | null;
   action: LearningGoalAction;
   quantity: string | number;
   unit: LearningProgressUnit;

@@ -28,10 +28,16 @@ export type AggregateActivityAyahTrace = {
 
 export type ActivityAyahTraceAvgAggregateOutputType = {
   ayahId: number | null
+  lineNumbers: number | null
+  pageLineCount: number | null
+  mushafPageNumber: number | null
 }
 
 export type ActivityAyahTraceSumAggregateOutputType = {
   ayahId: number | null
+  lineNumbers: number[]
+  pageLineCount: number | null
+  mushafPageNumber: number | null
 }
 
 export type ActivityAyahTraceMinAggregateOutputType = {
@@ -40,6 +46,8 @@ export type ActivityAyahTraceMinAggregateOutputType = {
   ayahId: number | null
   status: $Enums.ActivityAyahTraceStatus | null
   recordedAt: Date | null
+  pageLineCount: number | null
+  mushafPageNumber: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -50,6 +58,8 @@ export type ActivityAyahTraceMaxAggregateOutputType = {
   ayahId: number | null
   status: $Enums.ActivityAyahTraceStatus | null
   recordedAt: Date | null
+  pageLineCount: number | null
+  mushafPageNumber: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -60,6 +70,9 @@ export type ActivityAyahTraceCountAggregateOutputType = {
   ayahId: number
   status: number
   recordedAt: number
+  lineNumbers: number
+  pageLineCount: number
+  mushafPageNumber: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -68,10 +81,16 @@ export type ActivityAyahTraceCountAggregateOutputType = {
 
 export type ActivityAyahTraceAvgAggregateInputType = {
   ayahId?: true
+  lineNumbers?: true
+  pageLineCount?: true
+  mushafPageNumber?: true
 }
 
 export type ActivityAyahTraceSumAggregateInputType = {
   ayahId?: true
+  lineNumbers?: true
+  pageLineCount?: true
+  mushafPageNumber?: true
 }
 
 export type ActivityAyahTraceMinAggregateInputType = {
@@ -80,6 +99,8 @@ export type ActivityAyahTraceMinAggregateInputType = {
   ayahId?: true
   status?: true
   recordedAt?: true
+  pageLineCount?: true
+  mushafPageNumber?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -90,6 +111,8 @@ export type ActivityAyahTraceMaxAggregateInputType = {
   ayahId?: true
   status?: true
   recordedAt?: true
+  pageLineCount?: true
+  mushafPageNumber?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -100,6 +123,9 @@ export type ActivityAyahTraceCountAggregateInputType = {
   ayahId?: true
   status?: true
   recordedAt?: true
+  lineNumbers?: true
+  pageLineCount?: true
+  mushafPageNumber?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -197,6 +223,9 @@ export type ActivityAyahTraceGroupByOutputType = {
   ayahId: number
   status: $Enums.ActivityAyahTraceStatus
   recordedAt: Date | null
+  lineNumbers: number[]
+  pageLineCount: number | null
+  mushafPageNumber: number | null
   createdAt: Date
   updatedAt: Date
   _count: ActivityAyahTraceCountAggregateOutputType | null
@@ -230,6 +259,9 @@ export type ActivityAyahTraceWhereInput = {
   ayahId?: Prisma.IntFilter<"ActivityAyahTrace"> | number
   status?: Prisma.EnumActivityAyahTraceStatusFilter<"ActivityAyahTrace"> | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.DateTimeNullableFilter<"ActivityAyahTrace"> | Date | string | null
+  lineNumbers?: Prisma.IntNullableListFilter<"ActivityAyahTrace">
+  pageLineCount?: Prisma.IntNullableFilter<"ActivityAyahTrace"> | number | null
+  mushafPageNumber?: Prisma.IntNullableFilter<"ActivityAyahTrace"> | number | null
   createdAt?: Prisma.DateTimeFilter<"ActivityAyahTrace"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ActivityAyahTrace"> | Date | string
   activity?: Prisma.XOR<Prisma.ActivityScalarRelationFilter, Prisma.ActivityWhereInput>
@@ -242,6 +274,9 @@ export type ActivityAyahTraceOrderByWithRelationInput = {
   ayahId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lineNumbers?: Prisma.SortOrder
+  pageLineCount?: Prisma.SortOrderInput | Prisma.SortOrder
+  mushafPageNumber?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   activity?: Prisma.ActivityOrderByWithRelationInput
@@ -258,6 +293,9 @@ export type ActivityAyahTraceWhereUniqueInput = Prisma.AtLeast<{
   ayahId?: Prisma.IntFilter<"ActivityAyahTrace"> | number
   status?: Prisma.EnumActivityAyahTraceStatusFilter<"ActivityAyahTrace"> | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.DateTimeNullableFilter<"ActivityAyahTrace"> | Date | string | null
+  lineNumbers?: Prisma.IntNullableListFilter<"ActivityAyahTrace">
+  pageLineCount?: Prisma.IntNullableFilter<"ActivityAyahTrace"> | number | null
+  mushafPageNumber?: Prisma.IntNullableFilter<"ActivityAyahTrace"> | number | null
   createdAt?: Prisma.DateTimeFilter<"ActivityAyahTrace"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ActivityAyahTrace"> | Date | string
   activity?: Prisma.XOR<Prisma.ActivityScalarRelationFilter, Prisma.ActivityWhereInput>
@@ -270,6 +308,9 @@ export type ActivityAyahTraceOrderByWithAggregationInput = {
   ayahId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  lineNumbers?: Prisma.SortOrder
+  pageLineCount?: Prisma.SortOrderInput | Prisma.SortOrder
+  mushafPageNumber?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ActivityAyahTraceCountOrderByAggregateInput
@@ -288,6 +329,9 @@ export type ActivityAyahTraceScalarWhereWithAggregatesInput = {
   ayahId?: Prisma.IntWithAggregatesFilter<"ActivityAyahTrace"> | number
   status?: Prisma.EnumActivityAyahTraceStatusWithAggregatesFilter<"ActivityAyahTrace"> | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ActivityAyahTrace"> | Date | string | null
+  lineNumbers?: Prisma.IntNullableListFilter<"ActivityAyahTrace">
+  pageLineCount?: Prisma.IntNullableWithAggregatesFilter<"ActivityAyahTrace"> | number | null
+  mushafPageNumber?: Prisma.IntNullableWithAggregatesFilter<"ActivityAyahTrace"> | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ActivityAyahTrace"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ActivityAyahTrace"> | Date | string
 }
@@ -296,6 +340,9 @@ export type ActivityAyahTraceCreateInput = {
   id?: string
   status?: $Enums.ActivityAyahTraceStatus
   recordedAt?: Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceCreatelineNumbersInput | number[]
+  pageLineCount?: number | null
+  mushafPageNumber?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   activity: Prisma.ActivityCreateNestedOneWithoutAyahTracesInput
@@ -308,6 +355,9 @@ export type ActivityAyahTraceUncheckedCreateInput = {
   ayahId: number
   status?: $Enums.ActivityAyahTraceStatus
   recordedAt?: Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceCreatelineNumbersInput | number[]
+  pageLineCount?: number | null
+  mushafPageNumber?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -316,6 +366,9 @@ export type ActivityAyahTraceUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumActivityAyahTraceStatusFieldUpdateOperationsInput | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceUpdatelineNumbersInput | number[]
+  pageLineCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  mushafPageNumber?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   activity?: Prisma.ActivityUpdateOneRequiredWithoutAyahTracesNestedInput
@@ -328,6 +381,9 @@ export type ActivityAyahTraceUncheckedUpdateInput = {
   ayahId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumActivityAyahTraceStatusFieldUpdateOperationsInput | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceUpdatelineNumbersInput | number[]
+  pageLineCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  mushafPageNumber?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -338,6 +394,9 @@ export type ActivityAyahTraceCreateManyInput = {
   ayahId: number
   status?: $Enums.ActivityAyahTraceStatus
   recordedAt?: Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceCreatelineNumbersInput | number[]
+  pageLineCount?: number | null
+  mushafPageNumber?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -346,6 +405,9 @@ export type ActivityAyahTraceUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumActivityAyahTraceStatusFieldUpdateOperationsInput | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceUpdatelineNumbersInput | number[]
+  pageLineCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  mushafPageNumber?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -356,6 +418,9 @@ export type ActivityAyahTraceUncheckedUpdateManyInput = {
   ayahId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumActivityAyahTraceStatusFieldUpdateOperationsInput | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceUpdatelineNumbersInput | number[]
+  pageLineCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  mushafPageNumber?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -381,12 +446,18 @@ export type ActivityAyahTraceCountOrderByAggregateInput = {
   ayahId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
+  lineNumbers?: Prisma.SortOrder
+  pageLineCount?: Prisma.SortOrder
+  mushafPageNumber?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type ActivityAyahTraceAvgOrderByAggregateInput = {
   ayahId?: Prisma.SortOrder
+  lineNumbers?: Prisma.SortOrder
+  pageLineCount?: Prisma.SortOrder
+  mushafPageNumber?: Prisma.SortOrder
 }
 
 export type ActivityAyahTraceMaxOrderByAggregateInput = {
@@ -395,6 +466,8 @@ export type ActivityAyahTraceMaxOrderByAggregateInput = {
   ayahId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
+  pageLineCount?: Prisma.SortOrder
+  mushafPageNumber?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -405,12 +478,17 @@ export type ActivityAyahTraceMinOrderByAggregateInput = {
   ayahId?: Prisma.SortOrder
   status?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
+  pageLineCount?: Prisma.SortOrder
+  mushafPageNumber?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type ActivityAyahTraceSumOrderByAggregateInput = {
   ayahId?: Prisma.SortOrder
+  lineNumbers?: Prisma.SortOrder
+  pageLineCount?: Prisma.SortOrder
+  mushafPageNumber?: Prisma.SortOrder
 }
 
 export type ActivityAyahTraceCreateNestedManyWithoutAyahInput = {
@@ -497,14 +575,26 @@ export type ActivityAyahTraceUncheckedUpdateManyWithoutActivityNestedInput = {
   deleteMany?: Prisma.ActivityAyahTraceScalarWhereInput | Prisma.ActivityAyahTraceScalarWhereInput[]
 }
 
+export type ActivityAyahTraceCreatelineNumbersInput = {
+  set: number[]
+}
+
 export type EnumActivityAyahTraceStatusFieldUpdateOperationsInput = {
   set?: $Enums.ActivityAyahTraceStatus
+}
+
+export type ActivityAyahTraceUpdatelineNumbersInput = {
+  set?: number[]
+  push?: number | number[]
 }
 
 export type ActivityAyahTraceCreateWithoutAyahInput = {
   id?: string
   status?: $Enums.ActivityAyahTraceStatus
   recordedAt?: Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceCreatelineNumbersInput | number[]
+  pageLineCount?: number | null
+  mushafPageNumber?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   activity: Prisma.ActivityCreateNestedOneWithoutAyahTracesInput
@@ -515,6 +605,9 @@ export type ActivityAyahTraceUncheckedCreateWithoutAyahInput = {
   activityId: string
   status?: $Enums.ActivityAyahTraceStatus
   recordedAt?: Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceCreatelineNumbersInput | number[]
+  pageLineCount?: number | null
+  mushafPageNumber?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -554,6 +647,9 @@ export type ActivityAyahTraceScalarWhereInput = {
   ayahId?: Prisma.IntFilter<"ActivityAyahTrace"> | number
   status?: Prisma.EnumActivityAyahTraceStatusFilter<"ActivityAyahTrace"> | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.DateTimeNullableFilter<"ActivityAyahTrace"> | Date | string | null
+  lineNumbers?: Prisma.IntNullableListFilter<"ActivityAyahTrace">
+  pageLineCount?: Prisma.IntNullableFilter<"ActivityAyahTrace"> | number | null
+  mushafPageNumber?: Prisma.IntNullableFilter<"ActivityAyahTrace"> | number | null
   createdAt?: Prisma.DateTimeFilter<"ActivityAyahTrace"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ActivityAyahTrace"> | Date | string
 }
@@ -562,6 +658,9 @@ export type ActivityAyahTraceCreateWithoutActivityInput = {
   id?: string
   status?: $Enums.ActivityAyahTraceStatus
   recordedAt?: Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceCreatelineNumbersInput | number[]
+  pageLineCount?: number | null
+  mushafPageNumber?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   ayah: Prisma.AyahCreateNestedOneWithoutActivityTracesInput
@@ -572,6 +671,9 @@ export type ActivityAyahTraceUncheckedCreateWithoutActivityInput = {
   ayahId: number
   status?: $Enums.ActivityAyahTraceStatus
   recordedAt?: Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceCreatelineNumbersInput | number[]
+  pageLineCount?: number | null
+  mushafPageNumber?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -607,6 +709,9 @@ export type ActivityAyahTraceCreateManyAyahInput = {
   activityId: string
   status?: $Enums.ActivityAyahTraceStatus
   recordedAt?: Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceCreatelineNumbersInput | number[]
+  pageLineCount?: number | null
+  mushafPageNumber?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -615,6 +720,9 @@ export type ActivityAyahTraceUpdateWithoutAyahInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumActivityAyahTraceStatusFieldUpdateOperationsInput | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceUpdatelineNumbersInput | number[]
+  pageLineCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  mushafPageNumber?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   activity?: Prisma.ActivityUpdateOneRequiredWithoutAyahTracesNestedInput
@@ -625,6 +733,9 @@ export type ActivityAyahTraceUncheckedUpdateWithoutAyahInput = {
   activityId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumActivityAyahTraceStatusFieldUpdateOperationsInput | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceUpdatelineNumbersInput | number[]
+  pageLineCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  mushafPageNumber?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -634,6 +745,9 @@ export type ActivityAyahTraceUncheckedUpdateManyWithoutAyahInput = {
   activityId?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumActivityAyahTraceStatusFieldUpdateOperationsInput | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceUpdatelineNumbersInput | number[]
+  pageLineCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  mushafPageNumber?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -643,6 +757,9 @@ export type ActivityAyahTraceCreateManyActivityInput = {
   ayahId: number
   status?: $Enums.ActivityAyahTraceStatus
   recordedAt?: Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceCreatelineNumbersInput | number[]
+  pageLineCount?: number | null
+  mushafPageNumber?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -651,6 +768,9 @@ export type ActivityAyahTraceUpdateWithoutActivityInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumActivityAyahTraceStatusFieldUpdateOperationsInput | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceUpdatelineNumbersInput | number[]
+  pageLineCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  mushafPageNumber?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ayah?: Prisma.AyahUpdateOneRequiredWithoutActivityTracesNestedInput
@@ -661,6 +781,9 @@ export type ActivityAyahTraceUncheckedUpdateWithoutActivityInput = {
   ayahId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumActivityAyahTraceStatusFieldUpdateOperationsInput | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceUpdatelineNumbersInput | number[]
+  pageLineCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  mushafPageNumber?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -670,6 +793,9 @@ export type ActivityAyahTraceUncheckedUpdateManyWithoutActivityInput = {
   ayahId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumActivityAyahTraceStatusFieldUpdateOperationsInput | $Enums.ActivityAyahTraceStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lineNumbers?: Prisma.ActivityAyahTraceUpdatelineNumbersInput | number[]
+  pageLineCount?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  mushafPageNumber?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -682,6 +808,9 @@ export type ActivityAyahTraceSelect<ExtArgs extends runtime.Types.Extensions.Int
   ayahId?: boolean
   status?: boolean
   recordedAt?: boolean
+  lineNumbers?: boolean
+  pageLineCount?: boolean
+  mushafPageNumber?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   activity?: boolean | Prisma.ActivityDefaultArgs<ExtArgs>
@@ -694,6 +823,9 @@ export type ActivityAyahTraceSelectCreateManyAndReturn<ExtArgs extends runtime.T
   ayahId?: boolean
   status?: boolean
   recordedAt?: boolean
+  lineNumbers?: boolean
+  pageLineCount?: boolean
+  mushafPageNumber?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   activity?: boolean | Prisma.ActivityDefaultArgs<ExtArgs>
@@ -706,6 +838,9 @@ export type ActivityAyahTraceSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   ayahId?: boolean
   status?: boolean
   recordedAt?: boolean
+  lineNumbers?: boolean
+  pageLineCount?: boolean
+  mushafPageNumber?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   activity?: boolean | Prisma.ActivityDefaultArgs<ExtArgs>
@@ -718,11 +853,14 @@ export type ActivityAyahTraceSelectScalar = {
   ayahId?: boolean
   status?: boolean
   recordedAt?: boolean
+  lineNumbers?: boolean
+  pageLineCount?: boolean
+  mushafPageNumber?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ActivityAyahTraceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "activityId" | "ayahId" | "status" | "recordedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["activityAyahTrace"]>
+export type ActivityAyahTraceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "activityId" | "ayahId" | "status" | "recordedAt" | "lineNumbers" | "pageLineCount" | "mushafPageNumber" | "createdAt" | "updatedAt", ExtArgs["result"]["activityAyahTrace"]>
 export type ActivityAyahTraceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   activity?: boolean | Prisma.ActivityDefaultArgs<ExtArgs>
   ayah?: boolean | Prisma.AyahDefaultArgs<ExtArgs>
@@ -748,6 +886,9 @@ export type $ActivityAyahTracePayload<ExtArgs extends runtime.Types.Extensions.I
     ayahId: number
     status: $Enums.ActivityAyahTraceStatus
     recordedAt: Date | null
+    lineNumbers: number[]
+    pageLineCount: number | null
+    mushafPageNumber: number | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["activityAyahTrace"]>
@@ -1180,6 +1321,9 @@ export interface ActivityAyahTraceFieldRefs {
   readonly ayahId: Prisma.FieldRef<"ActivityAyahTrace", 'Int'>
   readonly status: Prisma.FieldRef<"ActivityAyahTrace", 'ActivityAyahTraceStatus'>
   readonly recordedAt: Prisma.FieldRef<"ActivityAyahTrace", 'DateTime'>
+  readonly lineNumbers: Prisma.FieldRef<"ActivityAyahTrace", 'Int[]'>
+  readonly pageLineCount: Prisma.FieldRef<"ActivityAyahTrace", 'Int'>
+  readonly mushafPageNumber: Prisma.FieldRef<"ActivityAyahTrace", 'Int'>
   readonly createdAt: Prisma.FieldRef<"ActivityAyahTrace", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ActivityAyahTrace", 'DateTime'>
 }

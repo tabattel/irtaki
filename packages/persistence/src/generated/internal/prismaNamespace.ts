@@ -2298,6 +2298,9 @@ export const ActivityAyahTraceScalarFieldEnum = {
   ayahId: 'ayahId',
   status: 'status',
   recordedAt: 'recordedAt',
+  lineNumbers: 'lineNumbers',
+  pageLineCount: 'pageLineCount',
+  mushafPageNumber: 'mushafPageNumber',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

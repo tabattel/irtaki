@@ -59,6 +59,14 @@ type TrackedTaskAction =
   | "khatma"
   | "tahajjud";
 
+type ActiveLearningTask = {
+  learnerId: string;
+  activityId: string;
+  action: TrackedTaskAction;
+  startedAt: string;
+  ayahIds: number[];
+};
+
 const TRACKED_TASK_OPTIONS: Array<{
   action: TrackedTaskAction;
   label: string;
@@ -1660,6 +1668,10 @@ export function MushafPage({
           typeof parsed.activityId === "string" &&
           typeof parsed.startedAt === "string" &&
           Array.isArray(parsed.ayahIds) &&
+          parsed.ayahIds.every(
+            (id: unknown) =>
+              typeof id === "number" && Number.isInteger(id) && id > 0,
+          ) &&
           TRACKED_TASK_OPTIONS.some((option) => option.action === parsed.action)
         ) {
           setActiveTask(parsed as ActiveLearningTask);
@@ -1714,6 +1726,124 @@ export function MushafPage({
     return [...ids];
   }
 
+  function getTaskPageLineMetadata(ayahIds: number[]) {
+    if (
+      !menu ||
+      (menu.type !== "ayah" && menu.type !== "selection") ||
+      !layout ||
+      layout.page !== pageNumber ||
+      !Number.isInteger(pageNumber) ||
+      pageNumber < 1 ||
+      pageNumber > 604
+    ) {
+      return null;
+    }
+
+    // Source canonique : le layout réellement chargé et rendu par le Mushaf.
+    // Les titres de sourates et basmalas sont exclus du dénominateur.
+    const lineRows = layout.lines.filter(
+      (line) => line.type === "ayah",
+    );
+    const pageLineCount = lineRows.length;
+
+    if (pageLineCount < 1 || pageLineCount > 100) {
+      return null;
+    }
+
+    const ayahById = new Map(
+      ayahs.map((ayah) => [ayah.id, ayah] as const),
+    );
+
+    // Correspondance entre les références présentes dans les mots du layout
+    // (sourate:aya) et les identifiants persistés dans les traces.
+    const ayahIdByReference = new Map<string, number>();
+
+    for (const ayahId of ayahIds) {
+      const ayah = ayahById.get(ayahId);
+      if (!ayah) return null;
+
+      ayahIdByReference.set(
+        `${ayah.surahNumber}:${ayah.number}`,
+        ayah.id,
+      );
+    }
+
+    const linesByAyah = new Map<number, Set<number>>();
+    for (const ayahId of ayahIds) {
+      linesByAyah.set(ayahId, new Set<number>());
+    }
+
+    const addLineForReference = (
+      surahNumber: number,
+      ayahNumber: number,
+      lineNumber: number,
+    ) => {
+      const ayahId = ayahIdByReference.get(
+        `${surahNumber}:${ayahNumber}`,
+      );
+
+      if (ayahId === undefined) return;
+
+      linesByAyah.get(ayahId)?.add(lineNumber);
+    };
+
+    if (menu.type === "ayah") {
+      // Une aya peut apparaître sur plusieurs lignes du layout :
+      // toutes ses lignes visibles doivent être comptées.
+      lineRows.forEach((line, index) => {
+        for (const word of line.words) {
+          addLineForReference(
+            word.surah,
+            word.ayah,
+            index + 1,
+          );
+        }
+      });
+    } else {
+      // Pour une sélection de mots, compter seulement les lignes qui
+      // contiennent les mots sélectionnés, pas toute l'aya par approximation.
+      const keys = menu.wordKeys?.length
+        ? menu.wordKeys
+        : [...selectedWords];
+
+      const selectedKeys = new Set(keys);
+      if (selectedKeys.size === 0) return null;
+
+      lineRows.forEach((line, index) => {
+        for (const word of line.words) {
+          const wordKey = `${word.surah}:${word.ayah}:${word.word}`;
+          if (!selectedKeys.has(wordKey)) continue;
+
+          addLineForReference(
+            word.surah,
+            word.ayah,
+            index + 1,
+          );
+        }
+      });
+    }
+
+    const lineNumbersByAyah: Record<string, number[]> = {};
+
+    for (const ayahId of ayahIds) {
+      const actualLines = [
+        ...(linesByAyah.get(ayahId) ?? new Set<number>()),
+      ].sort((a, b) => a - b);
+
+      // Ne jamais créer une fausse fraction si une aya ne correspond
+      // à aucune ligne du layout actuel.
+      if (actualLines.length === 0) return null;
+
+      lineNumbersByAyah[String(ayahId)] = actualLines;
+    }
+
+    return {
+      lineNumbersByAyah,
+      pageLineCount,
+      pageNumber: layout.page,
+    };
+  }
+
   async function completeContextTask(action: TrackedTaskAction) {
     const learnerId = getStoredActiveLearnerId();
 
@@ -1727,6 +1857,8 @@ export function MushafPage({
       setTaskError("حدد آية أو كلمات من المصحف أولاً");
       return;
     }
+
+    const pageMetadata = getTaskPageLineMetadata(ayahIds);
 
     setTaskBusy(true);
     setTaskError(null);
@@ -1748,6 +1880,14 @@ export function MushafPage({
           learnerId,
           activityId: activeTask.activityId,
           status: "completed",
+          ayahIds,
+          ...(pageMetadata
+            ? {
+                lineNumbersByAyah: pageMetadata.lineNumbersByAyah,
+                pageLineCount: pageMetadata.pageLineCount,
+                pageNumber: pageMetadata.pageNumber,
+              }
+            : {}),
         };
         finishingExistingActivity = true;
       } else {
@@ -1756,6 +1896,13 @@ export function MushafPage({
           learnerId,
           action,
           ayahIds,
+          ...(pageMetadata
+            ? {
+                lineNumbersByAyah: pageMetadata.lineNumbersByAyah,
+                pageLineCount: pageMetadata.pageLineCount,
+                pageNumber: pageMetadata.pageNumber,
+              }
+            : {}),
         };
       }
 
@@ -4248,7 +4395,7 @@ export function MushafPage({
       ) : (
         <div
           className="mushaf-hafs-text space-y-0 text-center sm:space-y-1"
-          data-mushaf-lines={layout!.lines.length}
+          data-mushaf-lines={layout!.lines.filter((line) => line.type === "ayah").length}
         >
           {layout!.lines.map((line) => (
             <MushafLine
@@ -5781,7 +5928,18 @@ export function MushafPage({
                               ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
                               : "rounded-lg border px-3 py-2 text-sm"
                           }
-                          onClick={() => selectSecondaryMode(mode.id)}
+                          onClick={() => {
+                            if (mode.id === "goals") {
+                              const currentMushafUrl =
+                                `${window.location.pathname}${window.location.search}${window.location.hash}`;
+                              router.push(
+                                `/objectifs?returnTo=${encodeURIComponent(currentMushafUrl)}`,
+                              );
+                              return;
+                            }
+
+                            selectSecondaryMode(mode.id);
+                          }}
                         >
                           {mode.icon} {mode.label}
                         </button>

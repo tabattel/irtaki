@@ -35,7 +35,7 @@ export function readMushafActionJournal(): MushafActionJournalEvent[] {
         typeof item.label === "string" &&
         "references" in item &&
         Array.isArray(item.references) &&
-        item.references.every((reference) => typeof reference === "string"),
+        item.references.every((reference: unknown) => typeof reference === "string"),
     );
   } catch {
     return [];

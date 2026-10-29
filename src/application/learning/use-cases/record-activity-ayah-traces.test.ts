@@ -57,6 +57,60 @@ describe("recordActivityAyahTraces", () => {
     expect(result.status).toBe("started");
   });
 
+  it("transmet les métadonnées des lignes de la page", async () => {
+    const dependencies = createDependencies();
+
+    const pageInput: RecordActivityAyahTracesInput = {
+      ...input,
+      lineNumbersByAyah: {
+        "10": [1, 2],
+        "11": [3],
+      },
+      pageLineCount: 15,
+      pageNumber: 42,
+    };
+
+    await recordActivityAyahTraces("user-1", pageInput, dependencies);
+
+    expect(
+      dependencies.activityAyahTraceRepository.createForActivity,
+    ).toHaveBeenCalledWith({
+      activityId: "activity-1",
+      ayahIds: [10, 11],
+      status: "started",
+      recordedAt: null,
+      lineNumbersByAyah: {
+        "10": [1, 2],
+        "11": [3],
+      },
+      pageLineCount: 15,
+      pageNumber: 42,
+    });
+  });
+
+  it("refuse des métadonnées de page incomplètes", async () => {
+    const dependencies = createDependencies();
+
+    await expect(
+      recordActivityAyahTraces(
+        "user-1",
+        {
+          ...input,
+          lineNumbersByAyah: {
+            "10": [1],
+            "11": [2],
+          },
+          pageLineCount: 15,
+        },
+        dependencies,
+      ),
+    ).rejects.toThrow("Invalid page line metadata");
+
+    expect(
+      dependencies.activityAyahTraceRepository.createForActivity,
+    ).not.toHaveBeenCalled();
+  });
+
   it("refuse un apprenant qui n'appartient pas à l'utilisateur", async () => {
     const dependencies = createDependencies();
     vi.mocked(dependencies.learnerRepository.findById).mockResolvedValue(null);

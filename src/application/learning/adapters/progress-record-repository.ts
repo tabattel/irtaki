@@ -31,6 +31,28 @@ export function createLearningProgressRecordRepository(
       return records.map(mapProgressRecord);
     },
 
+    async findManyByActivityId(
+      activityId: string,
+      learnerId: string,
+    ): Promise<
+      Array<{
+        goalId: string | null;
+        recordedAt: Date;
+        quantity: string;
+      }>
+    > {
+      const records = await repository.findManyByActivityId(
+        activityId,
+        learnerId,
+      );
+
+      return records.map((record: PersistenceProgressRecord) => ({
+        goalId: record.goalId,
+        recordedAt: record.recordedAt,
+        quantity: record.quantity.toString(),
+      }));
+    },
+
     async findManyByLearnerId(learnerId: string): Promise<
       Array<{
         goalId: string | null;

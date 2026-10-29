@@ -3,6 +3,7 @@ import type {
   LearningGoal,
   LearningGoalAction,
   LearningGoalStatus,
+  LearningGoalTargetScope,
   LearningFrequencyPeriod,
   LearningProgressUnit,
   LearningWeekday,
@@ -14,6 +15,14 @@ function mapGoal(goal: NonNullable<PersistenceGoal>): LearningGoal {
   return {
     id: goal.id,
     title: goal.title,
+    target:
+      goal.target === null
+        ? null
+        : {
+            scope: goal.target.scope as LearningGoalTargetScope,
+            startValue: goal.target.startValue,
+            endValue: goal.target.endValue,
+          },
     action: goal.action as LearningGoalAction,
     quantity: goal.quantity.toString(),
     unit: goal.unit as LearningProgressUnit,

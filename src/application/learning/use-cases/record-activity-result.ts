@@ -32,6 +32,17 @@ export type RecordActivityResultDependencies = {
 
   activityResultRepository: {
     create(input: RecordActivityResultInput): Promise<unknown>;
+    createWithProgress(
+      input: RecordActivityResultInput,
+      progressInput: {
+        learnerId: string;
+        goalId: string;
+        activityId: string;
+        recordedAt: Date;
+        quantity: string | number;
+        unit: LearningProgressUnit;
+      },
+    ): Promise<{ activityResult: unknown; progressRecord: unknown }>;
   };
 
   progressRecordRepository: {
@@ -99,17 +110,17 @@ export async function recordActivityResult(
     throw new Error("Activity result unit does not match goal unit");
   }
 
-  const activityResult =
-    await dependencies.activityResultRepository.create(input);
-
   if (input.status !== "completed" && input.status !== "partial") {
+    const activityResult =
+      await dependencies.activityResultRepository.create(input);
+
     return {
       activityResult,
       progressRecord: null,
     };
   }
 
-  const progressRecord = await dependencies.progressRecordRepository.create({
+  return dependencies.activityResultRepository.createWithProgress(input, {
     learnerId,
     goalId: goal.id,
     activityId: activity.id,
@@ -117,9 +128,4 @@ export async function recordActivityResult(
     quantity: input.quantity,
     unit: input.unit,
   });
-
-  return {
-    activityResult,
-    progressRecord,
-  };
 }

@@ -12,7 +12,10 @@ export type TrackedActivityAction =
   | "tajwid"
   | "tadabbur"
   | "talkin"
-  | "tathbit";
+  | "tathbit"
+  | "qiraa"
+  | "khatma"
+  | "tahajjud";
 
 export class ActivityAyahTraceRepository {
   async findUnknownAyahIds(ayahIds: number[]): Promise<number[]> {
@@ -35,10 +38,34 @@ export class ActivityAyahTraceRepository {
     ayahIds: number[];
     status?: ActivityTraceStatus;
     recordedAt?: Date | null;
+    lineNumbersByAyah?: Record<string, number[]>;
+    pageLineCount?: number;
+    pageNumber?: number;
   }): Promise<number> {
     const ayahIds = [...new Set(input.ayahIds)];
 
     if (ayahIds.length === 0) return 0;
+
+    const hasAnyPageMetadata =
+      input.lineNumbersByAyah !== undefined ||
+      input.pageLineCount !== undefined ||
+      input.pageNumber !== undefined;
+
+    if (hasAnyPageMetadata) {
+      if (
+        input.lineNumbersByAyah === undefined ||
+        !Number.isInteger(input.pageLineCount) ||
+        (input.pageLineCount ?? 0) < 1 ||
+        !Number.isInteger(input.pageNumber) ||
+        (input.pageNumber ?? 0) < 1 ||
+        ayahIds.some(
+          (ayahId) =>
+            !Array.isArray(input.lineNumbersByAyah?.[String(ayahId)]),
+        )
+      ) {
+        throw new Error("Invalid page line metadata");
+      }
+    }
 
     const result = await prisma.activityAyahTrace.createMany({
       data: ayahIds.map((ayahId) => ({
@@ -46,9 +73,36 @@ export class ActivityAyahTraceRepository {
         ayahId,
         status: input.status ?? "started",
         recordedAt: input.recordedAt ?? null,
+        ...(hasAnyPageMetadata
+          ? {
+              lineNumbers: input.lineNumbersByAyah![String(ayahId)],
+              pageLineCount: input.pageLineCount!,
+              mushafPageNumber: input.pageNumber!,
+            }
+          : {}),
       })),
       skipDuplicates: true,
     });
+
+    // Une trace déjà existante est ignorée par createMany.
+    // On actualise donc ses métadonnées sans modifier son statut.
+    if (hasAnyPageMetadata) {
+      await Promise.all(
+        ayahIds.map((ayahId) =>
+          prisma.activityAyahTrace.updateMany({
+            where: {
+              activityId: input.activityId,
+              ayahId,
+            },
+            data: {
+              lineNumbers: input.lineNumbersByAyah![String(ayahId)],
+              pageLineCount: input.pageLineCount!,
+              mushafPageNumber: input.pageNumber!,
+            },
+          }),
+        ),
+      );
+    }
 
     return result.count;
   }
@@ -185,6 +239,9 @@ export class ActivityAyahTraceRepository {
         ayahId: true,
         status: true,
         recordedAt: true,
+        lineNumbers: true,
+        pageLineCount: true,
+        mushafPageNumber: true,
         activity: {
           select: {
             action: true,
@@ -219,7 +276,9 @@ export class ActivityAyahTraceRepository {
       action: trace.activity.action,
       ayahNumber: trace.ayah.number,
       surahNumber: trace.ayah.surahNumber,
-      pageNumber: trace.ayah.pageNumber,
+      pageNumber: trace.mushafPageNumber ?? trace.ayah.pageNumber,
+      lineNumbers: trace.lineNumbers,
+      pageLineCount: trace.pageLineCount,
     }));
   }
 }

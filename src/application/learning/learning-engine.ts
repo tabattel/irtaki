@@ -45,6 +45,16 @@ export function createLearningEngine() {
   );
 
   return {
+    listGoals: async (userId: string, learnerId: string) => {
+      const learner = await learnerRepository.findById(learnerId, userId);
+
+      if (!learner) {
+        throw new Error("Learner not found");
+      }
+
+      return goalRepository.findManyByLearnerId(learnerId);
+    },
+
     createGoal: (userId: string, input: Parameters<typeof createGoal>[1]) =>
       createGoal(userId, input, {
         learnerRepository,
@@ -61,6 +71,69 @@ export function createLearningEngine() {
         activityRepository,
       }),
 
+    getActivityGoal: async (
+      userId: string,
+      learnerId: string,
+      activityId: string,
+    ) => {
+      const learner = await learnerRepository.findById(learnerId, userId);
+
+      if (!learner) {
+        throw new Error("Learner not found");
+      }
+
+      const activity = await activityRepository.findById(
+        activityId,
+        learnerId,
+      );
+
+      if (!activity) {
+        throw new Error("Activity not found");
+      }
+
+      const goalId = (activity as { goalId?: string | null }).goalId;
+
+      if (!goalId) {
+        return null;
+      }
+
+      return goalRepository.findById(goalId, learnerId);
+    },
+
+    getActivityContext: async (
+      userId: string,
+      learnerId: string,
+      activityId: string,
+    ) => {
+      const learner = await learnerRepository.findById(learnerId, userId);
+
+      if (!learner) {
+        throw new Error("Learner not found");
+      }
+
+      const activity = await activityRepository.findById(
+        activityId,
+        learnerId,
+      );
+
+      if (!activity) {
+        throw new Error("Activity not found");
+      }
+
+      const goalId = activity.goalId ?? null;
+      const goal = goalId
+        ? await goalRepository.findById(goalId, learnerId)
+        : null;
+
+      return {
+        id: activity.id,
+        action: activity.action,
+        startedAt: activity.startedAt,
+        goalId,
+        goal,
+      };
+    },
+
     recordActivityAyahTraces: (
       userId: string,
       input: Parameters<typeof recordActivityAyahTraces>[1],
@@ -70,6 +143,74 @@ export function createLearningEngine() {
         activityRepository,
         activityAyahTraceRepository,
       }),
+
+    recordAdditionalGoalProgress: async (
+      userId: string,
+      learnerId: string,
+      goalId: string,
+      input: {
+        activityId: string;
+        quantity: number;
+        unit: "ayah" | "page";
+      },
+      recordedAt = new Date(),
+    ) => {
+      const learner = await learnerRepository.findById(learnerId, userId);
+
+      if (!learner) {
+        throw new Error("Learner not found");
+      }
+
+      const activity = await activityRepository.findById(
+        input.activityId,
+        learnerId,
+      );
+
+      if (!activity) {
+        throw new Error("Activity not found");
+      }
+
+      const goal = await goalRepository.findById(goalId, learnerId);
+
+      if (!goal) {
+        throw new Error("Goal not found");
+      }
+
+      if (goal.unit !== input.unit) {
+        throw new Error("Activity result unit does not match goal unit");
+      }
+
+      if (!Number.isFinite(input.quantity) || input.quantity <= 0) {
+        throw new Error("Progress quantity must be positive");
+      }
+
+      if (activity.goalId === goalId) {
+        throw new Error(
+          "Goal is already linked to this activity; use recordActivityResult",
+        );
+      }
+
+      const existingRecords =
+        await progressRecordRepository.findManyByActivityId(
+          input.activityId,
+          learnerId,
+        );
+
+      const existingForGoal = existingRecords.find(
+        (record) => record.goalId === goalId,
+      );
+
+      if (existingForGoal) return existingForGoal;
+
+      return progressRecordRepository.create({
+        learnerId,
+        goalId,
+        activityId: input.activityId,
+        recordedAt,
+        quantity: input.quantity,
+        unit: input.unit,
+      });
+    },
 
     recordActivityResult: (
       learnerId: string,

@@ -14,7 +14,10 @@ export class ActivityRepository {
       | "tajwid"
       | "tadabbur"
       | "talkin"
-      | "tathbit";
+      | "tathbit"
+      | "qiraa"
+      | "khatma"
+      | "tahajjud";
     startedAt: Date;
     endedAt?: Date;
     durationSec?: number;
@@ -89,7 +92,10 @@ export class ActivityRepository {
         | "tajwid"
         | "tadabbur"
         | "talkin"
-        | "tathbit";
+        | "tathbit"
+        | "qiraa"
+        | "khatma"
+        | "tahajjud";
       startedAt?: Date;
       endedAt?: Date | null;
       durationSec?: number | null;

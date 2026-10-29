@@ -12,6 +12,8 @@ export type ActivityHistoryTrace = {
   ayahNumber: number;
   surahNumber: number;
   pageNumber: number;
+  lineNumbers?: number[];
+  pageLineCount?: number | null;
 };
 
 export type GetActivityHistoryDependencies = {
@@ -53,6 +55,12 @@ export async function getActivityHistory(
       ayahNumber: trace.ayahNumber,
       surahNumber: trace.surahNumber,
       pageNumber: trace.pageNumber,
+      ...(trace.lineNumbers !== undefined
+        ? { lineNumbers: trace.lineNumbers }
+        : {}),
+      ...(trace.pageLineCount !== undefined
+        ? { pageLineCount: trace.pageLineCount }
+        : {}),
       occurredAt: (
         trace.recordedAt ??
         trace.endedAt ??

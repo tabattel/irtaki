@@ -89,7 +89,11 @@ export async function startActivity(
     throw new Error("Goal is not active");
   }
 
-  if (goal.action !== input.action) {
+  const sameReadingAction =
+    (goal.action === "read" || goal.action === "qiraa") &&
+    (input.action === "read" || input.action === "qiraa");
+
+  if (goal.action !== input.action && !sameReadingAction) {
     throw new Error("Activity action does not match goal action");
   }
 

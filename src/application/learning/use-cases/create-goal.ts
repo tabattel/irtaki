@@ -4,11 +4,19 @@ import type {
   LearningGoalStatus,
   LearningProgressUnit,
   LearningWeekday,
+  LearningGoalTargetScope,
 } from "../types";
+
+export type CreateGoalTargetInput = {
+  scope: LearningGoalTargetScope;
+  startValue?: string;
+  endValue?: string;
+};
 
 export type CreateGoalInput = {
   learnerId: string;
   parentGoalId?: string;
+  target?: CreateGoalTargetInput;
   title: string;
   description?: string;
   action: LearningGoalAction;
@@ -96,6 +104,69 @@ function validateNotificationTime(
   }
 }
 
+const GOAL_TARGET_SCOPES: readonly LearningGoalTargetScope[] = [
+  "quran",
+  "surah",
+  "juz",
+  "hizb",
+  "nisf",
+  "roboa",
+  "page",
+  "page_range",
+  "ayah",
+  "ayah_range",
+];
+
+function validateGoalTarget(target: CreateGoalTargetInput | undefined): void {
+  if (target === undefined) {
+    return;
+  }
+
+  if (target === null || typeof target !== "object") {
+    throw new Error("Goal target is invalid");
+  }
+
+  if (!GOAL_TARGET_SCOPES.includes(target.scope)) {
+    throw new Error("Goal target scope is invalid");
+  }
+
+  for (const value of [target.startValue, target.endValue]) {
+    if (
+      value !== undefined &&
+      (typeof value !== "string" || value.trim().length === 0)
+    ) {
+      throw new Error("Goal target values must be non-empty strings");
+    }
+  }
+
+  const isRange =
+    target.scope === "page_range" || target.scope === "ayah_range";
+
+  if (!isRange) {
+    return;
+  }
+
+  if (target.startValue === undefined || target.endValue === undefined) {
+    throw new Error("Goal target range requires startValue and endValue");
+  }
+
+  const startValue = Number(target.startValue);
+  const endValue = Number(target.endValue);
+
+  if (
+    !Number.isSafeInteger(startValue) ||
+    startValue <= 0 ||
+    !Number.isSafeInteger(endValue) ||
+    endValue <= 0
+  ) {
+    throw new Error("Goal target range values must be positive integers");
+  }
+
+  if (startValue > endValue) {
+    throw new Error("Goal target startValue must not exceed endValue");
+  }
+}
+
 export async function createGoal(
   userId: string,
   input: CreateGoalInput,
@@ -111,6 +182,7 @@ export async function createGoal(
   validateIntervalDays(input.intervalDays);
   validateDates(input.startDate, input.endDate);
   validateNotificationTime(input.notificationEnabled, input.notificationTime);
+  validateGoalTarget(input.target);
 
   const learner = await dependencies.learnerRepository.findById(
     input.learnerId,
