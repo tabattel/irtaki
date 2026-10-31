@@ -2,6 +2,7 @@
 
 import { MushafColorPalette } from "./mushaf-color-palette";
 import { MushafTafsirPanel } from "./mushaf-tafsir-panel";
+import { MushafSimilarPanel } from "./mushaf-similar-panel";
 
 import {
   type PointerEvent as ReactPointerEvent,
@@ -1199,6 +1200,10 @@ export function MushafPage({
     null,
   );
   const [tafsirAyahId, setTafsirAyahId] = useState<number | null>(null);
+  const [similarAyah, setSimilarAyah] = useState<{
+    surahNumber: number;
+    ayahNumber: number;
+  } | null>(null);
 
   const visibleModificationModes =
     secondaryMode === "progress"
@@ -4589,9 +4594,21 @@ export function MushafPage({
                 <button
                   type="button"
                   className="rounded-lg border px-3 py-2"
-                  onClick={() =>
-                    setContextMenuMessage("متشابهات: الوظيفة غير مربوطة بعد")
-                  }
+                  onClick={() => {
+                    const ayahId = contextAyahId();
+                    const ayah = ayahs.find((item) => item.id === ayahId);
+
+                    if (!ayah) {
+                      setContextMenuMessage("حدد آية أولاً");
+                      return;
+                    }
+
+                    setContextMenuMessage(null);
+                    setSimilarAyah({
+                      surahNumber: ayah.surahNumber,
+                      ayahNumber: ayah.number,
+                    });
+                  }}
                 >
                   متشابهات
                 </button>
@@ -6157,6 +6174,14 @@ export function MushafPage({
         ayahId={tafsirAyahId}
         onClose={() => setTafsirAyahId(null)}
       />
+
+      {similarAyah && (
+        <MushafSimilarPanel
+          surahNumber={similarAyah.surahNumber}
+          ayahNumber={similarAyah.ayahNumber}
+          onClose={() => setSimilarAyah(null)}
+        />
+      )}
 
       {annotationPanelOpen && (
         <div

@@ -137,6 +137,28 @@ export type {
 } from "./provider/quranpedia/quranpedia-tafsir-types";
 
 export {
+  createQuranpediaSimilarLoader,
+} from "./provider/quranpedia/quranpedia-similar-loader";
+
+export {
+  createQuranpediaSimilarIndex,
+  type QuranpediaSimilarIndex,
+} from "./provider/quranpedia/quranpedia-similar-index";
+
+export type {
+  QuranpediaSimilarAttachment,
+  QuranpediaSimilarYoutube,
+  QuranpediaSimilarSurah,
+  QuranpediaSimilarAyahInfo,
+  QuranpediaSimilarAyahReference,
+  QuranpediaSimilarGroup,
+  QuranpediaSimilarEntry,
+  QuranpediaSimilarDocument,
+  QuranpediaSimilarLoader,
+  QuranpediaSimilarLookup,
+} from "./provider/quranpedia/quranpedia-similar-types";
+
+export {
   createJsonGzipReader,
   type JsonGzipReader,
 } from "./reader/json-gzip-reader";
