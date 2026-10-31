@@ -3,6 +3,7 @@
 import { MushafColorPalette } from "./mushaf-color-palette";
 import { MushafTafsirPanel } from "./mushaf-tafsir-panel";
 import { MushafSimilarPanel } from "./mushaf-similar-panel";
+import { MushafQiraatPanel } from "./mushaf-qiraat-panel";
 
 import {
   type PointerEvent as ReactPointerEvent,
@@ -1204,6 +1205,10 @@ export function MushafPage({
     surahNumber: number;
     ayahNumber: number;
   } | null>(null);
+  const [qiraatAyah, setQiraatAyah] = useState<{
+    surahNumber: number;
+    ayahNumber: number;
+  } | null>(null);
 
   const visibleModificationModes =
     secondaryMode === "progress"
@@ -1748,18 +1753,14 @@ export function MushafPage({
 
     // Source canonique : le layout réellement chargé et rendu par le Mushaf.
     // Les titres de sourates et basmalas sont exclus du dénominateur.
-    const lineRows = layout.lines.filter(
-      (line) => line.type === "ayah",
-    );
+    const lineRows = layout.lines.filter((line) => line.type === "ayah");
     const pageLineCount = lineRows.length;
 
     if (pageLineCount < 1 || pageLineCount > 100) {
       return null;
     }
 
-    const ayahById = new Map(
-      ayahs.map((ayah) => [ayah.id, ayah] as const),
-    );
+    const ayahById = new Map(ayahs.map((ayah) => [ayah.id, ayah] as const));
 
     // Correspondance entre les références présentes dans les mots du layout
     // (sourate:aya) et les identifiants persistés dans les traces.
@@ -1769,10 +1770,7 @@ export function MushafPage({
       const ayah = ayahById.get(ayahId);
       if (!ayah) return null;
 
-      ayahIdByReference.set(
-        `${ayah.surahNumber}:${ayah.number}`,
-        ayah.id,
-      );
+      ayahIdByReference.set(`${ayah.surahNumber}:${ayah.number}`, ayah.id);
     }
 
     const linesByAyah = new Map<number, Set<number>>();
@@ -1785,9 +1783,7 @@ export function MushafPage({
       ayahNumber: number,
       lineNumber: number,
     ) => {
-      const ayahId = ayahIdByReference.get(
-        `${surahNumber}:${ayahNumber}`,
-      );
+      const ayahId = ayahIdByReference.get(`${surahNumber}:${ayahNumber}`);
 
       if (ayahId === undefined) return;
 
@@ -1799,19 +1795,13 @@ export function MushafPage({
       // toutes ses lignes visibles doivent être comptées.
       lineRows.forEach((line, index) => {
         for (const word of line.words) {
-          addLineForReference(
-            word.surah,
-            word.ayah,
-            index + 1,
-          );
+          addLineForReference(word.surah, word.ayah, index + 1);
         }
       });
     } else {
       // Pour une sélection de mots, compter seulement les lignes qui
       // contiennent les mots sélectionnés, pas toute l'aya par approximation.
-      const keys = menu.wordKeys?.length
-        ? menu.wordKeys
-        : [...selectedWords];
+      const keys = menu.wordKeys?.length ? menu.wordKeys : [...selectedWords];
 
       const selectedKeys = new Set(keys);
       if (selectedKeys.size === 0) return null;
@@ -1821,11 +1811,7 @@ export function MushafPage({
           const wordKey = `${word.surah}:${word.ayah}:${word.word}`;
           if (!selectedKeys.has(wordKey)) continue;
 
-          addLineForReference(
-            word.surah,
-            word.ayah,
-            index + 1,
-          );
+          addLineForReference(word.surah, word.ayah, index + 1);
         }
       });
     }
@@ -4402,7 +4388,9 @@ export function MushafPage({
       ) : (
         <div
           className="mushaf-hafs-text space-y-0 text-center sm:space-y-1"
-          data-mushaf-lines={layout!.lines.filter((line) => line.type === "ayah").length}
+          data-mushaf-lines={
+            layout!.lines.filter((line) => line.type === "ayah").length
+          }
         >
           {layout!.lines.map((line) => (
             <MushafLine
@@ -4565,15 +4553,7 @@ export function MushafPage({
                 >
                   💬 تعليق
                 </button>
-                <button
-                  type="button"
-                  className="rounded-lg border px-3 py-2"
-                  onClick={() =>
-                    setContextMenuMessage("موضوع: الوظيفة غير مربوطة بعد")
-                  }
-                >
-                  موضوع
-                </button>
+
                 <button
                   type="button"
                   className="rounded-lg border px-3 py-2"
@@ -4615,9 +4595,21 @@ export function MushafPage({
                 <button
                   type="button"
                   className="rounded-lg border px-3 py-2"
-                  onClick={() =>
-                    setContextMenuMessage("قراءات: الوظيفة غير مربوطة بعد")
-                  }
+                  onClick={() => {
+                    const ayahId = contextAyahId();
+                    const ayah = ayahs.find((item) => item.id === ayahId);
+
+                    if (!ayah) {
+                      setContextMenuMessage("حدد آية أولاً");
+                      return;
+                    }
+
+                    setContextMenuMessage(null);
+                    setQiraatAyah({
+                      surahNumber: ayah.surahNumber,
+                      ayahNumber: ayah.number,
+                    });
+                  }}
                 >
                   قراءات
                 </button>
@@ -5957,8 +5949,7 @@ export function MushafPage({
                           }
                           onClick={() => {
                             if (mode.id === "goals") {
-                              const currentMushafUrl =
-                                `${window.location.pathname}${window.location.search}${window.location.hash}`;
+                              const currentMushafUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
                               router.push(
                                 `/objectifs?returnTo=${encodeURIComponent(currentMushafUrl)}`,
                               );
@@ -6180,6 +6171,14 @@ export function MushafPage({
           surahNumber={similarAyah.surahNumber}
           ayahNumber={similarAyah.ayahNumber}
           onClose={() => setSimilarAyah(null)}
+        />
+      )}
+
+      {qiraatAyah && (
+        <MushafQiraatPanel
+          surahNumber={qiraatAyah.surahNumber}
+          ayahNumber={qiraatAyah.ayahNumber}
+          onClose={() => setQiraatAyah(null)}
         />
       )}
 

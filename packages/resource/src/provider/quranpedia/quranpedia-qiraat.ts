@@ -15,7 +15,7 @@ export interface QuranpediaRawi {
 
 export interface QuranpediaRewaya {
   readonly rawi: QuranpediaRawi;
-  readonly audio: string;
+  readonly audio: string | null;
 }
 
 export interface QuranpediaQiraatReading {

@@ -94,6 +94,12 @@ export {
 } from "./provider/quranpedia/quranpedia-qiraat";
 
 export {
+  createQuranpediaQiraatIndex,
+  type QuranpediaQiraatIndex,
+  type QuranpediaQiraatLookup,
+} from "./provider/quranpedia/quranpedia-qiraat-index";
+
+export {
   createQuranpediaRecitersLoader,
   type QuranpediaReciterRawi,
   type QuranpediaRecitationType,
