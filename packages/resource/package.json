@@ -15,6 +15,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@irtaki/domain": "workspace:*"
+    "@irtaki/domain": "workspace:*",
+    "parse5": "8.0.1"
   }
 }

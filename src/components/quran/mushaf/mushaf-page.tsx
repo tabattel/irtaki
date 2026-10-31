@@ -1,6 +1,7 @@
 "use client";
 
 import { MushafColorPalette } from "./mushaf-color-palette";
+import { MushafTafsirPanel } from "./mushaf-tafsir-panel";
 
 import {
   type PointerEvent as ReactPointerEvent,
@@ -1197,6 +1198,7 @@ export function MushafPage({
   const [contextMenuMessage, setContextMenuMessage] = useState<string | null>(
     null,
   );
+  const [tafsirAyahId, setTafsirAyahId] = useState<number | null>(null);
 
   const visibleModificationModes =
     secondaryMode === "progress"
@@ -4570,9 +4572,17 @@ export function MushafPage({
                 <button
                   type="button"
                   className="rounded-lg border px-3 py-2"
-                  onClick={() =>
-                    setContextMenuMessage("تفسير: الوظيفة غير مربوطة بعد")
-                  }
+                  onClick={() => {
+                    const ayahId = contextAyahId();
+
+                    if (ayahId === undefined) {
+                      setContextMenuMessage("حدد آية أولاً");
+                      return;
+                    }
+
+                    setContextMenuMessage(null);
+                    setTafsirAyahId(ayahId);
+                  }}
                 >
                   تفسير
                 </button>
@@ -6142,6 +6152,11 @@ export function MushafPage({
           ) : null}
         </div>
       ) : null}
+
+      <MushafTafsirPanel
+        ayahId={tafsirAyahId}
+        onClose={() => setTafsirAyahId(null)}
+      />
 
       {annotationPanelOpen && (
         <div

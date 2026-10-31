@@ -103,3 +103,40 @@ export {
   type QuranpediaRecitersDocument,
   type QuranpediaRecitersLoader,
 } from "./provider/quranpedia/quranpedia-reciters";
+
+export {
+  createQuranpediaTafsirCatalog,
+  QURANPEDIA_TAFSIR_OTHER_CATEGORY_LABEL,
+  type QuranpediaTafsirCatalog,
+} from "./provider/quranpedia/quranpedia-tafsir-catalog";
+
+export {
+  createQuranpediaTafsirLoader,
+} from "./provider/quranpedia/quranpedia-tafsir-loader";
+
+export {
+  createQuranpediaTafsirIndex,
+  type QuranpediaTafsirIndex,
+} from "./provider/quranpedia/quranpedia-tafsir-index";
+
+export {
+  parseQuranpediaTafsirHtml,
+  isSafeTafsirClassName,
+  type SafeTafsirNode,
+} from "./provider/quranpedia/quranpedia-tafsir-html";
+
+export type {
+  TafsirBookCategory,
+  QuranpediaTafsirCatalogEntry,
+  QuranpediaTafsirBookMetadata,
+  QuranpediaTafsirContentBlock,
+  QuranpediaTafsirAyah,
+  QuranpediaTafsirDocument,
+  QuranpediaTafsirLoader,
+  QuranpediaTafsirLookup,
+} from "./provider/quranpedia/quranpedia-tafsir-types";
+
+export {
+  createJsonGzipReader,
+  type JsonGzipReader,
+} from "./reader/json-gzip-reader";
