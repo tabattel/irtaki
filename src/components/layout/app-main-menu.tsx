@@ -88,6 +88,25 @@ function SettingsIcon() {
   );
 }
 
+function StatisticsIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <path d="M4 19V5" />
+      <path d="M4 19h17" />
+      <path d="M8 16v-5" />
+      <path d="M13 16V7" />
+      <path d="M18 16v-8" />
+    </svg>
+  );
+}
+
 function HistoryIcon() {
   return (
     <svg
@@ -105,21 +124,7 @@ function HistoryIcon() {
   );
 }
 
-function CloseIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-    >
-      <path d="m6 6 12 12" />
-      <path d="m18 6-12 12" />
-    </svg>
-  );
-}
+
 
 const iconButtonClass =
   "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--foreground)] transition hover:bg-[var(--surface)] focus-visible:outline-2 focus-visible:outline-offset-2 sm:h-11 sm:w-11";
@@ -182,22 +187,14 @@ function PanelButton({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function AppMainMenu({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
+export function AppMainMenu() {
   const [panel, setPanel] = useState<MainPanel>(null);
 
-  if (!open) {
-    return null;
-  }
+  
 
   function closeMenu() {
     setPanel(null);
-    onOpenChange(false);
+    
   }
 
   function togglePanel(nextPanel: Exclude<MainPanel, null>) {
@@ -205,21 +202,13 @@ export function AppMainMenu({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 overflow-hidden overscroll-contain bg-black/20"
-      role="presentation"
-      onClick={closeMenu}
-    >
-      <div
-        className="max-h-[100dvh] w-full max-w-[100vw] min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain border-b border-[var(--border)] bg-[var(--background)] shadow-xl"
-        dir="rtl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mx-auto w-full max-w-7xl min-w-0 px-2 py-1.5 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 w-full border-b border-[var(--border)] bg-[var(--background)] shadow-sm" dir="rtl">
+      <div className="w-full max-w-[100vw] min-w-0">
+        <div className="relative mx-auto w-full max-w-7xl min-w-0 px-2 py-1.5 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center justify-between gap-1">
             <nav
               aria-label="القائمة الرئيسية"
-              className="flex min-h-9 min-w-0 flex-nowrap items-center gap-0"
+              className="flex h-12 min-w-0 flex-1 flex-nowrap items-center gap-0 overflow-x-auto sm:h-14"
             >
               <MainMenuLink href="/" label="الرئيسية" onClick={closeMenu}>
                 <HomeIcon />
@@ -240,6 +229,14 @@ export function AppMainMenu({
                   <path d="M5 5h14v14H5z" />
                   <path d="m8 12 2.5 2.5L16 9" />
                 </svg>
+              </MainMenuLink>
+
+              <MainMenuLink
+                href="/statistiques"
+                label="الإحصائيات"
+                onClick={closeMenu}
+              >
+                <StatisticsIcon />
               </MainMenuLink>
 
               <MainMenuLink
@@ -272,19 +269,11 @@ export function AppMainMenu({
               </MainMenuButton>
             </nav>
 
-            <button
-              type="button"
-              title="إغلاق"
-              aria-label="إغلاق القائمة الرئيسية"
-              className={iconButtonClass}
-              onClick={closeMenu}
-            >
-              <CloseIcon />
-            </button>
+            
           </div>
 
           {panel ? (
-            <div className="mt-2 min-w-0 rounded-lg border border-[var(--border)] bg-[var(--background)] p-2 sm:rounded-xl sm:p-4">
+            <div className="absolute inset-x-2 top-full z-50 mt-2 max-h-[70dvh] min-w-0 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--background)] p-2 shadow-xl sm:rounded-xl sm:p-4">
               <div className="mb-3">
                 <h2 className="font-semibold">
                   {panel === "goto"
@@ -336,6 +325,6 @@ export function AppMainMenu({
           ) : null}
         </div>
       </div>
-    </div>
+    </header>
   );
 }

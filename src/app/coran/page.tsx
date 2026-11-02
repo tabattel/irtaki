@@ -114,7 +114,7 @@ export default function QuranPage() {
 
       <section aria-labelledby="available-mushaf-title" className="mb-10">
         <Link
-          href="/coran/10/page/1"
+          href="/coran/10"
           className="group block rounded-2xl border-2 border-emerald-600 bg-emerald-50 p-5 shadow-sm transition hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-700 sm:p-7"
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -182,7 +182,7 @@ export default function QuranPage() {
                   "available" in riwaya && riwaya.available ? (
                     <Link
                       key={riwaya.id}
-                      href="/coran/10/page/1"
+                      href="/coran/10"
                       className="block rounded-xl border-2 border-emerald-500 bg-emerald-50 p-4 transition hover:border-emerald-700 hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">

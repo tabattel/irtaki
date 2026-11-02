@@ -27,12 +27,14 @@ import {
   type MushafHistoryView,
 } from "./mushaf-history-content";
 import { recordMushafActionJournalEvent } from "./mushaf-action-journal";
+import { MushafTilawaRecorder } from "./mushaf-tilawa-recorder";
 
 type MushafPageProps = {
   mushafId: number;
   riwayaId: number;
   pageNumber: number;
   selectedAyahId?: number;
+  restoreSavedPosition?: boolean;
 };
 
 type InteractionMode = "idle" | "possible-tap" | "long-press" | "swipe";
@@ -45,7 +47,7 @@ type WordSelection = {
 };
 
 type MenuState = null | {
-  type: "ayah" | "word" | "selection" | "app-secondary";
+  type: "ayah" | "word" | "selection";
   ayahId?: number;
   wordKeys?: string[];
 };
@@ -74,14 +76,14 @@ const TRACKED_TASK_OPTIONS: Array<{
   action: TrackedTaskAction;
   label: string;
 }> = [
+  { action: "qiraa", label: "القراءة" },
+  { action: "listen", label: "الاستماع" },
+  { action: "recite", label: "التلاوة" },
   { action: "talkin", label: "التلقين" },
   { action: "memorize", label: "الحفظ" },
   { action: "tathbit", label: "التثبيت" },
   { action: "revise", label: "المراجعة" },
   { action: "tadabbur", label: "التدبر" },
-  { action: "qiraa", label: "القراءة" },
-  { action: "listen", label: "الاستماع" },
-  { action: "recite", label: "التلاوة" },
   { action: "khatma", label: "الختمة" },
   { action: "tahajjud", label: "التهجد" },
 ];
@@ -150,6 +152,20 @@ const SECONDARY_MODES: Array<{
   { id: "exercises", label: "التمارين", icon: "🧠" },
   { id: "data", label: "البيانات", icon: "💾" },
 ];
+
+const QURAN_ACTIVITY_MODES = new Set<SecondaryMode>([
+  "qiraa",
+  "listening",
+  "recitation",
+  "talqin",
+  "memorization",
+  "tathbit",
+  "review",
+  "tadabbur",
+  "khatma",
+  "tahajjud",
+]);
+
 
 type UnderlineStyle = "single" | "double" | "wavy" | "double-wavy";
 function UnderlineStyleIcon({ style }: { style: UnderlineStyle }) {
@@ -314,6 +330,7 @@ function removeMushafSessionStorageItem(key: string): void {
 }
 
 const MUSHAF_PREFERENCE_CHANGED_EVENT = "irtaki:mushaf-preference-changed";
+const MUSHAF_PREFERENCES_READY_EVENT = "irtaki:mushaf-preferences-ready";
 let cloudSyncReadyLearnerId: string | null = null;
 
 function isCloudMushafPreferenceKey(key: string): boolean {
@@ -495,6 +512,7 @@ export function MushafPage({
   riwayaId,
   pageNumber,
   selectedAyahId: externalSelectedAyahId,
+  restoreSavedPosition = false,
 }: MushafPageProps) {
   useEffect(() => {
     let cancelled = false;
@@ -502,6 +520,7 @@ export function MushafPage({
     let loadingLearnerId: string | null = null;
     let requestVersion = 0;
     let saveTimer: number | null = null;
+    let pendingPreferenceChangesForLearner: string | null = null;
 
     async function hydrateLearnerPreferences(learnerId: string) {
       if (loadingLearnerId === learnerId) return;
@@ -518,6 +537,20 @@ export function MushafPage({
 
         if (!response.ok) {
           console.warn("Préférences cloud indisponibles :", response.status);
+
+          if (
+            !cancelled &&
+            version === requestVersion &&
+            getStoredActiveLearnerId() === learnerId
+          ) {
+            cloudSyncReadyLearnerId = learnerId;
+            window.dispatchEvent(
+              new CustomEvent(MUSHAF_PREFERENCES_READY_EVENT, {
+                detail: learnerId,
+              }),
+            );
+          }
+
           return;
         }
 
@@ -526,51 +559,60 @@ export function MushafPage({
         };
 
         const remote = normalizeCloudMushafPreferences(payload.preferences);
+
+        // Ne jamais appliquer une réponse devenue obsolète.
+        if (
+          cancelled ||
+          version !== requestVersion ||
+          getStoredActiveLearnerId() !== learnerId
+        ) {
+          return;
+        }
+
         const local = getScopedMushafPreferencesSnapshot(learnerId);
 
-        if (Object.keys(remote).length > 0) {
-          const changed = replaceScopedMushafPreferences(learnerId, remote);
+        // Le cloud complète les clés absentes.
+        // Pour le mode actif et les positions, le local gagne en cas
+        // de conflit afin qu'une ancienne réponse distante ne réactive
+        // jamais un ancien mode après une navigation.
+        const merged: Record<string, string> = {
+          ...local,
+          ...remote,
+        };
 
-          if (changed) {
-            // Limiter le rechargement à une fois par version distante et par profil.
-            const fingerprintSource = Object.entries(remote)
-              .sort(([left], [right]) => left.localeCompare(right))
-              .map(([key, value]) => `${key}\\u0000${value}\\u0001`)
-              .join("");
-
-            let fingerprint = 2166136261;
-            for (let index = 0; index < fingerprintSource.length; index++) {
-              fingerprint ^= fingerprintSource.charCodeAt(index);
-              fingerprint = Math.imul(fingerprint, 16777619);
-            }
-
-            const reloadMarker = `${fingerprint >>> 0}:${Object.keys(remote).length}`;
-            const reloadKey = `irtaki.cloud-preferences-reloaded.${learnerId}`;
-            let alreadyReloaded = false;
-
-            try {
-              alreadyReloaded =
-                window.sessionStorage.getItem(reloadKey) === reloadMarker;
-
-              if (!alreadyReloaded) {
-                window.sessionStorage.setItem(reloadKey, reloadMarker);
-              }
-            } catch (error) {
-              console.warn("Marqueur de synchronisation indisponible :", error);
-            }
-
-            if (!alreadyReloaded) {
-              window.location.reload();
-              return;
-            }
+        for (const [key, value] of Object.entries(local)) {
+          if (
+            key.startsWith("irtaki.mushaf.mode.") ||
+            key.startsWith("irtaki.mushaf.position.")
+          ) {
+            merged[key] = value;
           }
-        } else if (Object.keys(local).length > 0) {
-          // Première synchronisation : conserver et sauvegarder le profil local.
+        }
+
+        if (!areMushafPreferenceMapsEqual(local, merged)) {
+          replaceScopedMushafPreferences(learnerId, merged);
+        }
+
+        const effectiveLocal =
+          getScopedMushafPreferencesSnapshot(learnerId);
+
+        if (
+          areMushafPreferenceMapsEqual(effectiveLocal, merged) &&
+          !areMushafPreferenceMapsEqual(remote, effectiveLocal)
+        ) {
+          // Synchroniser le résultat fusionné sans recharger la page.
           try {
             await saveCloudMushafSnapshot(learnerId);
           } catch (error) {
-            console.warn("Première sauvegarde cloud impossible :", error);
+            console.warn(
+              "Synchronisation des préférences fusionnées impossible :",
+              error,
+            );
           }
+        } else if (!areMushafPreferenceMapsEqual(effectiveLocal, merged)) {
+          console.warn(
+            "Fusion locale incomplète : conservation des données locales.",
+          );
         }
 
         if (
@@ -579,9 +621,37 @@ export function MushafPage({
           getStoredActiveLearnerId() === learnerId
         ) {
           cloudSyncReadyLearnerId = learnerId;
+
+          window.dispatchEvent(
+            new CustomEvent(MUSHAF_PREFERENCES_READY_EVENT, {
+              detail: learnerId,
+            }),
+          );
+
+          // Une modification faite pendant l'hydratation doit aussi
+          // être envoyée après que la synchronisation devient prête.
+          if (pendingPreferenceChangesForLearner === learnerId) {
+            pendingPreferenceChangesForLearner = null;
+            scheduleSave(learnerId);
+          }
         }
+
       } catch (error) {
         console.warn("Synchronisation des préférences indisponible :", error);
+
+        // Le stockage local reste utilisable si la connexion échoue.
+        if (
+          !cancelled &&
+          version === requestVersion &&
+          getStoredActiveLearnerId() === learnerId
+        ) {
+          cloudSyncReadyLearnerId = learnerId;
+          window.dispatchEvent(
+            new CustomEvent(MUSHAF_PREFERENCES_READY_EVENT, {
+              detail: learnerId,
+            }),
+          );
+        }
       } finally {
         if (loadingLearnerId === learnerId) loadingLearnerId = null;
       }
@@ -613,8 +683,13 @@ export function MushafPage({
           ? event.detail
           : null;
 
-      if (!learnerId || cloudSyncReadyLearnerId !== learnerId) return;
+      if (!learnerId) return;
       if (getStoredActiveLearnerId() !== learnerId) return;
+
+      if (cloudSyncReadyLearnerId !== learnerId) {
+        pendingPreferenceChangesForLearner = learnerId;
+        return;
+      }
 
       scheduleSave(learnerId);
     }
@@ -652,7 +727,7 @@ export function MushafPage({
           : Promise.resolve();
 
         void flushPrevious.finally(() => {
-          if (!cancelled) window.location.reload();
+          if (!cancelled) window.location.replace("/coran/10");
         });
         return;
       }
@@ -979,6 +1054,17 @@ export function MushafPage({
   const secondaryModeRef = useRef<SecondaryMode>(
     pageNumber === 605 ? "history" : "listening",
   );
+
+  const modeInitializationContextRef = useRef<string | null>(null);
+  const positionInitializationReadyContextRef = useRef<string | null>(null);
+
+  const pendingModePositionRestoreRef = useRef<{
+    learnerId: string | null;
+    contextKey: string;
+    mode: SecondaryMode;
+    sourcePage: number;
+    targetPage: number;
+  } | null>(null);
   const [historyView, setHistoryView] = useState<MushafHistoryView>("pages");
 
   function journalReferencesForTargets(targets: string[]): string[] {
@@ -1066,6 +1152,24 @@ export function MushafPage({
   }, [listeningAyahsHidden]);
   const [modePickerOpen, setModePickerOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [tilawaUiStatus, setTilawaUiStatus] = useState<
+    "idle" | "recording" | "paused" | "stopped" | "playing" | "playback-paused"
+  >("idle");
+
+  useEffect(() => {
+    function handleTilawaStatus(event: Event) {
+      const status = (event as CustomEvent<{ status?: string }>).detail?.status;
+      if (
+        status === "idle" || status === "recording" || status === "paused" ||
+        status === "stopped" || status === "playing" || status === "playback-paused"
+      ) {
+        setTilawaUiStatus(status);
+      }
+    }
+
+    window.addEventListener("irtaki:tilawa-status", handleTilawaStatus);
+    return () => window.removeEventListener("irtaki:tilawa-status", handleTilawaStatus);
+  }, []);
   const [repeatEnabled, setRepeatEnabled] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [reciterPickerOpen, setReciterPickerOpen] = useState(false);
@@ -1553,39 +1657,190 @@ export function MushafPage({
     };
   }, [mushafId, pageNumber]);
 
-  // Restaurer le dernier mode avant de sauvegarder la position de page.
+  // Restaurer le mode et la page uniquement après l'hydratation
+  // des préférences du current-learner.
   useEffect(() => {
-    const storageKey = `irtaki.mushaf.mode.${mushafId}.${riwayaId}`;
-    let storedMode: string | null = null;
+    function initializeModeForLearner() {
+      const learnerId = getStoredActiveLearnerId();
 
-    try {
-      storedMode = getMushafStorageItem(storageKey);
-    } catch {
-      // Utiliser le mode par défaut si le stockage est indisponible.
-    }
-
-    const savedMode = SECONDARY_MODES.find(
-      (candidate) => candidate.id === storedMode,
-    )?.id;
-    const initialMode: SecondaryMode =
-      pageNumber === 605 ? "history" : (savedMode ?? "listening");
-
-    secondaryModeRef.current = initialMode;
-    setSecondaryMode(initialMode);
-
-    if (!savedMode) {
-      try {
-        setMushafStorageItem(storageKey, initialMode);
-      } catch {
-        // Le lecteur reste utilisable sans stockage local.
+      // Ne pas utiliser les valeurs par défaut avant la réponse cloud.
+      if (learnerId && cloudSyncReadyLearnerId !== learnerId) {
+        return;
       }
+
+      const contextKey = JSON.stringify([
+        learnerId,
+        mushafId,
+        riwayaId,
+      ]);
+
+      if (modeInitializationContextRef.current === contextKey) {
+        return;
+      }
+
+      modeInitializationContextRef.current = contextKey;
+      positionInitializationReadyContextRef.current = null;
+      pendingModePositionRestoreRef.current = null;
+
+      const storageKey = `irtaki.mushaf.mode.${mushafId}.${riwayaId}`;
+      let storedMode: string | null = null;
+
+      try {
+        storedMode = getMushafStorageItem(storageKey);
+      } catch {
+        // Utiliser le mode par défaut si le stockage est indisponible.
+      }
+
+      const savedMode = SECONDARY_MODES.find(
+        (candidate) => candidate.id === storedMode,
+      )?.id;
+
+      const initialMode: SecondaryMode =
+        pageNumber === 605 ? "history" : (savedMode ?? "listening");
+
+      secondaryModeRef.current = initialMode;
+      setSecondaryMode(initialMode);
+
+      if (!savedMode) {
+        setMushafStorageItem(storageKey, initialMode);
+      }
+
+      // Les outils de suivi ne possèdent pas de position indépendante.
+      if (!QURAN_ACTIVITY_MODES.has(initialMode)) {
+        positionInitializationReadyContextRef.current = contextKey;
+        return;
+      }
+
+      if (
+        !Number.isInteger(pageNumber) ||
+        pageNumber < 1 ||
+        pageNumber > TOTAL_PAGES
+      ) {
+        return;
+      }
+
+      const positionKey =
+        `irtaki.mushaf.position.${mushafId}.${riwayaId}.${initialMode}`;
+
+      // Une route /page/[page] représente une navigation explicite.
+      // Seule la route d'entrée du Mushaf autorise la restauration.
+      if (!restoreSavedPosition) {
+        positionInitializationReadyContextRef.current = contextKey;
+        setMushafStorageItem(positionKey, String(pageNumber));
+        return;
+      }
+
+      const rawSavedPage = getMushafStorageItem(positionKey);
+      const savedPage =
+        rawSavedPage === null ? Number.NaN : Number(rawSavedPage);
+
+      const hasSavedPage =
+        Number.isInteger(savedPage) &&
+        savedPage >= 1 &&
+        savedPage <= TOTAL_PAGES;
+
+      if (hasSavedPage && savedPage !== pageNumber) {
+        pendingModePositionRestoreRef.current = {
+          learnerId,
+          contextKey,
+          mode: initialMode,
+          sourcePage: pageNumber,
+          targetPage: savedPage,
+        };
+
+        router.replace(`/coran/${riwayaId}/page/${savedPage}`);
+        return;
+      }
+
+      // Première utilisation : conserver la page courante.
+      positionInitializationReadyContextRef.current = contextKey;
+
+      setMushafStorageItem(
+        positionKey,
+        String(hasSavedPage ? savedPage : pageNumber),
+      );
     }
-  }, [mushafId, riwayaId]);
+
+    function handlePreferencesReady(event: Event) {
+      const learnerId =
+        event instanceof CustomEvent &&
+        typeof event.detail === "string"
+          ? event.detail
+          : null;
+
+      if (!learnerId) return;
+      if (learnerId !== getStoredActiveLearnerId()) return;
+
+      initializeModeForLearner();
+    }
+
+    initializeModeForLearner();
+
+    window.addEventListener(
+      MUSHAF_PREFERENCES_READY_EVENT,
+      handlePreferencesReady,
+    );
+
+    return () => {
+      window.removeEventListener(
+        MUSHAF_PREFERENCES_READY_EVENT,
+        handlePreferencesReady,
+      );
+    };
+  }, [mushafId, riwayaId, pageNumber, router, restoreSavedPosition]);
 
   useEffect(() => {
+    const activeMode = secondaryModeRef.current;
+
+    if (!QURAN_ACTIVITY_MODES.has(activeMode)) return;
+
+    const learnerId = getStoredActiveLearnerId();
+
+    const contextKey = JSON.stringify([
+      learnerId,
+      mushafId,
+      riwayaId,
+    ]);
+
+    const pendingRestore = pendingModePositionRestoreRef.current;
+
+    if (pendingRestore) {
+      if (
+        pendingRestore.learnerId !== learnerId ||
+        pendingRestore.contextKey !== contextKey ||
+        pendingRestore.mode !== activeMode
+      ) {
+        pendingModePositionRestoreRef.current = null;
+        return;
+      }
+
+      // L'ancienne page est toujours affichée : ne pas la sauvegarder.
+      if (pageNumber === pendingRestore.sourcePage) {
+        return;
+      }
+
+      // La redirection est arrivée à destination, ou une navigation
+      // volontaire a remplacé la restauration.
+      pendingModePositionRestoreRef.current = null;
+      positionInitializationReadyContextRef.current = contextKey;
+    }
+
+    // Aucune position ne doit être enregistrée avant l'initialisation.
+    if (positionInitializationReadyContextRef.current !== contextKey) {
+      return;
+    }
+
+    if (
+      !Number.isInteger(pageNumber) ||
+      pageNumber < 1 ||
+      pageNumber > TOTAL_PAGES
+    ) {
+      return;
+    }
+
     try {
       setMushafStorageItem(
-        `irtaki.mushaf.position.${mushafId}.${riwayaId}.${secondaryModeRef.current}`,
+        getModePositionKey(activeMode),
         String(pageNumber),
       );
     } catch {
@@ -1604,6 +1859,17 @@ export function MushafPage({
 
     if (nextPage === pageNumber) {
       return;
+    }
+
+    // Enregistrer la destination avant la navigation.
+    // Cela protège la restauration si le composant est remonté.
+    const activeMode = secondaryModeRef.current;
+
+    if (QURAN_ACTIVITY_MODES.has(activeMode)) {
+      setMushafStorageItem(
+        getModePositionKey(activeMode),
+        String(nextPage),
+      );
     }
 
     router.push(`/coran/${riwayaId}/page/${nextPage}`);
@@ -1837,6 +2103,44 @@ export function MushafPage({
     };
   }
 
+  function getTaskAudioRange(ayahIds: number[]): {
+    startSurah: number;
+    startAyah: number;
+    endSurah: number;
+    endAyah: number;
+  } | null {
+    const selectedAyahs = ayahIds
+      .map((id) => ayahs.find((ayah) => ayah.id === id))
+      .filter(
+        (ayah): ayah is (typeof ayahs)[number] => ayah !== undefined,
+      );
+
+    if (
+      selectedAyahs.length === 0 ||
+      selectedAyahs.length !== ayahIds.length
+    ) {
+      return null;
+    }
+
+    const orderedAyahs = [...selectedAyahs].sort(
+      (a, b) =>
+        a.surahNumber - b.surahNumber ||
+        a.number - b.number,
+    );
+
+    const first = orderedAyahs[0];
+    const last = orderedAyahs[orderedAyahs.length - 1];
+
+    if (!first || !last) return null;
+
+    return {
+      startSurah: first.surahNumber,
+      startAyah: first.number,
+      endSurah: last.surahNumber,
+      endAyah: last.number,
+    };
+  }
+
   async function completeContextTask(action: TrackedTaskAction) {
     const learnerId = getStoredActiveLearnerId();
 
@@ -1852,6 +2156,13 @@ export function MushafPage({
     }
 
     const pageMetadata = getTaskPageLineMetadata(ayahIds);
+    const taskAudioRange =
+      action === "listen" ? getTaskAudioRange(ayahIds) : null;
+
+    if (action === "listen" && !taskAudioRange) {
+      setTaskError("تعذر تحديد نطاق الاستماع");
+      return;
+    }
 
     setTaskBusy(true);
     setTaskError(null);
@@ -1919,6 +2230,16 @@ export function MushafPage({
       }
 
       setTaskMenuOpen(false);
+
+      if (action === "listen" && taskAudioRange) {
+        setContextAudioTarget(
+          menu?.type === "selection" ? "selection" : "ayah",
+        );
+        setContextMenuMessage(null);
+        await validateAndStartAudio(taskAudioRange);
+        return;
+      }
+
       showSecondaryMessage("اكتمل النشاط");
     } catch {
       setTaskError("تعذر تسجيل النشاط");
@@ -1944,8 +2265,18 @@ export function MushafPage({
               key={option.action}
               type="button"
               className="rounded-lg border px-3 py-2 text-right"
-              disabled={taskBusy || !learnerId}
-              onClick={() => void completeContextTask(option.action)}
+              disabled={
+                taskBusy || !learnerId ||
+                (option.action === "recite" && tilawaUiStatus !== "idle")
+              }
+              onClick={() => {
+                if (option.action === "recite") {
+                  setTaskError(null);
+                  dispatchTilawaCommand("start", true);
+                } else {
+                  void completeContextTask(option.action);
+                }
+              }}
             >
               {option.label}
             </button>
@@ -1963,6 +2294,184 @@ export function MushafPage({
           </p>
         )}
       </div>
+    );
+  }
+
+
+  function dispatchTilawaCommand(
+    command: "activate" | "toggle" | "start" | "open-library",
+    tracked = false,
+  ) {
+    const learnerId = getStoredActiveLearnerId();
+
+    if (!learnerId) {
+      showSecondaryMessage("اختر المستخدم الحالي أولاً");
+      return;
+    }
+
+    if (command === "open-library") {
+      window.dispatchEvent(
+        new CustomEvent("irtaki:tilawa-command", {
+          detail: {
+            command,
+            learnerId,
+            ayahIds: [],
+            ayahs: [],
+            tracked: false,
+          },
+        }),
+      );
+      return;
+    }
+
+    // Une commande sur un enregistrement déjà démarré ne doit pas
+    // recalculer son propriétaire ni ses ayahs.
+    if (command === "toggle" && tilawaUiStatus !== "idle") {
+      window.dispatchEvent(
+        new CustomEvent("irtaki:tilawa-command", {
+          detail: {
+            command,
+            learnerId,
+            ayahIds: [],
+            ayahs: [],
+            tracked: false,
+          },
+        }),
+      );
+      return;
+    }
+
+    let ayahIds = getTaskAyahIds();
+
+    if (ayahIds.length === 0) {
+      const fallbackId =
+        menu?.type === "word"
+          ? contextAyahId()
+          : menu?.type === "ayah"
+            ? menu.ayahId
+            : selectedAyahId;
+
+      const targetId = fallbackId ?? ayahs[0]?.id;
+      if (typeof targetId === "number") ayahIds = [targetId];
+    }
+
+    ayahIds = [...new Set(ayahIds)];
+
+    const references = ayahIds
+      .map((id) => ayahs.find((ayah) => ayah.id === id))
+      .filter((ayah): ayah is AyahDto => Boolean(ayah))
+      .map((ayah) => ({
+        surahNumber: ayah.surahNumber,
+        ayahNumber: ayah.number,
+        surahName:
+          surahs.find((surah) => surah.number === ayah.surahNumber)?.name ??
+          `سورة ${ayah.surahNumber}`,
+      }));
+
+    if (references.length === 0) {
+      showSecondaryMessage("حدد آية من المصحف أولاً");
+      return;
+    }
+
+    const effectiveAyahIds = references.map((ayah) =>
+      ayahs.find(
+        (item) =>
+          item.surahNumber === ayah.surahNumber &&
+          item.number === ayah.ayahNumber,
+      )!.id,
+    );
+
+    const pageMetadata = getTaskPageLineMetadata(effectiveAyahIds);
+
+    window.dispatchEvent(
+      new CustomEvent("irtaki:tilawa-command", {
+        detail: {
+          command,
+          learnerId,
+          ayahIds: effectiveAyahIds,
+          ayahs: references,
+          tracked,
+          pageMetadata: pageMetadata
+            ? {
+                lineNumbersByAyah: pageMetadata.lineNumbersByAyah,
+                pageLineCount: pageMetadata.pageLineCount,
+                pageNumber: pageMetadata.pageNumber,
+              }
+            : null,
+        },
+      }),
+    );
+  }
+
+  function renderTilawaMainButton(label: string) {
+    const recording = tilawaUiStatus === "recording";
+    const playing = tilawaUiStatus === "playing";
+    const paused = tilawaUiStatus === "paused";
+    const isActive = recording || playing;
+
+    const ariaLabel = recording
+      ? "إيقاف التسجيل مؤقتاً"
+      : paused
+        ? "استئناف التسجيل"
+        : playing
+          ? "إيقاف التشغيل مؤقتاً"
+          : tilawaUiStatus === "playback-paused"
+            ? "استئناف التشغيل"
+            : tilawaUiStatus === "stopped"
+              ? "تشغيل التسجيل"
+              : "بدء تسجيل التلاوة";
+
+    return (
+      <button
+        type="button"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-600 text-white shadow-md shadow-rose-600/20 transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
+        aria-label={`${label}: ${ariaLabel}`}
+        title={ariaLabel}
+        onClick={() => {
+          const startTrackedActivity = tilawaUiStatus === "idle";
+
+          dispatchTilawaCommand(
+            startTrackedActivity ? "start" : "toggle",
+            startTrackedActivity,
+          );
+        }}
+      >
+        {isActive ? (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="h-6 w-6"
+            fill="white"
+          >
+            <rect x="6" y="4" width="4" height="16" rx="1" />
+            <rect x="14" y="4" width="4" height="16" rx="1" />
+          </svg>
+        ) : paused || tilawaUiStatus === "stopped" ||
+          tilawaUiStatus === "playback-paused" ? (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="h-6 w-6"
+            fill="white"
+          >
+            <path d="M7 4.5a1 1 0 0 1 1.5-.86l11 7.5a1 1 0 0 1 0 1.72l-11 7.5A1 1 0 0 1 7 19.5z" />
+          </svg>
+        ) : (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="h-6 w-6"
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="9" y="2" width="6" height="12" rx="3" />
+            <path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8" />
+          </svg>
+        )}
+      </button>
     );
   }
 
@@ -2262,13 +2771,7 @@ export function MushafPage({
        * ultérieurement.
        */
       else {
-        if (dy < 0) {
-          setMenu({
-            type: "app-secondary",
-          });
-        } else {
-          setMenu(null);
-        }
+        if (dy >= 0) { setMenu(null); }
       }
     }
 
@@ -2817,7 +3320,7 @@ export function MushafPage({
     endSurah: number;
     endAyah: number;
   } | null {
-    if (!menu || menu.type === "app-secondary") return null;
+    if (!menu) return null;
 
     if (menu.type === "ayah") {
       const target = ayahs.find((ayah) => ayah.id === menu.ayahId);
@@ -3512,32 +4015,70 @@ export function MushafPage({
   }, [mushafId, riwayaId]);
 
   function selectSecondaryMode(mode: SecondaryMode) {
-    let targetPage =
-      mode === "history" ? 605 : pageNumber === 605 ? 1 : pageNumber;
-    try {
-      setMushafStorageItem(`irtaki.mushaf.mode.${mushafId}.${riwayaId}`, mode);
+    const previousMode = secondaryModeRef.current;
 
-      // Sauvegarder indépendamment la sélection et la position du mode quitté.
-      saveModeSelection(secondaryModeRef.current);
+    const currentPageIsValid =
+      Number.isInteger(pageNumber) &&
+      pageNumber >= 1 &&
+      pageNumber <= TOTAL_PAGES;
+
+    const fallbackPage = currentPageIsValid ? pageNumber : 1;
+
+    let targetPage = mode === "history" ? 605 : fallbackPage;
+
+    try {
       setMushafStorageItem(
-        getModePositionKey(secondaryModeRef.current),
-        String(pageNumber),
+        `irtaki.mushaf.mode.${mushafId}.${riwayaId}`,
+        mode,
       );
 
-      // Restaurer la dernière position du mode demandé, si elle existe.
-      const savedPage = Number(getMushafStorageItem(getModePositionKey(mode)));
-      targetPage =
-        mode === "history"
-          ? 605
-          : Number.isInteger(savedPage) &&
-              savedPage >= 1 &&
-              savedPage <= TOTAL_PAGES
-            ? savedPage
-            : pageNumber === 605
-              ? 1
-              : pageNumber;
+      // Conserver les paramètres du mode quitté.
+      saveModeSelection(previousMode);
 
-      // Recharger la sélection indépendante du mode choisi.
+      // Enregistrer sa dernière page uniquement s'il fait partie
+      // des dix modes d'activité et que la page est valide.
+      if (
+        QURAN_ACTIVITY_MODES.has(previousMode) &&
+        currentPageIsValid
+      ) {
+        setMushafStorageItem(
+          getModePositionKey(previousMode),
+          String(pageNumber),
+        );
+      }
+
+      if (QURAN_ACTIVITY_MODES.has(mode)) {
+        const rawSavedPage = getMushafStorageItem(
+          getModePositionKey(mode),
+        );
+
+        const savedPage =
+          rawSavedPage === null ? Number.NaN : Number(rawSavedPage);
+
+        const hasSavedPage =
+          Number.isInteger(savedPage) &&
+          savedPage >= 1 &&
+          savedPage <= TOTAL_PAGES;
+
+        // Reprendre la dernière page du mode demandé.
+        // Pour un premier accès, conserver la page courante et
+        // l'enregistrer immédiatement pour ce mode.
+        targetPage = hasSavedPage ? savedPage : fallbackPage;
+
+        if (!hasSavedPage) {
+          setMushafStorageItem(
+            getModePositionKey(mode),
+            String(targetPage),
+          );
+        }
+      }
+
+      // Le journal, les objectifs et les autres outils ne font pas
+      // partie des dix modes qui possèdent une position indépendante.
+      if (mode === "history") {
+        targetPage = 605;
+      }
+
       restoreModeSelection(mode, targetPage);
 
       secondaryModeRef.current = mode;
@@ -3545,7 +4086,7 @@ export function MushafPage({
       setModePickerOpen(false);
       setReciterPickerOpen(false);
     } catch {
-      // Si le stockage est indisponible, conserver la navigation normale.
+      // En cas d'indisponibilité du stockage, préserver la navigation.
       secondaryModeRef.current = mode;
       setSecondaryMode(mode);
       setModePickerOpen(false);
@@ -4333,8 +4874,9 @@ export function MushafPage({
   const surahNames = new Map(surahs.map((surah) => [surah.number, surah.name]));
 
   return (
-    <article
-      className={`mx-auto max-w-3xl ${"touch-none"} rounded-xl border border-[var(--border)] bg-[var(--background)] p-2 select-none sm:p-8`}
+    <>
+        <article
+      className={`mx-auto max-w-3xl ${"touch-none"} rounded-xl border border-[var(--border)] bg-[var(--background)] p-2 pb-[45dvh] select-none sm:p-8 sm:pb-[45dvh]`}
       dir="rtl"
       data-mushaf-page={pageNumber}
       onPointerDown={handlePointerDown}
@@ -4344,6 +4886,7 @@ export function MushafPage({
       onDoubleClick={handleDoubleClick}
     >
       <audio ref={audioRef} preload="auto" className="hidden" />
+      <MushafTilawaRecorder />
       <header className="mb-3 grid grid-cols-3 items-center gap-1 text-xs text-[var(--muted)] sm:mb-6 sm:gap-2 sm:text-sm">
         <span className="text-right tabular-nums">
           صفحة {pageNumber} / {pageNumber === 605 ? 605 : TOTAL_PAGES}
@@ -4419,7 +4962,7 @@ export function MushafPage({
             "fixed inset-x-0 z-50 mx-auto w-fit rounded-xl border",
             "border-[var(--border)] bg-[var(--background)] px-5 py-3",
             "shadow-lg",
-            menu.type === "app-secondary" ? "bottom-4" : "top-4",
+            "top-[3.75rem] sm:top-20",
           ].join(" ")}
           dir="rtl"
           role="dialog"
@@ -4446,6 +4989,7 @@ export function MushafPage({
                 >
                   🎧 استماع
                 </button>
+                {tilawaUiStatus === "idle" && renderTilawaMainButton("التلاوة")}
                 <button
                   type="button"
                   className="rounded-lg border px-3 py-2"
@@ -4732,8 +5276,267 @@ export function MushafPage({
             </div>
           )}
 
-          {menu.type === "app-secondary" && (
-            <div className="flex max-w-[min(100vw-2rem,56rem)] flex-col gap-3">
+
+
+          {menu.type === "selection" && (
+            <div className="flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3">
+              <div className="font-semibold">تحديد الكلمات</div>
+              <div className="text-sm text-[var(--muted)]">
+                {selectedWords.size}{" "}
+                {selectedWords.size === 1 ? "كلمة محددة" : "كلمات محددة"}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  aria-expanded={contextAudioTarget === "selection"}
+                  aria-haspopup="true"
+                  onClick={() => toggleContextAudioControls("selection")}
+                >
+                  🎧 استماع
+                </button>
+                {tilawaUiStatus === "idle" && renderTilawaMainButton("التلاوة")}
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  aria-expanded={taskMenuOpen}
+                  aria-haspopup="true"
+                  onClick={() => {
+                    setTaskError(null);
+                    setTaskMenuOpen((open) => !open);
+                  }}
+                >
+                  📋 نشاط
+                </button>
+                <MushafColorPalette
+                  action="colors"
+                  mode={secondaryMode}
+                  selectionType="selection"
+                  open={openColorPaletteAction === "colors"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "colors" ? null : "colors",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("colors", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
+                <MushafColorPalette
+                  action="highlight"
+                  mode={secondaryMode}
+                  selectionType="selection"
+                  open={openColorPaletteAction === "highlight"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "highlight" ? null : "highlight",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("highlight", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
+                <div className="relative inline-flex">
+                  <button
+                    type="button"
+                    aria-expanded={openUnderlinePalette}
+                    aria-haspopup="true"
+                    aria-pressed={UNDERLINE_STYLE_OPTIONS.some((option) =>
+                      isContextTextActionEnabled(option.action),
+                    )}
+                    className="rounded-lg border px-3 py-2"
+                    onClick={() => {
+                      setOpenColorPaletteAction(null);
+                      setOpenUnderlinePalette((current) => !current);
+                    }}
+                  >
+                    〰️ تسطير
+                  </button>
+                  {openUnderlinePalette && (
+                    <div
+                      className="absolute top-full right-0 z-50 mt-2 flex items-center gap-2 rounded-xl border bg-[var(--background)] p-2 shadow-lg"
+                      role="group"
+                      aria-label="أنواع التسطير"
+                    >
+                      {UNDERLINE_STYLE_OPTIONS.map((option) => (
+                        <button
+                          key={option.action}
+                          type="button"
+                          aria-label={option.label}
+                          aria-pressed={isContextTextActionEnabled(
+                            option.action,
+                          )}
+                          className="flex h-10 w-12 items-center justify-center rounded-lg border p-2"
+                          onClick={() => {
+                            toggleContextUnderlineStyle(option.style);
+                            setOpenUnderlinePalette(false);
+                          }}
+                        >
+                          <UnderlineStyleIcon style={option.style} />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("hidden")}
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => toggleContextTextAction("hidden")}
+                >
+                  {isContextTextActionEnabled("hidden") ? "إظهار" : "إخفاء"}
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2"
+                  onClick={() => void openAnnotations(contextAyahId())}
+                >
+                  💬 تعليق
+                </button>
+              </div>
+              {contextAudioTarget === "selection" &&
+                renderContextAudioControls()}
+              {taskMenuOpen && renderTaskControls()}
+            </div>
+          )}
+          {contextMenuMessage ? (
+            <div
+              className="text-center text-sm text-[var(--muted)]"
+              role="status"
+              aria-live="polite"
+            >
+              {contextMenuMessage}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <MushafTafsirPanel
+        ayahId={tafsirAyahId}
+        onClose={() => setTafsirAyahId(null)}
+      />
+
+      {similarAyah && (
+        <MushafSimilarPanel
+          surahNumber={similarAyah.surahNumber}
+          ayahNumber={similarAyah.ayahNumber}
+          onClose={() => setSimilarAyah(null)}
+        />
+      )}
+
+      {qiraatAyah && (
+        <MushafQiraatPanel
+          surahNumber={qiraatAyah.surahNumber}
+          ayahNumber={qiraatAyah.ayahNumber}
+          onClose={() => setQiraatAyah(null)}
+        />
+      )}
+
+      {annotationPanelOpen && (
+        <div
+          className="fixed inset-x-4 bottom-4 z-[60] mx-auto max-h-[70vh] max-w-xl overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 shadow-xl"
+          dir="rtl"
+          role="dialog"
+          aria-modal="true"
+          aria-label="التعليقات والملاحظات"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold">التعليقات والملاحظات</h2>
+            <button
+              type="button"
+              className="rounded-lg border px-3 py-1"
+              onClick={() => setAnnotationPanelOpen(false)}
+            >
+              إغلاق
+            </button>
+          </div>
+
+          {annotationAyahId !== null && (
+            <div className="mt-3 space-y-2">
+              {annotations
+                .filter((item) => item.ayahId === annotationAyahId)
+                .map((item) => (
+                  <div key={item.id} className="rounded-lg border p-3">
+                    <p className="whitespace-pre-wrap">{item.content}</p>
+                  </div>
+                ))}
+
+              {annotations.every((item) => item.ayahId !== annotationAyahId) &&
+                !annotationBusy && (
+                  <p className="text-sm text-[var(--muted)]">
+                    لا توجد ملاحظات لهذا الموضع.
+                  </p>
+                )}
+            </div>
+          )}
+
+          {annotationBusy && (
+            <p role="status" className="mt-3 text-sm">
+              جارٍ تحميل الملاحظات أو حفظها…
+            </p>
+          )}
+
+          <form
+            className="mt-3 flex flex-col gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveAnnotation();
+            }}
+          >
+            <label htmlFor="mushaf-annotation-content">ملاحظة جديدة</label>
+            <textarea
+              id="mushaf-annotation-content"
+              value={annotationContent}
+              onChange={(event) => setAnnotationContent(event.target.value)}
+              rows={3}
+              maxLength={5000}
+              className="w-full rounded-lg border bg-transparent p-3"
+              placeholder="اكتب ملاحظتك…"
+            />
+
+            <div className="flex items-center justify-between gap-3">
+              <p
+                role="status"
+                aria-live="polite"
+                className="text-sm text-[var(--muted)]"
+              >
+                {annotationStatus}
+              </p>
+              <button
+                type="submit"
+                disabled={
+                  annotationBusy ||
+                  !annotationContent.trim() ||
+                  annotationAyahId === null
+                }
+                className="rounded-lg border px-4 py-2 disabled:opacity-50"
+              >
+                حفظ الملاحظة
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </article>
+      <div
+        role="region"
+        aria-label="القائمة الثانوية للمصحف"
+        dir="rtl"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--background)] px-2 pt-2 shadow-lg"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+      >
+        <div className="mx-auto max-h-[40dvh] w-full max-w-3xl overflow-y-auto overscroll-contain">
+          <div className="flex max-w-[min(100vw-2rem,56rem)] flex-col gap-3">
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <button
                   type="button"
@@ -4949,25 +5752,27 @@ export function MushafPage({
                   </>
                 )}
 
+                {secondaryMode === "recitation" &&
+                  renderTilawaMainButton("التسجيل")}
+
+                <div
+                  id="irtaki-tilawa-toolbar-slot"
+                  className={
+                    secondaryMode === "recitation" ? "contents" : "hidden"
+                  }
+                />
+
                 {secondaryMode === "recitation" && (
-                  <>
-                    <button
-                      type="button"
-                      className="rounded-lg border px-3 py-2"
-                      aria-label="التسجيل"
-                      onClick={() => showSecondaryMessage("التسجيل")}
-                    >
-                      🎙️
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg border px-3 py-2"
-                      aria-label="تشغيل المرجع"
-                      onClick={togglePlayback}
-                    >
-                      {isPlaying ? "⏸" : "▶"}
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    className="rounded-lg border px-3 py-2"
+                    aria-label="تشغيل المرجع"
+                    aria-pressed={isPlaying}
+                    title={isPlaying ? "إيقاف المرجع" : "تشغيل المرجع"}
+                    onClick={togglePlayback}
+                  >
+                    {isPlaying ? "⏸" : "▶"}
+                  </button>
                 )}
 
                 {secondaryMode === "memorization" && (
@@ -6017,256 +6822,8 @@ export function MushafPage({
                 تغيير الوضع يحافظ على الصفحة والتحديد والسياق الحالي.
               </div>
             </div>
-          )}
-
-          {menu.type === "selection" && (
-            <div className="flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3">
-              <div className="font-semibold">تحديد الكلمات</div>
-              <div className="text-sm text-[var(--muted)]">
-                {selectedWords.size}{" "}
-                {selectedWords.size === 1 ? "كلمة محددة" : "كلمات محددة"}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="rounded-lg border px-3 py-2"
-                  aria-expanded={contextAudioTarget === "selection"}
-                  aria-haspopup="true"
-                  onClick={() => toggleContextAudioControls("selection")}
-                >
-                  🎧 استماع
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg border px-3 py-2"
-                  aria-expanded={taskMenuOpen}
-                  aria-haspopup="true"
-                  onClick={() => {
-                    setTaskError(null);
-                    setTaskMenuOpen((open) => !open);
-                  }}
-                >
-                  📋 نشاط
-                </button>
-                <MushafColorPalette
-                  action="colors"
-                  mode={secondaryMode}
-                  selectionType="selection"
-                  open={openColorPaletteAction === "colors"}
-                  labels={colorPaletteLabels}
-                  onToggle={() =>
-                    setOpenColorPaletteAction((current) =>
-                      current === "colors" ? null : "colors",
-                    )
-                  }
-                  onSelect={(color) => applyContextColor("colors", color)}
-                  onLabelChange={(id, label) =>
-                    setColorPaletteLabels((current) => ({
-                      ...current,
-                      [id]: label,
-                    }))
-                  }
-                />
-                <MushafColorPalette
-                  action="highlight"
-                  mode={secondaryMode}
-                  selectionType="selection"
-                  open={openColorPaletteAction === "highlight"}
-                  labels={colorPaletteLabels}
-                  onToggle={() =>
-                    setOpenColorPaletteAction((current) =>
-                      current === "highlight" ? null : "highlight",
-                    )
-                  }
-                  onSelect={(color) => applyContextColor("highlight", color)}
-                  onLabelChange={(id, label) =>
-                    setColorPaletteLabels((current) => ({
-                      ...current,
-                      [id]: label,
-                    }))
-                  }
-                />
-                <div className="relative inline-flex">
-                  <button
-                    type="button"
-                    aria-expanded={openUnderlinePalette}
-                    aria-haspopup="true"
-                    aria-pressed={UNDERLINE_STYLE_OPTIONS.some((option) =>
-                      isContextTextActionEnabled(option.action),
-                    )}
-                    className="rounded-lg border px-3 py-2"
-                    onClick={() => {
-                      setOpenColorPaletteAction(null);
-                      setOpenUnderlinePalette((current) => !current);
-                    }}
-                  >
-                    〰️ تسطير
-                  </button>
-                  {openUnderlinePalette && (
-                    <div
-                      className="absolute top-full right-0 z-50 mt-2 flex items-center gap-2 rounded-xl border bg-[var(--background)] p-2 shadow-lg"
-                      role="group"
-                      aria-label="أنواع التسطير"
-                    >
-                      {UNDERLINE_STYLE_OPTIONS.map((option) => (
-                        <button
-                          key={option.action}
-                          type="button"
-                          aria-label={option.label}
-                          aria-pressed={isContextTextActionEnabled(
-                            option.action,
-                          )}
-                          className="flex h-10 w-12 items-center justify-center rounded-lg border p-2"
-                          onClick={() => {
-                            toggleContextUnderlineStyle(option.style);
-                            setOpenUnderlinePalette(false);
-                          }}
-                        >
-                          <UnderlineStyleIcon style={option.style} />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  aria-pressed={isContextTextActionEnabled("hidden")}
-                  className="rounded-lg border px-3 py-2"
-                  onClick={() => toggleContextTextAction("hidden")}
-                >
-                  {isContextTextActionEnabled("hidden") ? "إظهار" : "إخفاء"}
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg border px-3 py-2"
-                  onClick={() => void openAnnotations(contextAyahId())}
-                >
-                  💬 تعليق
-                </button>
-              </div>
-              {contextAudioTarget === "selection" &&
-                renderContextAudioControls()}
-              {taskMenuOpen && renderTaskControls()}
-            </div>
-          )}
-          {contextMenuMessage ? (
-            <div
-              className="text-center text-sm text-[var(--muted)]"
-              role="status"
-              aria-live="polite"
-            >
-              {contextMenuMessage}
-            </div>
-          ) : null}
         </div>
-      ) : null}
-
-      <MushafTafsirPanel
-        ayahId={tafsirAyahId}
-        onClose={() => setTafsirAyahId(null)}
-      />
-
-      {similarAyah && (
-        <MushafSimilarPanel
-          surahNumber={similarAyah.surahNumber}
-          ayahNumber={similarAyah.ayahNumber}
-          onClose={() => setSimilarAyah(null)}
-        />
-      )}
-
-      {qiraatAyah && (
-        <MushafQiraatPanel
-          surahNumber={qiraatAyah.surahNumber}
-          ayahNumber={qiraatAyah.ayahNumber}
-          onClose={() => setQiraatAyah(null)}
-        />
-      )}
-
-      {annotationPanelOpen && (
-        <div
-          className="fixed inset-x-4 bottom-4 z-[60] mx-auto max-h-[70vh] max-w-xl overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 shadow-xl"
-          dir="rtl"
-          role="dialog"
-          aria-modal="true"
-          aria-label="التعليقات والملاحظات"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="font-semibold">التعليقات والملاحظات</h2>
-            <button
-              type="button"
-              className="rounded-lg border px-3 py-1"
-              onClick={() => setAnnotationPanelOpen(false)}
-            >
-              إغلاق
-            </button>
-          </div>
-
-          {annotationAyahId !== null && (
-            <div className="mt-3 space-y-2">
-              {annotations
-                .filter((item) => item.ayahId === annotationAyahId)
-                .map((item) => (
-                  <div key={item.id} className="rounded-lg border p-3">
-                    <p className="whitespace-pre-wrap">{item.content}</p>
-                  </div>
-                ))}
-
-              {annotations.every((item) => item.ayahId !== annotationAyahId) &&
-                !annotationBusy && (
-                  <p className="text-sm text-[var(--muted)]">
-                    لا توجد ملاحظات لهذا الموضع.
-                  </p>
-                )}
-            </div>
-          )}
-
-          {annotationBusy && (
-            <p role="status" className="mt-3 text-sm">
-              جارٍ تحميل الملاحظات أو حفظها…
-            </p>
-          )}
-
-          <form
-            className="mt-3 flex flex-col gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void saveAnnotation();
-            }}
-          >
-            <label htmlFor="mushaf-annotation-content">ملاحظة جديدة</label>
-            <textarea
-              id="mushaf-annotation-content"
-              value={annotationContent}
-              onChange={(event) => setAnnotationContent(event.target.value)}
-              rows={3}
-              maxLength={5000}
-              className="w-full rounded-lg border bg-transparent p-3"
-              placeholder="اكتب ملاحظتك…"
-            />
-
-            <div className="flex items-center justify-between gap-3">
-              <p
-                role="status"
-                aria-live="polite"
-                className="text-sm text-[var(--muted)]"
-              >
-                {annotationStatus}
-              </p>
-              <button
-                type="submit"
-                disabled={
-                  annotationBusy ||
-                  !annotationContent.trim() ||
-                  annotationAyahId === null
-                }
-                className="rounded-lg border px-4 py-2 disabled:opacity-50"
-              >
-                حفظ الملاحظة
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-    </article>
+      </div>
+      </>
   );
 }

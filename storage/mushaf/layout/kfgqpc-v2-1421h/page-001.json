@@ -1,0 +1,356 @@
+{
+  "page": 1,
+  "lines": [
+    {
+      "line": 1,
+      "type": "surah_name",
+      "centered": true,
+      "surahNumber": 1,
+      "words": []
+    },
+    {
+      "line": 2,
+      "type": "ayah",
+      "centered": true,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 1,
+          "key": "1:1:1",
+          "surah": 1,
+          "ayah": 1,
+          "word": 1,
+          "text": "بِسۡمِ"
+        },
+        {
+          "id": 2,
+          "key": "1:1:2",
+          "surah": 1,
+          "ayah": 1,
+          "word": 2,
+          "text": "ٱللَّهِ"
+        },
+        {
+          "id": 3,
+          "key": "1:1:3",
+          "surah": 1,
+          "ayah": 1,
+          "word": 3,
+          "text": "ٱلرَّحۡمَٰنِ"
+        },
+        {
+          "id": 4,
+          "key": "1:1:4",
+          "surah": 1,
+          "ayah": 1,
+          "word": 4,
+          "text": "ٱلرَّحِيمِ"
+        },
+        {
+          "id": 5,
+          "key": "1:1:5",
+          "surah": 1,
+          "ayah": 1,
+          "word": 5,
+          "text": "١"
+        }
+      ]
+    },
+    {
+      "line": 3,
+      "type": "ayah",
+      "centered": true,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 6,
+          "key": "1:2:1",
+          "surah": 1,
+          "ayah": 2,
+          "word": 1,
+          "text": "ٱلۡحَمۡدُ"
+        },
+        {
+          "id": 7,
+          "key": "1:2:2",
+          "surah": 1,
+          "ayah": 2,
+          "word": 2,
+          "text": "لِلَّهِ"
+        },
+        {
+          "id": 8,
+          "key": "1:2:3",
+          "surah": 1,
+          "ayah": 2,
+          "word": 3,
+          "text": "رَبِّ"
+        },
+        {
+          "id": 9,
+          "key": "1:2:4",
+          "surah": 1,
+          "ayah": 2,
+          "word": 4,
+          "text": "ٱلۡعَٰلَمِينَ"
+        },
+        {
+          "id": 10,
+          "key": "1:2:5",
+          "surah": 1,
+          "ayah": 2,
+          "word": 5,
+          "text": "٢"
+        }
+      ]
+    },
+    {
+      "line": 4,
+      "type": "ayah",
+      "centered": true,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 11,
+          "key": "1:3:1",
+          "surah": 1,
+          "ayah": 3,
+          "word": 1,
+          "text": "ٱلرَّحۡمَٰنِ"
+        },
+        {
+          "id": 12,
+          "key": "1:3:2",
+          "surah": 1,
+          "ayah": 3,
+          "word": 2,
+          "text": "ٱلرَّحِيمِ"
+        },
+        {
+          "id": 13,
+          "key": "1:3:3",
+          "surah": 1,
+          "ayah": 3,
+          "word": 3,
+          "text": "٣"
+        },
+        {
+          "id": 14,
+          "key": "1:4:1",
+          "surah": 1,
+          "ayah": 4,
+          "word": 1,
+          "text": "مَٰلِكِ"
+        },
+        {
+          "id": 15,
+          "key": "1:4:2",
+          "surah": 1,
+          "ayah": 4,
+          "word": 2,
+          "text": "يَوۡمِ"
+        },
+        {
+          "id": 16,
+          "key": "1:4:3",
+          "surah": 1,
+          "ayah": 4,
+          "word": 3,
+          "text": "ٱلدِّينِ"
+        },
+        {
+          "id": 17,
+          "key": "1:4:4",
+          "surah": 1,
+          "ayah": 4,
+          "word": 4,
+          "text": "٤"
+        }
+      ]
+    },
+    {
+      "line": 5,
+      "type": "ayah",
+      "centered": true,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 18,
+          "key": "1:5:1",
+          "surah": 1,
+          "ayah": 5,
+          "word": 1,
+          "text": "إِيَّاكَ"
+        },
+        {
+          "id": 19,
+          "key": "1:5:2",
+          "surah": 1,
+          "ayah": 5,
+          "word": 2,
+          "text": "نَعۡبُدُ"
+        },
+        {
+          "id": 20,
+          "key": "1:5:3",
+          "surah": 1,
+          "ayah": 5,
+          "word": 3,
+          "text": "وَإِيَّاكَ"
+        },
+        {
+          "id": 21,
+          "key": "1:5:4",
+          "surah": 1,
+          "ayah": 5,
+          "word": 4,
+          "text": "نَسۡتَعِينُ"
+        },
+        {
+          "id": 22,
+          "key": "1:5:5",
+          "surah": 1,
+          "ayah": 5,
+          "word": 5,
+          "text": "٥"
+        },
+        {
+          "id": 23,
+          "key": "1:6:1",
+          "surah": 1,
+          "ayah": 6,
+          "word": 1,
+          "text": "ٱهۡدِنَا"
+        }
+      ]
+    },
+    {
+      "line": 6,
+      "type": "ayah",
+      "centered": true,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 24,
+          "key": "1:6:2",
+          "surah": 1,
+          "ayah": 6,
+          "word": 2,
+          "text": "ٱلصِّرَٰطَ"
+        },
+        {
+          "id": 25,
+          "key": "1:6:3",
+          "surah": 1,
+          "ayah": 6,
+          "word": 3,
+          "text": "ٱلۡمُسۡتَقِيمَ"
+        },
+        {
+          "id": 26,
+          "key": "1:6:4",
+          "surah": 1,
+          "ayah": 6,
+          "word": 4,
+          "text": "٦"
+        },
+        {
+          "id": 27,
+          "key": "1:7:1",
+          "surah": 1,
+          "ayah": 7,
+          "word": 1,
+          "text": "صِرَٰطَ"
+        },
+        {
+          "id": 28,
+          "key": "1:7:2",
+          "surah": 1,
+          "ayah": 7,
+          "word": 2,
+          "text": "ٱلَّذِينَ"
+        },
+        {
+          "id": 29,
+          "key": "1:7:3",
+          "surah": 1,
+          "ayah": 7,
+          "word": 3,
+          "text": "أَنۡعَمۡتَ"
+        }
+      ]
+    },
+    {
+      "line": 7,
+      "type": "ayah",
+      "centered": true,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 30,
+          "key": "1:7:4",
+          "surah": 1,
+          "ayah": 7,
+          "word": 4,
+          "text": "عَلَيۡهِمۡ"
+        },
+        {
+          "id": 31,
+          "key": "1:7:5",
+          "surah": 1,
+          "ayah": 7,
+          "word": 5,
+          "text": "غَيۡرِ"
+        },
+        {
+          "id": 32,
+          "key": "1:7:6",
+          "surah": 1,
+          "ayah": 7,
+          "word": 6,
+          "text": "ٱلۡمَغۡضُوبِ"
+        },
+        {
+          "id": 33,
+          "key": "1:7:7",
+          "surah": 1,
+          "ayah": 7,
+          "word": 7,
+          "text": "عَلَيۡهِمۡ"
+        }
+      ]
+    },
+    {
+      "line": 8,
+      "type": "ayah",
+      "centered": true,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 34,
+          "key": "1:7:8",
+          "surah": 1,
+          "ayah": 7,
+          "word": 8,
+          "text": "وَلَا"
+        },
+        {
+          "id": 35,
+          "key": "1:7:9",
+          "surah": 1,
+          "ayah": 7,
+          "word": 9,
+          "text": "ٱلضَّآلِّينَ"
+        },
+        {
+          "id": 36,
+          "key": "1:7:10",
+          "surah": 1,
+          "ayah": 7,
+          "word": 10,
+          "text": "٧"
+        }
+      ]
+    }
+  ]
+}

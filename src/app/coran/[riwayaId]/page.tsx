@@ -39,7 +39,7 @@ export default async function RiwayaPage({ params }: RiwayaPageProps) {
 
           <h1 className="mt-2 text-2xl font-bold">المصحف الشريف</h1>
 
-          <p className="mt-2 text-sm text-gray-500">الصفحة الأولى</p>
+          <p className="mt-2 text-sm text-gray-500">متابعة القراءة من آخر موضع</p>
         </div>
 
         <Link
@@ -50,7 +50,12 @@ export default async function RiwayaPage({ params }: RiwayaPageProps) {
         </Link>
       </header>
 
-      <MushafPage mushafId={2} riwayaId={10} pageNumber={1} />
+      <MushafPage
+        mushafId={2}
+        riwayaId={10}
+        pageNumber={1}
+        restoreSavedPosition
+      />
     </main>
   );
 }

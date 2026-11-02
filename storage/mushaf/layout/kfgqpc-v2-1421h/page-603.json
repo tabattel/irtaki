@@ -1,0 +1,775 @@
+{
+  "page": 603,
+  "lines": [
+    {
+      "line": 1,
+      "type": "surah_name",
+      "centered": true,
+      "surahNumber": 109,
+      "words": []
+    },
+    {
+      "line": 2,
+      "type": "basmallah",
+      "centered": true,
+      "surahNumber": "",
+      "words": []
+    },
+    {
+      "line": 3,
+      "type": "ayah",
+      "centered": false,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 83514,
+          "key": "109:1:1",
+          "surah": 109,
+          "ayah": 1,
+          "word": 1,
+          "text": "قُلۡ"
+        },
+        {
+          "id": 83515,
+          "key": "109:1:2",
+          "surah": 109,
+          "ayah": 1,
+          "word": 2,
+          "text": "يَٰٓأَيُّهَا"
+        },
+        {
+          "id": 83516,
+          "key": "109:1:3",
+          "surah": 109,
+          "ayah": 1,
+          "word": 3,
+          "text": "ٱلۡكَٰفِرُونَ"
+        },
+        {
+          "id": 83517,
+          "key": "109:1:4",
+          "surah": 109,
+          "ayah": 1,
+          "word": 4,
+          "text": "١"
+        },
+        {
+          "id": 83518,
+          "key": "109:2:1",
+          "surah": 109,
+          "ayah": 2,
+          "word": 1,
+          "text": "لَآ"
+        },
+        {
+          "id": 83519,
+          "key": "109:2:2",
+          "surah": 109,
+          "ayah": 2,
+          "word": 2,
+          "text": "أَعۡبُدُ"
+        },
+        {
+          "id": 83520,
+          "key": "109:2:3",
+          "surah": 109,
+          "ayah": 2,
+          "word": 3,
+          "text": "مَا"
+        },
+        {
+          "id": 83521,
+          "key": "109:2:4",
+          "surah": 109,
+          "ayah": 2,
+          "word": 4,
+          "text": "تَعۡبُدُونَ"
+        },
+        {
+          "id": 83522,
+          "key": "109:2:5",
+          "surah": 109,
+          "ayah": 2,
+          "word": 5,
+          "text": "٢"
+        }
+      ]
+    },
+    {
+      "line": 4,
+      "type": "ayah",
+      "centered": false,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 83523,
+          "key": "109:3:1",
+          "surah": 109,
+          "ayah": 3,
+          "word": 1,
+          "text": "وَلَآ"
+        },
+        {
+          "id": 83524,
+          "key": "109:3:2",
+          "surah": 109,
+          "ayah": 3,
+          "word": 2,
+          "text": "أَنتُمۡ"
+        },
+        {
+          "id": 83525,
+          "key": "109:3:3",
+          "surah": 109,
+          "ayah": 3,
+          "word": 3,
+          "text": "عَٰبِدُونَ"
+        },
+        {
+          "id": 83526,
+          "key": "109:3:4",
+          "surah": 109,
+          "ayah": 3,
+          "word": 4,
+          "text": "مَآ"
+        },
+        {
+          "id": 83527,
+          "key": "109:3:5",
+          "surah": 109,
+          "ayah": 3,
+          "word": 5,
+          "text": "أَعۡبُدُ"
+        },
+        {
+          "id": 83528,
+          "key": "109:3:6",
+          "surah": 109,
+          "ayah": 3,
+          "word": 6,
+          "text": "٣"
+        },
+        {
+          "id": 83529,
+          "key": "109:4:1",
+          "surah": 109,
+          "ayah": 4,
+          "word": 1,
+          "text": "وَلَآ"
+        },
+        {
+          "id": 83530,
+          "key": "109:4:2",
+          "surah": 109,
+          "ayah": 4,
+          "word": 2,
+          "text": "أَنَا۠"
+        },
+        {
+          "id": 83531,
+          "key": "109:4:3",
+          "surah": 109,
+          "ayah": 4,
+          "word": 3,
+          "text": "عَابِدٞ"
+        },
+        {
+          "id": 83532,
+          "key": "109:4:4",
+          "surah": 109,
+          "ayah": 4,
+          "word": 4,
+          "text": "مَّا"
+        },
+        {
+          "id": 83533,
+          "key": "109:4:5",
+          "surah": 109,
+          "ayah": 4,
+          "word": 5,
+          "text": "عَبَدتُّمۡ"
+        },
+        {
+          "id": 83534,
+          "key": "109:4:6",
+          "surah": 109,
+          "ayah": 4,
+          "word": 6,
+          "text": "٤"
+        }
+      ]
+    },
+    {
+      "line": 5,
+      "type": "ayah",
+      "centered": false,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 83535,
+          "key": "109:5:1",
+          "surah": 109,
+          "ayah": 5,
+          "word": 1,
+          "text": "وَلَآ"
+        },
+        {
+          "id": 83536,
+          "key": "109:5:2",
+          "surah": 109,
+          "ayah": 5,
+          "word": 2,
+          "text": "أَنتُمۡ"
+        },
+        {
+          "id": 83537,
+          "key": "109:5:3",
+          "surah": 109,
+          "ayah": 5,
+          "word": 3,
+          "text": "عَٰبِدُونَ"
+        },
+        {
+          "id": 83538,
+          "key": "109:5:4",
+          "surah": 109,
+          "ayah": 5,
+          "word": 4,
+          "text": "مَآ"
+        },
+        {
+          "id": 83539,
+          "key": "109:5:5",
+          "surah": 109,
+          "ayah": 5,
+          "word": 5,
+          "text": "أَعۡبُدُ"
+        },
+        {
+          "id": 83540,
+          "key": "109:5:6",
+          "surah": 109,
+          "ayah": 5,
+          "word": 6,
+          "text": "٥"
+        },
+        {
+          "id": 83541,
+          "key": "109:6:1",
+          "surah": 109,
+          "ayah": 6,
+          "word": 1,
+          "text": "لَكُمۡ"
+        },
+        {
+          "id": 83542,
+          "key": "109:6:2",
+          "surah": 109,
+          "ayah": 6,
+          "word": 2,
+          "text": "دِينُكُمۡ"
+        },
+        {
+          "id": 83543,
+          "key": "109:6:3",
+          "surah": 109,
+          "ayah": 6,
+          "word": 3,
+          "text": "وَلِيَ"
+        },
+        {
+          "id": 83544,
+          "key": "109:6:4",
+          "surah": 109,
+          "ayah": 6,
+          "word": 4,
+          "text": "دِينِ"
+        },
+        {
+          "id": 83545,
+          "key": "109:6:5",
+          "surah": 109,
+          "ayah": 6,
+          "word": 5,
+          "text": "٦"
+        }
+      ]
+    },
+    {
+      "line": 6,
+      "type": "surah_name",
+      "centered": true,
+      "surahNumber": 110,
+      "words": []
+    },
+    {
+      "line": 7,
+      "type": "basmallah",
+      "centered": true,
+      "surahNumber": "",
+      "words": []
+    },
+    {
+      "line": 8,
+      "type": "ayah",
+      "centered": false,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 83546,
+          "key": "110:1:1",
+          "surah": 110,
+          "ayah": 1,
+          "word": 1,
+          "text": "إِذَا"
+        },
+        {
+          "id": 83547,
+          "key": "110:1:2",
+          "surah": 110,
+          "ayah": 1,
+          "word": 2,
+          "text": "جَآءَ"
+        },
+        {
+          "id": 83548,
+          "key": "110:1:3",
+          "surah": 110,
+          "ayah": 1,
+          "word": 3,
+          "text": "نَصۡرُ"
+        },
+        {
+          "id": 83549,
+          "key": "110:1:4",
+          "surah": 110,
+          "ayah": 1,
+          "word": 4,
+          "text": "ٱللَّهِ"
+        },
+        {
+          "id": 83550,
+          "key": "110:1:5",
+          "surah": 110,
+          "ayah": 1,
+          "word": 5,
+          "text": "وَٱلۡفَتۡحُ"
+        },
+        {
+          "id": 83551,
+          "key": "110:1:6",
+          "surah": 110,
+          "ayah": 1,
+          "word": 6,
+          "text": "١"
+        },
+        {
+          "id": 83552,
+          "key": "110:2:1",
+          "surah": 110,
+          "ayah": 2,
+          "word": 1,
+          "text": "وَرَأَيۡتَ"
+        },
+        {
+          "id": 83553,
+          "key": "110:2:2",
+          "surah": 110,
+          "ayah": 2,
+          "word": 2,
+          "text": "ٱلنَّاسَ"
+        }
+      ]
+    },
+    {
+      "line": 9,
+      "type": "ayah",
+      "centered": false,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 83554,
+          "key": "110:2:3",
+          "surah": 110,
+          "ayah": 2,
+          "word": 3,
+          "text": "يَدۡخُلُونَ"
+        },
+        {
+          "id": 83555,
+          "key": "110:2:4",
+          "surah": 110,
+          "ayah": 2,
+          "word": 4,
+          "text": "فِي"
+        },
+        {
+          "id": 83556,
+          "key": "110:2:5",
+          "surah": 110,
+          "ayah": 2,
+          "word": 5,
+          "text": "دِينِ"
+        },
+        {
+          "id": 83557,
+          "key": "110:2:6",
+          "surah": 110,
+          "ayah": 2,
+          "word": 6,
+          "text": "ٱللَّهِ"
+        },
+        {
+          "id": 83558,
+          "key": "110:2:7",
+          "surah": 110,
+          "ayah": 2,
+          "word": 7,
+          "text": "أَفۡوَاجٗا"
+        },
+        {
+          "id": 83559,
+          "key": "110:2:8",
+          "surah": 110,
+          "ayah": 2,
+          "word": 8,
+          "text": "٢"
+        },
+        {
+          "id": 83560,
+          "key": "110:3:1",
+          "surah": 110,
+          "ayah": 3,
+          "word": 1,
+          "text": "فَسَبِّحۡ"
+        },
+        {
+          "id": 83561,
+          "key": "110:3:2",
+          "surah": 110,
+          "ayah": 3,
+          "word": 2,
+          "text": "بِحَمۡدِ"
+        },
+        {
+          "id": 83562,
+          "key": "110:3:3",
+          "surah": 110,
+          "ayah": 3,
+          "word": 3,
+          "text": "رَبِّكَ"
+        }
+      ]
+    },
+    {
+      "line": 10,
+      "type": "ayah",
+      "centered": true,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 83563,
+          "key": "110:3:4",
+          "surah": 110,
+          "ayah": 3,
+          "word": 4,
+          "text": "وَٱسۡتَغۡفِرۡهُۚ"
+        },
+        {
+          "id": 83564,
+          "key": "110:3:5",
+          "surah": 110,
+          "ayah": 3,
+          "word": 5,
+          "text": "إِنَّهُۥ"
+        },
+        {
+          "id": 83565,
+          "key": "110:3:6",
+          "surah": 110,
+          "ayah": 3,
+          "word": 6,
+          "text": "كَانَ"
+        },
+        {
+          "id": 83566,
+          "key": "110:3:7",
+          "surah": 110,
+          "ayah": 3,
+          "word": 7,
+          "text": "تَوَّابَۢا"
+        },
+        {
+          "id": 83567,
+          "key": "110:3:8",
+          "surah": 110,
+          "ayah": 3,
+          "word": 8,
+          "text": "٣"
+        }
+      ]
+    },
+    {
+      "line": 11,
+      "type": "surah_name",
+      "centered": true,
+      "surahNumber": 111,
+      "words": []
+    },
+    {
+      "line": 12,
+      "type": "basmallah",
+      "centered": true,
+      "surahNumber": "",
+      "words": []
+    },
+    {
+      "line": 13,
+      "type": "ayah",
+      "centered": false,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 83568,
+          "key": "111:1:1",
+          "surah": 111,
+          "ayah": 1,
+          "word": 1,
+          "text": "تَبَّتۡ"
+        },
+        {
+          "id": 83569,
+          "key": "111:1:2",
+          "surah": 111,
+          "ayah": 1,
+          "word": 2,
+          "text": "يَدَآ"
+        },
+        {
+          "id": 83570,
+          "key": "111:1:3",
+          "surah": 111,
+          "ayah": 1,
+          "word": 3,
+          "text": "أَبِي"
+        },
+        {
+          "id": 83571,
+          "key": "111:1:4",
+          "surah": 111,
+          "ayah": 1,
+          "word": 4,
+          "text": "لَهَبٖ"
+        },
+        {
+          "id": 83572,
+          "key": "111:1:5",
+          "surah": 111,
+          "ayah": 1,
+          "word": 5,
+          "text": "وَتَبَّ"
+        },
+        {
+          "id": 83573,
+          "key": "111:1:6",
+          "surah": 111,
+          "ayah": 1,
+          "word": 6,
+          "text": "١"
+        },
+        {
+          "id": 83574,
+          "key": "111:2:1",
+          "surah": 111,
+          "ayah": 2,
+          "word": 1,
+          "text": "مَآ"
+        },
+        {
+          "id": 83575,
+          "key": "111:2:2",
+          "surah": 111,
+          "ayah": 2,
+          "word": 2,
+          "text": "أَغۡنَىٰ"
+        },
+        {
+          "id": 83576,
+          "key": "111:2:3",
+          "surah": 111,
+          "ayah": 2,
+          "word": 3,
+          "text": "عَنۡهُ"
+        },
+        {
+          "id": 83577,
+          "key": "111:2:4",
+          "surah": 111,
+          "ayah": 2,
+          "word": 4,
+          "text": "مَالُهُۥ"
+        },
+        {
+          "id": 83578,
+          "key": "111:2:5",
+          "surah": 111,
+          "ayah": 2,
+          "word": 5,
+          "text": "وَمَا"
+        },
+        {
+          "id": 83579,
+          "key": "111:2:6",
+          "surah": 111,
+          "ayah": 2,
+          "word": 6,
+          "text": "كَسَبَ"
+        },
+        {
+          "id": 83580,
+          "key": "111:2:7",
+          "surah": 111,
+          "ayah": 2,
+          "word": 7,
+          "text": "٢"
+        }
+      ]
+    },
+    {
+      "line": 14,
+      "type": "ayah",
+      "centered": false,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 83581,
+          "key": "111:3:1",
+          "surah": 111,
+          "ayah": 3,
+          "word": 1,
+          "text": "سَيَصۡلَىٰ"
+        },
+        {
+          "id": 83582,
+          "key": "111:3:2",
+          "surah": 111,
+          "ayah": 3,
+          "word": 2,
+          "text": "نَارٗا"
+        },
+        {
+          "id": 83583,
+          "key": "111:3:3",
+          "surah": 111,
+          "ayah": 3,
+          "word": 3,
+          "text": "ذَاتَ"
+        },
+        {
+          "id": 83584,
+          "key": "111:3:4",
+          "surah": 111,
+          "ayah": 3,
+          "word": 4,
+          "text": "لَهَبٖ"
+        },
+        {
+          "id": 83585,
+          "key": "111:3:5",
+          "surah": 111,
+          "ayah": 3,
+          "word": 5,
+          "text": "٣"
+        },
+        {
+          "id": 83586,
+          "key": "111:4:1",
+          "surah": 111,
+          "ayah": 4,
+          "word": 1,
+          "text": "وَٱمۡرَأَتُهُۥ"
+        },
+        {
+          "id": 83587,
+          "key": "111:4:2",
+          "surah": 111,
+          "ayah": 4,
+          "word": 2,
+          "text": "حَمَّالَةَ"
+        },
+        {
+          "id": 83588,
+          "key": "111:4:3",
+          "surah": 111,
+          "ayah": 4,
+          "word": 3,
+          "text": "ٱلۡحَطَبِ"
+        },
+        {
+          "id": 83589,
+          "key": "111:4:4",
+          "surah": 111,
+          "ayah": 4,
+          "word": 4,
+          "text": "٤"
+        }
+      ]
+    },
+    {
+      "line": 15,
+      "type": "ayah",
+      "centered": true,
+      "surahNumber": "",
+      "words": [
+        {
+          "id": 83590,
+          "key": "111:5:1",
+          "surah": 111,
+          "ayah": 5,
+          "word": 1,
+          "text": "فِي"
+        },
+        {
+          "id": 83591,
+          "key": "111:5:2",
+          "surah": 111,
+          "ayah": 5,
+          "word": 2,
+          "text": "جِيدِهَا"
+        },
+        {
+          "id": 83592,
+          "key": "111:5:3",
+          "surah": 111,
+          "ayah": 5,
+          "word": 3,
+          "text": "حَبۡلٞ"
+        },
+        {
+          "id": 83593,
+          "key": "111:5:4",
+          "surah": 111,
+          "ayah": 5,
+          "word": 4,
+          "text": "مِّن"
+        },
+        {
+          "id": 83594,
+          "key": "111:5:5",
+          "surah": 111,
+          "ayah": 5,
+          "word": 5,
+          "text": "مَّسَدِۭ"
+        },
+        {
+          "id": 83595,
+          "key": "111:5:6",
+          "surah": 111,
+          "ayah": 5,
+          "word": 6,
+          "text": "٥"
+        }
+      ]
+    }
+  ]
+}
