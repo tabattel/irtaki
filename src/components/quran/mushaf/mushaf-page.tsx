@@ -503,6 +503,7 @@ type AudioContinuation = {
   endSurahNumber: number;
   endAyahNumber: number;
   playbackRate: number;
+  selectionDurationSeconds?: number;
 };
 const MOVE_THRESHOLD = 20;
 const SWIPE_THRESHOLD = 50;
@@ -2973,6 +2974,11 @@ export function MushafPage({
         endSurahNumber: parsed.endSurahNumber,
         endAyahNumber: parsed.endAyahNumber,
         playbackRate: parsed.playbackRate,
+        ...(typeof parsed.selectionDurationSeconds === "number" &&
+        Number.isFinite(parsed.selectionDurationSeconds) &&
+        parsed.selectionDurationSeconds > 0
+          ? { selectionDurationSeconds: parsed.selectionDurationSeconds }
+          : {}),
       };
     } catch {
       return undefined;
@@ -3677,6 +3683,54 @@ export function MushafPage({
 
       const startPage = targetAyah.pageNumber;
 
+      let selectionDurationSeconds: number | undefined;
+
+      const selectionSilenceEnabled =
+        Number(audioSettingsRef.current.silenceBeforeSelection) > 0 ||
+        Number(audioSettingsRef.current.silenceAfterSelection) > 0;
+
+      if (selectionSilenceEnabled) {
+        try {
+          const durationResponse = await fetch("/api/audio/duration", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              reciterId: selectedReciter,
+              startSurah,
+              startAyah,
+              endSurah,
+              endAyah,
+            }),
+          });
+
+          if (!durationResponse.ok) {
+            throw new Error("Audio duration request failed");
+          }
+
+          const durationPayload = (await durationResponse.json()) as {
+            data?: {
+              totalDurationSeconds?: unknown;
+            };
+          };
+
+          const totalDuration = durationPayload.data?.totalDurationSeconds;
+
+          if (
+            typeof totalDuration !== "number" ||
+            !Number.isFinite(totalDuration) ||
+            totalDuration <= 0
+          ) {
+            throw new Error("Invalid selection duration");
+          }
+
+          selectionDurationSeconds = totalDuration;
+        } catch {
+          setIsPlaying(false);
+          showSecondaryMessage("تعذر حساب مدة التحديد");
+          return;
+        }
+      }
+
       const continuation: AudioContinuation = {
         reciterId: selectedReciter,
         surahNumber: startSurah,
@@ -3684,6 +3738,9 @@ export function MushafPage({
         endSurahNumber: endSurah,
         endAyahNumber: endAyah,
         playbackRate,
+        ...(selectionDurationSeconds !== undefined
+          ? { selectionDurationSeconds }
+          : {}),
       };
 
       writeAudioContinuation(continuation);
@@ -3711,9 +3768,47 @@ export function MushafPage({
 
         if (visibleTargetAyah) {
           setSelectedAyahId(visibleTargetAyah.id);
-          window.setTimeout(() => {
-            void playCurrentAyah();
-          }, 0);
+
+          const beforeSelectionCoefficient = Number(
+            audioSettingsRef.current.silenceBeforeSelection,
+          );
+
+          if (
+            Number.isFinite(beforeSelectionCoefficient) &&
+            beforeSelectionCoefficient > 0 &&
+            typeof selectionDurationSeconds === "number" &&
+            Number.isFinite(selectionDurationSeconds) &&
+            selectionDurationSeconds > 0
+          ) {
+            const currentAudio = audioRef.current;
+            currentAudio?.pause();
+            setIsPlaying(false);
+
+            const effectivePlaybackRate =
+              currentAudio &&
+              Number.isFinite(currentAudio.playbackRate) &&
+              currentAudio.playbackRate > 0
+                ? currentAudio.playbackRate
+                : playbackRate;
+
+            const delayMs = Math.ceil(
+              (selectionDurationSeconds / effectivePlaybackRate) *
+                beforeSelectionCoefficient *
+                1000,
+            );
+
+            const timer = window.setTimeout(() => {
+              silenceCancelRef.current = null;
+              void playCurrentAyah();
+            }, delayMs);
+
+            silenceCancelRef.current = () => window.clearTimeout(timer);
+          } else {
+            window.setTimeout(() => {
+              void playCurrentAyah();
+            }, 0);
+          }
+
           return;
         }
       }
@@ -4145,13 +4240,49 @@ export function MushafPage({
       return;
     }
 
-    function replayCurrentAyah() {
+    function replayCurrentAyah(selectionDurationSeconds?: number) {
       const el = audioRef.current;
       if (!el) return;
-      el.currentTime = 0;
-      void el.play().catch(() => {
+
+      const startPlayback = () => {
+        silenceCancelRef.current = null;
+        el.currentTime = 0;
+        void el.play().catch(() => {
+          setIsPlaying(false);
+        });
+      };
+
+      const beforeSelection = Number(
+        audioSettingsRef.current.silenceBeforeSelection,
+      );
+
+      const effectivePlaybackRate =
+        Number.isFinite(el.playbackRate) && el.playbackRate > 0
+          ? el.playbackRate
+          : 1;
+
+      if (
+        typeof selectionDurationSeconds === "number" &&
+        Number.isFinite(selectionDurationSeconds) &&
+        selectionDurationSeconds > 0 &&
+        Number.isFinite(beforeSelection) &&
+        beforeSelection > 0
+      ) {
+        el.pause();
         setIsPlaying(false);
-      });
+
+        const delayMs = Math.ceil(
+          (selectionDurationSeconds / effectivePlaybackRate) *
+            beforeSelection *
+            1000,
+        );
+
+        const timer = window.setTimeout(startPlayback, delayMs);
+        silenceCancelRef.current = () => window.clearTimeout(timer);
+        return;
+      }
+
+      startPlayback();
     }
 
     function handleEnded() {
@@ -4204,13 +4335,35 @@ export function MushafPage({
         loop: readAudioLoop() ?? null,
       });
 
-      // Silence après l'ayah (ou après la plage), exprimé en secondes.
+      // Le coefficient multiplie la durée audio réelle, corrigée
+      // selon la vitesse effective du lecteur.
       if (!silenceDoneRef.current) {
-        const seconds = Number(
+        const endedAudio = audioRef.current;
+        const effectivePlaybackRate =
+          endedAudio &&
+          Number.isFinite(endedAudio.playbackRate) &&
+          endedAudio.playbackRate > 0
+            ? endedAudio.playbackRate
+            : 1;
+
+        const referenceDuration = atRangeEnd
+          ? rangeContinuation?.selectionDurationSeconds
+          : endedAudio?.duration;
+
+        const coefficient = Number(
           atRangeEnd
             ? settings.silenceAfterSelection
             : settings.silenceAfterAyah,
         );
+
+        const seconds =
+          typeof referenceDuration === "number" &&
+          Number.isFinite(referenceDuration) &&
+          referenceDuration > 0 &&
+          Number.isFinite(coefficient) &&
+          coefficient > 0
+            ? (referenceDuration / effectivePlaybackRate) * coefficient
+            : 0;
 
         if (seconds > 0) {
           const timer = window.setTimeout(() => {
@@ -4252,7 +4405,9 @@ export function MushafPage({
               loop.startAyah === rangeContinuation.endAyahNumber;
 
             if (rangeIsSingleAyah) {
-              replayCurrentAyah();
+              replayCurrentAyah(
+                rangeContinuation.selectionDurationSeconds,
+              );
             } else {
               audioShouldContinueRef.current = true;
               if (activatePreloadedAudio(startAyahOnPage)) return;
@@ -4741,24 +4896,81 @@ export function MushafPage({
         loop.startSurah === currentAyah.surahNumber &&
         loop.startAyah === currentAyah.number,
       );
-      const beforeSeconds = Number(
+      const beforeCoefficient = Number(
         isRangeStart
           ? audioSettingsRef.current.silenceBeforeSelection
           : audioSettingsRef.current.silenceBeforeAyah,
       );
 
-      if (beforeSeconds > 0) {
-        const onMetadata = () => {
-          const seconds = beforeSeconds;
+      if (beforeCoefficient > 0) {
+        const scheduleBeforePlayback = (referenceDuration: number) => {
+          const effectivePlaybackRate =
+            Number.isFinite(audio.playbackRate) && audio.playbackRate > 0
+              ? audio.playbackRate
+              : 1;
+
+          const seconds =
+            (referenceDuration / effectivePlaybackRate) * beforeCoefficient;
+
+          if (!Number.isFinite(seconds) || seconds <= 0) {
+            startPlayback();
+            return;
+          }
+
           const timer = window.setTimeout(() => {
             silenceCancelRef.current = null;
             startPlayback();
-          }, seconds * 1000);
+          }, Math.ceil(seconds * 1000));
+
           silenceCancelRef.current = () => window.clearTimeout(timer);
         };
-        audio.addEventListener("loadedmetadata", onMetadata, { once: true });
-        silenceCancelRef.current = () =>
-          audio.removeEventListener("loadedmetadata", onMetadata);
+
+        if (isRangeStart) {
+          const duration = continuation?.selectionDurationSeconds;
+
+          if (
+            typeof duration !== "number" ||
+            !Number.isFinite(duration) ||
+            duration <= 0
+          ) {
+            showSecondaryMessage("تعذر حساب مدة التحديد");
+            startPlayback();
+          } else {
+            scheduleBeforePlayback(duration);
+          }
+        } else if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
+          scheduleBeforePlayback(audio.duration);
+        } else {
+          const cleanupMetadataListeners = () => {
+            audio.removeEventListener("loadedmetadata", onMetadata);
+            audio.removeEventListener("error", onMetadataError);
+          };
+
+          const onMetadata = () => {
+            cleanupMetadataListeners();
+            silenceCancelRef.current = null;
+
+            if (
+              Number.isFinite(audio.duration) &&
+              audio.duration > 0
+            ) {
+              scheduleBeforePlayback(audio.duration);
+            } else {
+              startPlayback();
+            }
+          };
+
+          const onMetadataError = () => {
+            cleanupMetadataListeners();
+            silenceCancelRef.current = null;
+            startPlayback();
+          };
+
+          audio.addEventListener("loadedmetadata", onMetadata, { once: true });
+          audio.addEventListener("error", onMetadataError, { once: true });
+
+          silenceCancelRef.current = cleanupMetadataListeners;
+        }
       } else {
         startPlayback();
       }
@@ -5772,6 +5984,29 @@ export function MushafPage({
                     onClick={togglePlayback}
                   >
                     {isPlaying ? "⏸" : "▶"}
+                  </button>
+                )}
+
+                {secondaryMode === "recitation" && (
+                  <button
+                    type="button"
+                    className="min-h-10 rounded-lg border px-3 py-2 text-sm"
+                    aria-label={
+                      listeningAyahsHidden
+                        ? "إظهار نص الآيات"
+                        : "إخفاء نص الآيات"
+                    }
+                    aria-pressed={listeningAyahsHidden}
+                    title={
+                      listeningAyahsHidden
+                        ? "إظهار نص الآيات"
+                        : "إخفاء نص الآيات"
+                    }
+                    onClick={toggleGlobalTextVisibility}
+                  >
+                    {listeningAyahsHidden
+                      ? "👁 إظهار النص"
+                      : "🙈 إخفاء النص"}
                   </button>
                 )}
 
