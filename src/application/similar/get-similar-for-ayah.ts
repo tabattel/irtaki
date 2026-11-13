@@ -9,7 +9,7 @@ import {
 } from "@irtaki/resource";
 
 const DEFAULT_RAW_ROOT =
-  "/home/zaki/irtaki/storage/quranpedia/2026-10-31/raw";
+  "/home/zaki/Projets/storage/quranpedia/2026-11-11/raw";
 
 const DATA_FILE_NAME = "similar.json.gz";
 

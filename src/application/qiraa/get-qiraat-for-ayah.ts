@@ -9,7 +9,7 @@ import {
 } from "@irtaki/resource";
 
 const DEFAULT_RAW_ROOT =
-  "/home/zaki/irtaki/storage/quranpedia/2026-09-11/raw";
+  "/home/zaki/Projets/storage/quranpedia/2026-11-11/raw";
 
 const DATA_FILE_NAME = "qiraat.json.gz";
 
