@@ -17,9 +17,10 @@ logger = logging.getLogger("irtaki.tarteel")
 
 SAMPLE_RATE = 16000
 PACKET_SECONDS = 0.2
-INFERENCE_INTERVAL = 0.8
-MIN_AUDIO_SECONDS = 1.2
-WINDOW_SECONDS = 20
+INFERENCE_INTERVAL = 0.5
+MIN_AUDIO_SECONDS = 0.8
+WINDOW_SECONDS = 12
+SILENCE_RMS = 0.012  # seuil de silence (RMS), utilisé à l'étape suivante
 
 ROOT = Path(__file__).resolve().parents[2]
 

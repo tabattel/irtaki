@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  MushafTarteelTalkButton,
+  type TarteelTalkState,
+} from "./mushaf-tarteel-talk-button";
 
 import { MushafTarteelRecognitionCapture } from "./mushaf-tarteel-recognition-capture";
 import { MushafTarteelRecognitionClient } from "./mushaf-tarteel-recognition-client";
@@ -144,6 +149,41 @@ export function MushafTarteelController({
   const [transcript, setTranscript] = useState("");
   const [transcriptHidden, setTranscriptHidden] = useState(false);
   const [levels, setLevels] = useState<number[]>(INITIAL_LEVELS);
+
+  // Slot portail : barre Tarteel inline avec Tarteel X et ⋮
+  const [inlineSlot, setInlineSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const tryFind = () => {
+      const el = document.getElementById("irtaki-tarteel-inline-slot");
+      if (el) {
+        if (!cancelled) setInlineSlot(el);
+        return;
+      }
+      if (!cancelled) requestAnimationFrame(tryFind);
+    };
+    tryFind();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Mapping vers le bouton talk
+  const talkState: TarteelTalkState =
+    status === "error"
+      ? "error"
+      : status === "requesting" ||
+          status === "connecting" ||
+          status === "stopping"
+        ? "loading"
+        : status === "recording"
+          ? "listening"
+          : "idle";
+
+  const audioLevel =
+    levels.length > 0
+      ? levels.reduce((sum, v) => sum + v, 0) / levels.length
+      : 0;
 
   const releaseMicrophone = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -539,9 +579,10 @@ export function MushafTarteelController({
       <MushafTarteelRecognitionCapture />
       <MushafTarteelRecognitionClient />
 
-      <div className="w-full min-w-0 overflow-x-auto">
-        <div
-          className="flex min-w-max items-center gap-2 py-2"
+      {inlineSlot
+        ? createPortal(
+            <div
+          className="flex min-w-0 items-center gap-1.5 overflow-x-auto"
           role="toolbar"
           aria-label="أدوات الترتيل المباشر"
         >
@@ -576,89 +617,36 @@ export function MushafTarteelController({
             </svg>
           </button>
 
-          <button
-            type="button"
-            className="h-10 shrink-0 rounded-lg border px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={toggleRecording}
-            disabled={
-              status === "requesting" ||
-              status === "connecting" ||
-              status === "stopping" ||
-              !mode
-            }
-          >
-            {buttonLabel}
-          </button>
+          <MushafTarteelTalkButton
+            state={talkState}
+            audioLevel={audioLevel}
+            onStart={startSession}
+            onStop={stopSession}
+            compact
+          />
 
-          <button
-            type="button"
-            className="h-10 shrink-0 rounded-lg border border-rose-500 px-3 text-sm disabled:opacity-40"
-            onClick={stopSession}
-            disabled={!isBusy || status === "stopping"}
-          >
-            ■ إيقاف
-          </button>
-
-          <div
-            className="flex h-10 shrink-0 items-center gap-[3px] rounded-lg border px-2"
-            role="img"
-            aria-label="مستوى الصوت المباشر"
-          >
-            {levels.map((level, index) => (
-              <span
-                key={index}
-                className="w-[3px] rounded-full bg-current opacity-75"
-                style={{
-                  height: `${Math.max(4, Math.round(level * 28))}px`,
-                }}
-              />
-            ))}
-          </div>
-
-          <span
-            className="max-w-36 shrink-0 truncate text-xs text-[var(--muted)]"
-            role="status"
-            aria-live="polite"
-          >
-            {statusLabels[status]}
-          </span>
-
-          <button
-            type="button"
-            className="h-10 shrink-0 rounded-lg border px-3 text-sm"
-            aria-label={
-              transcriptHidden
-                ? "إظهار نص التعرف"
-                : "إخفاء نص التعرف"
-            }
-            aria-pressed={transcriptHidden}
-            onClick={() => setTranscriptHidden((current) => !current)}
-          >
-            {transcriptHidden ? "إظهار التفريغ" : "إخفاء التفريغ"}
-          </button>
-
-          <div
-            className="flex h-10 min-w-40 max-w-72 items-center overflow-hidden rounded-lg border px-3"
-            dir="rtl"
-            aria-live="polite"
-            aria-label="آخر خمس كلمات متعرف عليها"
-          >
-            {transcriptHidden ? (
-              <span className="text-xs text-[var(--muted)]">
-                التفريغ مخفي
-              </span>
-            ) : lastWords.length > 0 ? (
-              <span className="truncate text-sm">
-                {lastWords.join(" ")}
-              </span>
-            ) : (
-              <span className="text-xs text-[var(--muted)]">
-                الكلمات المتعرف عليها ستظهر هنا
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+          {!transcriptHidden && (
+            <div
+              className="flex h-10 min-w-40 max-w-72 shrink-0 items-center overflow-hidden rounded-lg border px-3"
+              dir="rtl"
+              aria-live="polite"
+              aria-label="آخر خمس كلمات متعرف عليها"
+            >
+              {lastWords.length > 0 ? (
+                <span className="truncate text-sm">
+                  {lastWords.join(" ")}
+                </span>
+              ) : (
+                <span className="text-xs text-[var(--muted)]">
+                  الكلمات المتعرف عليها ستظهر هنا
+                </span>
+              )}
+            </div>
+          )}
+        </div>,
+            inlineSlot
+          )
+        : null}
 
       {message && (
         <p className="text-sm text-rose-600" role="alert">

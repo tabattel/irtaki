@@ -853,12 +853,104 @@ export function MushafPage({
   const tarteelPendingNavigationKeyRef = useRef<string | null>(null);
   const tarteelHighlightTimerRef = useRef<number | null>(null);
 
+  // Précharger le catalogue au montage (avant tout clic Tarteel),
+  // pour que le cold start de 2-5 s soit absorbé pendant que
+  // l'utilisateur lit la page, pas pendant sa récitation.
   useEffect(() => {
     let cancelled = false;
 
     async function loadTarteelCatalog() {
+      const t0 = performance.now();
       try {
-        const catalog = await getAllAyahs();
+        // Cache localStorage + timing du chargement.
+        const CACHE_KEY = "irtaki.tarteel.catalog.v1";
+        const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+        let catalog: Awaited<ReturnType<typeof getAllAyahs>> = [];
+
+        try {
+          const raw = window.localStorage.getItem(CACHE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as {
+              savedAt: number;
+              ayahs: Awaited<ReturnType<typeof getAllAyahs>>;
+            };
+            if (
+              parsed &&
+              typeof parsed.savedAt === "number" &&
+              Date.now() - parsed.savedAt < CACHE_MAX_AGE_MS &&
+              Array.isArray(parsed.ayahs) &&
+              parsed.ayahs.length > 6000
+            ) {
+              catalog = parsed.ayahs;
+              console.info(
+                "[TARTEEL] Catalogue lu depuis cache localStorage :",
+                catalog.length,
+                "ayahs."
+              );
+            }
+          }
+        } catch {
+          // localStorage indisponible, ignorer.
+        }
+
+        if (catalog.length === 0) {
+          const tGetAll = performance.now();
+          catalog = await getAllAyahs();
+          console.info(
+            "[TARTEEL] getAllAyahs :",
+            ((performance.now() - tGetAll) / 1000).toFixed(2),
+            "s,",
+            catalog.length,
+            "ayahs."
+          );
+          try {
+            window.localStorage.setItem(
+              CACHE_KEY,
+              JSON.stringify({ savedAt: Date.now(), ayahs: catalog })
+            );
+          } catch {
+            // Quota localStorage dépassé, ignorer.
+          }
+        }
+
+        if (cancelled) return;
+        tarteelGlobalAyahsRef.current = catalog;
+
+        // ===== Fast path : construire les cibles depuis les ayahs =====
+        // 1 requête getAllAyahs() au lieu des 604 layouts → gain ~20 s.
+        const fastTargets: Array<{ key: string; text: string }> = [];
+        for (const ayah of catalog) {
+          const ayahText = (ayah as { text?: string }).text;
+          if (typeof ayahText !== "string" || !ayahText) continue;
+          const words = ayahText.split(/\s+/).filter(Boolean);
+          for (let i = 0; i < words.length; i += 1) {
+            if (!/[\u0621-\u064A]/.test(words[i])) continue;
+            fastTargets.push({
+              key: `${ayah.surahNumber}:${ayah.number}:${i + 1}`,
+              text: words[i],
+            });
+          }
+        }
+
+        if (fastTargets.length >= 60000) {
+          tarteelGlobalTargetsRef.current = fastTargets;
+          console.info(
+            "[TARTEEL] Catalogue construit depuis ayahs en",
+            ((performance.now() - t0) / 1000).toFixed(2),
+            "s :",
+            catalog.length,
+            "ayahs,",
+            fastTargets.length,
+            "mots (fast path).",
+          );
+          return;
+        }
+
+        console.warn(
+          "[TARTEEL] Fast path insuffisant (",
+          fastTargets.length,
+          "mots). Fallback vers les layouts."
+        );
 
         const layouts: MushafPageLayout[] = [];
         const pageCount = 604;
@@ -885,8 +977,6 @@ export function MushafPage({
 
         if (cancelled) return;
 
-        tarteelGlobalAyahsRef.current = catalog;
-
         tarteelGlobalTargetsRef.current = layouts.flatMap((pageLayout) =>
           pageLayout.lines
             .filter((line) => line.type === "ayah")
@@ -901,7 +991,9 @@ export function MushafPage({
         );
 
         console.info(
-          "[TARTEEL] Catalogue global chargé :",
+          "[TARTEEL] Catalogue global chargé en",
+          ((performance.now() - t0) / 1000).toFixed(1),
+          "s :",
           catalog.length,
           "ayahs,",
           layouts.length,
@@ -973,10 +1065,43 @@ export function MushafPage({
       tarteelLastProcessedSequenceRef.current = detail.sequence;
 
       // Recherche du plus long suffixe reconnu dans les 604 pages.
+      // Limiter la longueur du texte analysé : au-delà de 30 mots,
+      // la recherche sur 77432 targets devient coûteuse en JS synchrone
+      // et bloque l'event loop à chaque inférence.
+      const MAX_ANALYSIS_WORDS = 30;
+      const rawWords = detail.text.trim().split(/\s+/);
+      const cappedText =
+        rawWords.length > MAX_ANALYSIS_WORDS
+          ? rawWords.slice(-MAX_ANALYSIS_WORDS).join(" ")
+          : detail.text;
+
       const search = findTarteelLongestSuffixCandidates(
         globalTargets,
-        detail.text,
+        cappedText,
       );
+
+      // DIAG TEMPORAIRE — à retirer après diagnostic
+      // DIAG enrichi : écart matchedWords vs matches.length
+      const bestCandidate = search.candidates[0];
+      console.info("[TARTEEL-DIAG]", {
+        seq: detail.sequence,
+        textTail: detail.text.slice(-60),
+        matchedWords: search.matchedWords,
+        candidatesCount: search.candidates.length,
+        bestCandidateWords: bestCandidate?.matches.length ?? 0,
+        bestCandidateStart: bestCandidate
+          ? globalTargets[bestCandidate.startIndex]?.key
+          : null,
+        bestCandidateEnd: bestCandidate
+          ? globalTargets[bestCandidate.endIndex]?.key
+          : null,
+        bestMatches: (bestCandidate?.matches ?? []).map((m) => ({
+          key: m.key,
+          text: globalTargets[m.targetIndex]?.text,
+        })),
+        cursor: tarteelCursorRef.current,
+        pageNumber,
+      });
 
       if (search.candidates.length === 0) {
         return;
@@ -988,12 +1113,46 @@ export function MushafPage({
         (candidate) => candidate.endIndex >= tarteelCursorRef.current,
       );
 
-      // Plusieurs positions restent possibles : ne pas naviguer.
-      if (forwardCandidates.length !== 1) {
+      if (forwardCandidates.length === 0) {
         return;
       }
 
-      const candidate = forwardCandidates[0];
+      // Un seul mot reconnu ne suffit pas : un mot isolé peut
+      // apparaître par coïncidence à un autre endroit du Coran et
+      // provoquer une navigation erronée vers une autre sourate.
+      if (search.matchedWords < 2) {
+        return;
+      }
+
+      let candidate: typeof forwardCandidates[number] | null =
+        forwardCandidates.length === 1 ? forwardCandidates[0] : null;
+
+      // Ambiguïté : privilégier la page actuellement affichée. Cela
+      // permet de démarrer le suivi immédiatement sur la page en cours
+      // au lieu d'attendre que la récitation lève toute ambiguïté
+      // (10-15 s), ce qui est incompatible avec du live.
+      if (!candidate) {
+        const onCurrentPage = forwardCandidates.filter((forward) => {
+          const target = globalTargets[forward.endIndex];
+          if (!target) return false;
+          const [surahNumber, ayahNumber] = target.key
+            .split(":")
+            .map(Number);
+          const ayah = globalAyahs.find(
+            (item) =>
+              item.surahNumber === surahNumber &&
+              item.number === ayahNumber,
+          );
+          return ayah?.pageNumber === pageNumber;
+        });
+        if (onCurrentPage.length === 1) {
+          candidate = onCurrentPage[0];
+        }
+      }
+
+      if (!candidate) {
+        return;
+      }
       const matchedTarget = globalTargets[candidate.endIndex];
 
       if (!matchedTarget) {
@@ -1018,11 +1177,28 @@ export function MushafPage({
       tarteelCursorRef.current = candidate.endIndex + 1;
 
       if (targetAyah.pageNumber !== pageNumber) {
+        // Pour changer de page, exiger au moins 3 mots alignés :
+        // un changement de page sur 2 mots provoque des sauts
+        // intempestifs vers des sourates voisines.
+        if (search.matchedWords < 3) {
+          return;
+        }
         tarteelPendingNavigationKeyRef.current = matchedTarget.key;
 
         setTarteelCorrectWordsByMode((previous) => {
           const next = new Set(previous[detail.mode]);
-          next.add(matchedTarget.key);
+          for (const match of candidate.matches) {
+            next.add(match.key);
+          }
+          console.info("[TARTEEL-MARK]", {
+            seq: detail.sequence,
+            mode: detail.mode,
+            matchedWordsReported: search.matchedWords,
+            candidateWords: candidate.matches.length,
+            addedKeys: candidate.matches.map((m) => m.key),
+            setSizeBefore: previous[detail.mode].size,
+            setSizeAfter: next.size,
+          });
           return { ...previous, [detail.mode]: next };
         });
 
@@ -6653,7 +6829,11 @@ export function MushafPage({
                   </div>
                 )}
 
-                <button
+                <div
+                id="irtaki-tarteel-inline-slot"
+                style={{ display: "contents" }}
+              />
+              <button
                   type="button"
                   className={
                     moreMenuOpen

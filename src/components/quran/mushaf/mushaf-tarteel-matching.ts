@@ -12,8 +12,16 @@
 export function normalizeTarteelArabic(text: string): string {
   return text
     .normalize("NFC")
-    // Suppression des signes diacritiques arabes.
-    .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g, "")
+    // Convertir l'alef suscrit (U+0670) en alef normal AVANT suppression.
+    // Le texte coranique utilise U+0670 dans des mots comme
+    // "ٱلۡكَٰفِرِينَ" — cet alef est sémantiquement un vrai "ا" et
+    // ne doit pas être perdu, sinon le mot ne peut jamais matcher
+    // la transcription (qui contient un "ا" normal).
+    .replace(/\u0670/g, "ا")
+    // Suppression des signes diacritiques arabes (fatha, kasra, damma,
+    // shadda, sukun, madda, etc.) et des signes de pause coraniques.
+    // Note : U+0670 est DÉJÀ traité ci-dessus, il est retiré de cette plage.
+    .replace(/[\u0610-\u061A\u064B-\u065F\u06D6-\u06ED]/g, "")
     // Suppression du tatweel.
     .replace(/\u0640/g, "")
     // Normalisation de certaines variantes de lettres.
