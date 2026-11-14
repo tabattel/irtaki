@@ -68,13 +68,27 @@ async function readBoundedJson(request: Request): Promise<unknown> {
   }
 }
 
+const TRUSTED_ORIGINS = new Set(
+  [
+    "https://irtaki.com",
+    "https://www.irtaki.com",
+    ...(process.env.TARTEEL_TRUSTED_ORIGINS ?? "").split(","),
+  ]
+    .map((value) => value.trim())
+    .filter(Boolean),
+);
+
+function isTrustedOrigin(origin: string): boolean {
+  return TRUSTED_ORIGINS.has(origin);
+}
+
 export async function POST(request: Request): Promise<Response> {
   try {
     // 1. Vérification stricte de l'origine.
     const origin = request.headers.get("origin");
     const requestOrigin = new URL(request.url).origin;
 
-    if (!origin || origin !== requestOrigin) {
+    if (!origin || (origin !== requestOrigin && !isTrustedOrigin(origin))) {
       return jsonResponse(
         { error: "ORIGIN_NOT_ALLOWED" },
         403,

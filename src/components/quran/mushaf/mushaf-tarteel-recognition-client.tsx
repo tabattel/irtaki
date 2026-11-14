@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 type TarteelMode = "tarteel1" | "tarteel2";
 type LifecycleAction = "start" | "pause" | "resume" | "stop";
@@ -79,10 +79,35 @@ function dispatchResult(detail: RecognitionResult) {
 }
 
 function websocketUrl(mode: TarteelMode): string {
-  const protocol =
-    window.location.protocol === "https:" ? "wss:" : "ws:";
+  // HTTPS (via Cloudflare) : meme origine, le tunnel route /ws/ vers le port 8767.
+  if (window.location.protocol === "https:") {
+    return `wss://${window.location.host}/ws/${mode}`;
+  }
 
-  return `${protocol}//${window.location.hostname}:8767/ws/${mode}`;
+  // HTTP (local / reseau) : connexion directe au port 8767.
+  return `ws://${window.location.hostname}:8767/ws/${mode}`;
+}
+
+async function fetchTicket(mode: TarteelMode): Promise<string> {
+  const response = await fetch("/api/tarteel/ticket", {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mode }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`TARTEEL_TICKET_HTTP_${response.status}`);
+  }
+
+  const data = (await response.json()) as { ticket?: unknown };
+
+  if (typeof data.ticket !== "string" || data.ticket.length === 0) {
+    throw new Error("TARTEEL_TICKET_INVALID_RESPONSE");
+  }
+
+  return data.ticket;
 }
 
 function copySamplesToArrayBuffer(samples: Float32Array): ArrayBuffer {
@@ -92,7 +117,16 @@ function copySamplesToArrayBuffer(samples: Float32Array): ArrayBuffer {
 }
 
 export function MushafTarteelRecognitionClient() {
+  const sessionRef = useRef<Session | null>(null);
+
   useEffect(() => {
+    // Anti-StrictMode : un seul jeu de listeners, même si React monte 2 fois
+    const WIN = window as unknown as { __irtakiTarteelClientMounted?: boolean };
+    if (WIN.__irtakiTarteelClientMounted) {
+      return () => {};
+    }
+    WIN.__irtakiTarteelClientMounted = true;
+
     let session: Session | null = null;
 
     function closeSession(current: Session) {
@@ -110,6 +144,9 @@ export function MushafTarteelRecognitionClient() {
 
       if (session === current) {
         session = null;
+      }
+      if (sessionRef.current === current) {
+        sessionRef.current = null;
       }
     }
 
@@ -195,6 +232,11 @@ export function MushafTarteelRecognitionClient() {
     }
 
     function startSession(detail: LifecycleDetail) {
+      // Anti-doublon : même sessionId déjà en cours (autre closure StrictMode)
+      const active = sessionRef.current;
+      if (active && active.sessionId === detail.sessionId) return;
+      if (active && !active.closed) closeSession(active);
+
       if (session) {
         if (session.sessionId === detail.sessionId) return;
         closeSession(session);
@@ -205,6 +247,10 @@ export function MushafTarteelRecognitionClient() {
         mode: detail.mode,
         status: "connecting",
       });
+
+      // Ticket a usage unique, demande en parallele de l ouverture du socket.
+      const ticketPromise = fetchTicket(detail.mode);
+      ticketPromise.catch(() => undefined);
 
       let socket: WebSocket;
 
@@ -233,16 +279,36 @@ export function MushafTarteelRecognitionClient() {
       };
 
       session = current;
+      sessionRef.current = current;
 
       socket.onopen = () => {
         if (current.closed || session !== current) return;
 
-        socket.send(
-          JSON.stringify({
-            type: "configure",
-            sample_rate: 16000,
-          }),
-        );
+        ticketPromise
+          .then((ticket) => {
+            if (current.closed || session !== current) return;
+
+            socket.send(
+              JSON.stringify({
+                type: "configure",
+                sample_rate: 16000,
+                ticket,
+              }),
+            );
+          })
+          .catch((error: unknown) => {
+            if (current.closed) return;
+
+            dispatchClientStatus({
+              sessionId: current.sessionId,
+              mode: current.mode,
+              status: "error",
+              message:
+                error instanceof Error ? error.message : "TARTEEL_TICKET_ERROR",
+            });
+
+            closeSession(current);
+          });
       };
 
       socket.onmessage = (event: MessageEvent) => {
@@ -378,6 +444,8 @@ export function MushafTarteelRecognitionClient() {
     window.addEventListener("irtaki:tarteel-pcm", handlePcm);
 
     return () => {
+      WIN.__irtakiTarteelClientMounted = false;
+
       window.removeEventListener(
         "irtaki:tarteel-recognition",
         handleLifecycle,

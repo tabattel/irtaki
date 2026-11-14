@@ -206,6 +206,31 @@ def health() -> dict[str, Any]:
     }
 
 
+def _verify_live_ticket(ticket: object, mode: str) -> str:
+    """Verifie le ticket HMAC emis par Next (fichier secret partage)."""
+    import os as _os
+    import stat as _stat
+    from pathlib import Path as _Path
+
+    import ticket_auth as _ticket_auth
+
+    secret_path = _Path.home() / ".config" / "irtaki" / "tarteel-live.secret"
+    info = secret_path.lstat()
+
+    if not _stat.S_ISREG(info.st_mode):
+        raise ValueError("secret: fichier invalide")
+    if _stat.S_IMODE(info.st_mode) != 0o600:
+        raise ValueError("secret: permissions differentes de 600")
+    if info.st_uid != _os.getuid():
+        raise ValueError("secret: mauvais proprietaire")
+
+    raw = secret_path.read_text(encoding="utf-8").strip()
+    if len(raw) != 64:
+        raise ValueError("secret: format invalide")
+
+    return _ticket_auth.verify_ticket(ticket, mode, bytes.fromhex(raw))
+
+
 @app.websocket("/ws/{mode}")
 async def live_recognition(websocket: WebSocket, mode: str) -> None:
     await websocket.accept()
@@ -229,6 +254,17 @@ async def live_recognition(websocket: WebSocket, mode: str) -> None:
             await websocket.send_json({
                 "type": "error",
                 "message": "Le premier message doit être configure.",
+            })
+            await websocket.close(code=1008)
+            return
+
+        try:
+            _verify_live_ticket(first_message.get("ticket"), mode)
+        except Exception as exc:
+            print(f"[ticket] refuse: {type(exc).__name__}: {exc}", flush=True)
+            await websocket.send_json({
+                "type": "error",
+                "message": "Ticket invalide, expiré ou déjà utilisé.",
             })
             await websocket.close(code=1008)
             return
