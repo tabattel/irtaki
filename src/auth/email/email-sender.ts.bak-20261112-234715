@@ -1,0 +1,15 @@
+import { type PasswordResetEmail } from "../password/password-reset-service";
+
+export interface EmailSender {
+  sendPasswordReset(email: PasswordResetEmail): Promise<void>;
+}
+
+export class ConsoleEmailSender implements EmailSender {
+  async sendPasswordReset({ to, resetUrl }: PasswordResetEmail): Promise<void> {
+    console.info(`Sending password reset email to ${to} with URL ${resetUrl}`);
+  }
+}
+
+export function createEmailSender(): EmailSender {
+  return new ConsoleEmailSender();
+}

@@ -193,7 +193,7 @@ export function MushafColorPalette({
 
       {open && (
         <div
-          className="absolute top-full right-0 z-[70] mt-2 grid max-h-[70vh] w-[min(88vw,28rem)] grid-cols-3 gap-2 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 shadow-xl sm:grid-cols-4"
+          className="fixed inset-x-3 bottom-3 z-[70] mx-auto grid max-h-[70dvh] w-auto max-w-md grid-cols-3 gap-2 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 shadow-xl sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:bottom-auto sm:mx-0 sm:mt-2 sm:w-[min(88vw,28rem)] sm:max-w-none sm:grid-cols-4"
           role="group"
           aria-label="اختيار لون وتخصيصه"
           dir="rtl"

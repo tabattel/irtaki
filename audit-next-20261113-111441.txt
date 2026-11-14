@@ -1,0 +1,207 @@
+==============================================
+ AUDIT NEXT.JS CIBLÉ PWA - ven. 13 nov. 2026 11:14:41 CET
+==============================================
+
+### 1. STRUCTURE src/app (maxdepth 3)
+src/app/api/annotations/route.test.ts
+src/app/api/annotations/route.ts
+src/app/api/annotations/route.ts.before-tartil-menu-20261103-015527.bak
+src/app/api/child-profiles/route.test.ts
+src/app/api/child-profiles/route.ts
+src/app/api/history/route.ts
+src/app/api/learner-preferences/route.ts
+src/app/api/mushafs/route.ts
+src/app/api/qiraat/route.ts
+src/app/api/riwayat/route.ts
+src/app/api/search/route.ts
+src/app/api/surahs/route.ts
+src/app/api/turuq/route.ts
+src/app/coran/page.tsx
+src/app/coran/page.tsx.before-explicit-page-navigation-20261101-223153.bak
+src/app/coran/[riwayaId]/page.tsx
+src/app/coran/[riwayaId]/page.tsx.before-explicit-page-navigation-20261101-223153.bak
+src/app/favicon.ico
+src/app/globals.css
+src/app/historique/page.tsx
+src/app/layout.tsx
+src/app/mot-de-passe-oublie/page.tsx
+src/app/objectifs/page.tsx
+src/app/page.tsx
+src/app/recherche/page.tsx
+src/app/reinitialiser-mot-de-passe/page.tsx
+src/app/statistiques/page.tsx
+
+### 2. src/app/layout.tsx (CONTENU)
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+
+import "./globals.css";
+
+import { AppShell } from "@/components/layout/app-shell";
+
+export const metadata: Metadata = {
+  title: {
+    default: "IRTAKI — القرآن الكريم والتعلّم",
+    template: "%s — IRTAKI",
+  },
+  description:
+    "IRTAKI — plateforme de lecture, écoute et apprentissage du Coran.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: ReactNode;
+}>) {
+  return (
+    <html lang="ar" dir="rtl">
+      <body>
+        <AppShell>{children}</AppShell>
+      </body>
+    </html>
+  );
+}
+
+### 3. src/app/page.tsx (extrait 40 lignes)
+import Link from "next/link";
+
+export default function HomePage() {
+  return (
+    <main className="flex min-h-screen items-center justify-center px-4">
+      <section className="w-full max-w-2xl text-center">
+        <p className="text-sm font-medium text-gray-500">IRTAKI</p>
+
+        <h1 className="mt-3 text-4xl font-bold">القرآن الكريم</h1>
+
+        <p className="mt-4 text-gray-600">
+          Plateforme d&apos;étude et de lecture du Coran.
+        </p>
+
+        <Link
+          href="/coran"
+          className="mt-8 inline-flex rounded-xl border px-6 py-3 font-medium transition hover:shadow-md"
+        >
+          Ouvrir le Coran
+        </Link>
+      </section>
+    </main>
+  );
+}
+
+### 4. next.config.ts (CONTENU)
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  allowedDevOrigins: ["irtaki.com", "www.irtaki.com"],
+};
+
+export default nextConfig;
+
+### 5. Nginx - sites activés
+total 8
+drwxr-xr-x 2 root root 4096 nov.  13 02:49 .
+drwxr-xr-x 8 root root 4096 oct.  27 06:38 ..
+lrwxrwxrwx 1 root root   33 nov.  13 02:49 irtaki -> /etc/nginx/sites-available/irtaki
+
+--- Recherche irtaki dans /etc/nginx ---
+/etc/nginx/sites-available/irtaki.bak.1794534363
+/etc/nginx/sites-available/irtaki
+/etc/nginx/sites-available/irtaki.bak.1794535380
+
+  (fichier nginx irtaki non trouvé — accès root requis ?)
+
+### 6. Cloudflare Access (Zero Trust) - indices
+5437a3c6-a9d2-46f1-83af-4edebd5fa710.json
+cert.pem
+config.yml
+(Cloudflare Access se configure via dashboard, pas de fichier local — à vérifier manuellement)
+
+### 7. pnpm workspace
+packages:
+  - "packages/*"
+
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver
+
+audio
+domain
+persistence
+resource
+
+### 8. Poids des sous-dossiers (top 5)
+8,8G	ai/
+2,2G	storage/
+849M	node_modules/
+16M	src/
+4,8M	packages/
+156K	public/
+32K	scripts/
+8,0K	tests/
+
+### 9. .env (masquer les secrets)
+DATABASE_URL=***MASQUÉ***
+
+# SMTP Gmail (wairtaqi)
+SMTP_HOST=***MASQUÉ***
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=***MASQUÉ***
+SMTP_PASS=***MASQUÉ***
+SMTP_FROM=***MASQUÉ***
+NEXT_PUBLIC_APP_URL=***MASQUÉ***
+
+
+GOOGLE_REDIRECT_URI=***MASQUÉ***
+GOOGLE_STATE_SECRET=***MASQUÉ***
+
+GOOGLE_REDIRECT_URI=***MASQUÉ***
+
+# Google OAuth
+GOOGLE_CLIENT_ID=***MASQUÉ***
+GOOGLE_CLIENT_SECRET=***MASQUÉ***
+GOOGLE_REDIRECT_URI=***MASQUÉ***
+
+### 10. Test local Next.js (header et endpoints)
+--- curl localhost:3000/ (headers) ---
+HTTP/1.1 200 OK
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+Cache-Control: no-cache, must-revalidate
+X-Powered-By: Next.js
+Content-Type: text/html; charset=utf-8
+Date: Fri, 13 Nov 2026 10:14:42 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+
+--- curl localhost:3000/sw.js (doit 404 pour l'instant) ---
+HTTP/1.1 404 Not Found
+Cache-Control: no-cache, must-revalidate
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+X-Powered-By: Next.js
+Content-Type: text/html; charset=utf-8
+
+--- curl localhost:3000/manifest.json (doit 404 pour l'instant) ---
+HTTP/1.1 404 Not Found
+Cache-Control: no-cache, must-revalidate
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+X-Powered-By: Next.js
+Content-Type: text/html; charset=utf-8
+
+### 11. Nginx - headers actuels sur irtaki.com (via tunnel)
+--- curl -I https://irtaki.com/ ---
+HTTP/2 200 
+date: Fri, 13 Nov 2026 10:14:42 GMT
+content-type: text/html; charset=utf-8
+cache-control: no-cache, must-revalidate
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+x-powered-by: Next.js
+cf-cache-status: DYNAMIC
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=etWhKxxZm5PtRRKqq8u17k88sr7ziOO%2FlX4N7xrVE8rAkLBrwn63AvbkDF3wKntCQA%2Ft29SoIjwh%2FrRAY1oDjX8alw5BsiQ34FnovpWevsbGunOFtV7U82U8414%2B"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+server: cloudflare
+cf-ray: a59d02d0fca78f14-ORN
+alt-svc: h3=":443"; ma=86400
+
+
+==============================================

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head><title>Nettoyage IRTAKI</title></head>
+<body>
+<h1>Nettoyage en cours...</h1>
+<pre id="log"></pre>
+<script>
+const log = (msg) => { document.getElementById('log').textContent += msg + '\n'; console.log(msg); };
+
+async function cleanup() {
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const reg of regs) {
+      await reg.unregister();
+      log('✅ Service Worker désinscrit : ' + reg.scope);
+    }
+  }
+  
+  const cacheNames = await caches.keys();
+  for (const name of cacheNames) {
+    await caches.delete(name);
+    log('✅ Cache supprimé : ' + name);
+  }
+  
+  log('\n🎉 Nettoyage terminé. Rechargez irtaki.com');
+}
+cleanup();
+</script>
+</body>
+</html>

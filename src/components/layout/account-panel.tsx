@@ -1,9 +1,12 @@
 "use client";
 
+import Link from "next/link";
+
 import { AccountActiveLearnerSwitcher } from "@/components/layout/account-active-learner-switcher";
 
 import { useEffect, useState } from "react";
 import { ChildAccountsPanel } from "./child-accounts-panel";
+import { RolesPanel } from "./roles-panel";
 import type { FormEvent } from "react";
 
 type AuthUser = {
@@ -17,7 +20,7 @@ type AuthPayload = {
   error?: string;
 };
 
-type FormMode = "login" | "register";
+type FormMode = "login" | "register" | "forgot";
 
 const errorMessages: Record<string, string> = {
   INVALID_CREDENTIALS: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
@@ -38,6 +41,25 @@ async function readCurrentUser(): Promise<AuthUser | null> {
   return payload.user ?? null;
 }
 
+
+function MailIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
 export function AccountPanel() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -49,6 +71,7 @@ export function AccountPanel() {
   const [message, setMessage] = useState("");
   const [editingOwnerName, setEditingOwnerName] = useState(false);
   const [ownerNameDraft, setOwnerNameDraft] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -138,7 +161,27 @@ export function AccountPanel() {
     }
   }
 
-  async function handleOwnerNameSubmit(event: FormEvent<HTMLFormElement>) {
+    async function handleForgotSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage("");
+    setForgotSent(false);
+
+    try {
+      await fetch("/api/auth/password/forgot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      setForgotSent(true);
+    } catch {
+      setMessage("تعذّر الاتصال بالخادم. حاول مرة أخرى.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+async function handleOwnerNameSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const trimmedName = ownerNameDraft.trim();
@@ -216,14 +259,14 @@ export function AccountPanel() {
       dir="rtl"
       aria-live="polite"
     >
-      <h3 className="font-semibold">الحسابات</h3>
+      <h3 className="font-bold text-[var(--jannah-green)]">الحسابات</h3>
 
       {checkingSession ? (
         <p className="text-[var(--muted)]">جارٍ التحقق من الحساب...</p>
       ) : user ? (
         <div className="space-y-3 sm:space-y-4">
-          <section className="min-w-0 space-y-2 rounded-lg border border-[var(--border)] p-2 sm:p-3">
-            <h4 className="font-semibold">الحساب الرئيسي</h4>
+          <section className="min-w-0 space-y-2 rounded-lg border border-[var(--jannah-gold)]/30 bg-[var(--jannah-cream)]/30 p-2 sm:p-3">
+            <h4 className="font-bold text-[var(--jannah-green)]">الحساب الرئيسي</h4>
             <p className="font-medium">
               <span aria-hidden="true" className="text-green-600">
                 ✓{" "}
@@ -239,7 +282,7 @@ export function AccountPanel() {
                 <label className="block">
                   اسم صاحب الحساب الرئيسي
                   <input
-                    className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-base text-[var(--foreground)]"
+                    className="mt-1 w-full rounded-lg border border-[var(--jannah-gold)]/40 bg-[var(--background)] px-3 py-3 text-base text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--jannah-green)]/20"
                     type="text"
                     autoComplete="name"
                     maxLength={100}
@@ -254,7 +297,7 @@ export function AccountPanel() {
                   <button
                     type="submit"
                     disabled={busy}
-                    className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 font-semibold disabled:opacity-50"
+                    className="min-h-11 rounded-lg border border-[var(--jannah-gold)]/50 px-3 py-2 font-semibold text-[var(--jannah-green)] hover:bg-[var(--jannah-cream)] disabled:opacity-50"
                   >
                     {busy ? "جارٍ الحفظ..." : "حفظ الاسم"}
                   </button>
@@ -265,7 +308,7 @@ export function AccountPanel() {
                       setEditingOwnerName(false);
                       setOwnerNameDraft(user.name?.trim() ?? "");
                     }}
-                    className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 disabled:opacity-50"
+                    className="min-h-11 rounded-lg border border-[var(--jannah-gold)]/40 px-3 py-2 hover:bg-[var(--jannah-cream)] disabled:opacity-50"
                   >
                     إلغاء
                   </button>
@@ -284,7 +327,7 @@ export function AccountPanel() {
                     setEditingOwnerName(true);
                     setMessage("");
                   }}
-                  className="min-h-11 rounded-lg border border-[var(--border)] px-4 py-2 font-medium disabled:opacity-50"
+                  className="min-h-11 rounded-lg border border-[var(--jannah-gold)]/40 px-4 py-2 font-medium hover:bg-[var(--jannah-cream)] disabled:opacity-50"
                 >
                   تعديل
                 </button>
@@ -301,12 +344,13 @@ export function AccountPanel() {
               type="button"
               disabled={busy}
               onClick={() => void handleLogout()}
-              className="rounded-lg border border-[var(--border)] px-4 py-2 font-medium disabled:opacity-50"
+              className="rounded-lg border border-[var(--jannah-gold)]/40 px-4 py-2 font-medium hover:bg-[var(--jannah-cream)] disabled:opacity-50"
             >
               {busy ? "جارٍ التنفيذ..." : "تسجيل الخروج"}
             </button>
           </section>
           <ChildAccountsPanel />
+        <RolesPanel />
           <AccountActiveLearnerSwitcher />
         </div>
       ) : (
@@ -351,7 +395,7 @@ export function AccountPanel() {
             onClick={() => {
               window.location.assign("/api/auth/google");
             }}
-            className="flex w-full items-center justify-center gap-3 rounded-lg border border-[var(--border)] px-4 py-3 font-medium disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-3 rounded-lg border border-[var(--jannah-gold)]/40 px-4 py-3 font-medium hover:bg-[var(--jannah-cream)] disabled:opacity-50"
           >
             <svg aria-hidden="true" viewBox="0 0 48 48" className="h-5 w-5">
               <path
@@ -380,7 +424,10 @@ export function AccountPanel() {
 
           <form
             className="space-y-3"
-            onSubmit={(event) => void handleSubmit(event)}
+            onSubmit={(event) => {
+              if (mode === "forgot") void handleForgotSubmit(event);
+              else void handleSubmit(event);
+            }}
           >
             {mode === "register" ? (
               <label className="block">
@@ -395,21 +442,23 @@ export function AccountPanel() {
               </label>
             ) : null}
 
-            <label className="block">
-              البريد الإلكتروني
-              <input
+            {mode === "forgot" ? (
+              <p className="text-[var(--muted)]">
+                أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور.
+              </p>
+            ) : null}
+
+            <label className="block"><span className="flex items-center gap-1.5"><MailIcon />البريد الإلكتروني</span><input
                 className={fieldClass}
                 type="email"
                 autoComplete="email"
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-              />
-            </label>
+              /></label>
 
-            <label className="block">
-              كلمة المرور
-              <input
+            {mode !== "forgot" ? (
+              <label className="block"><span className="flex items-center gap-1.5"><LockIcon />كلمة المرور</span><input
                 className={fieldClass}
                 type="password"
                 autoComplete={
@@ -418,20 +467,49 @@ export function AccountPanel() {
                 required
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-              />
-            </label>
+              /></label>
+            ) : null}
+{mode === "login" ? (
+              <div className="text-left">
+                <button
+                  type="button"
+                  onClick={() => { setMode("forgot"); setMessage(""); setForgotSent(false); }}
+                  className="text-xs text-[var(--muted)] underline hover:text-[var(--foreground)]"
+                >
+                  هل نسيت كلمة المرور ؟
+                </button>
+              </div>
+            ) : null}
+
+            {mode === "forgot" && forgotSent ? (
+              <p className="rounded-lg bg-green-50 p-3 text-green-700" dir="rtl">
+                إذا كان البريد الإلكتروني مسجّلًا، فسيتم إرسال رابط إعادة التعيين.
+              </p>
+            ) : null}
 
             <button
               type="submit"
               disabled={busy}
-              className="rounded-lg border border-[var(--border)] px-4 py-2 font-semibold disabled:opacity-50"
+              className="rounded-lg border border-[var(--jannah-gold)]/50 px-4 py-2 font-semibold text-[var(--jannah-green)] hover:bg-[var(--jannah-cream)] disabled:opacity-50"
             >
               {busy
                 ? "جارٍ التنفيذ..."
                 : mode === "login"
                   ? "تسجيل الدخول"
-                  : "إنشاء الحساب"}
+                  : mode === "register"
+                    ? "إنشاء الحساب"
+                    : "إرسال رابط إعادة التعيين"}
             </button>
+
+            {mode === "forgot" ? (
+              <button
+                type="button"
+                onClick={() => { setMode("login"); setMessage(""); setForgotSent(false); }}
+                className="w-full text-center text-xs text-[var(--muted)] underline hover:text-[var(--foreground)]"
+              >
+                العودة إلى تسجيل الدخول
+              </button>
+            ) : null}
           </form>
         </div>
       )}

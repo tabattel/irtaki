@@ -179,7 +179,7 @@ export function MushafSimilarPanel({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/40 p-2 sm:items-center sm:p-4"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-3 sm:p-4"
       dir="rtl"
     >
       <button
@@ -194,7 +194,7 @@ export function MushafSimilarPanel({
         aria-modal="true"
         aria-labelledby="mushaf-similar-title"
         aria-busy={loading}
-        className="relative z-10 flex h-[82dvh] max-h-[82dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] shadow-2xl"
+        className="relative z-10 flex h-auto max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] shadow-2xl sm:h-[82dvh] sm:max-h-[82dvh]"
       >
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border)] p-3 sm:p-4">
           <div className="min-w-0">

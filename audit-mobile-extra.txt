@@ -1,0 +1,185 @@
+=== 1. LAYOUT.TSX (30 lignes) ===
+import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
+
+import "./globals.css";
+
+import { AppShell } from "@/components/layout/app-shell";
+import { RegisterServiceWorker } from "@/components/pwa/register-sw";
+import { OfflineBanner } from "@/components/pwa/offline-banner";
+
+export const metadata: Metadata = {
+  title: {
+    default: "IRTAKI — القرآن الكريم",
+    template: "%s — IRTAKI",
+  },
+  description:
+    "IRTAKI — plateforme de lecture, écoute et apprentissage du Coran.",
+  manifest: "/manifest.webmanifest",
+  applicationName: "IRTAKI",
+  appleWebApp: {
+    capable: true,
+    title: "IRTAKI",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: [{ url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0d4f43",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  return (
+    <html lang="ar" dir="rtl">
+      <body>
+        <AppShell>{children}</AppShell>
+        <RegisterServiceWorker />
+        <OfflineBanner />
+      </body>
+    </html>
+  );
+}
+
+=== 2. APP-SHELL.TSX ===
+"use client";
+
+import type { ReactNode } from "react";
+import { AppMainMenu } from "./app-main-menu";
+
+type AppShellProps = {
+  children: ReactNode;
+};
+
+export function AppShell({ children }: AppShellProps) {
+  return (
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <AppMainMenu />
+
+      <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {children}
+      </main>
+    </div>
+  );
+}
+
+=== 3. APP-MAIN-MENU.TSX (200-260) ===
+function PanelButton({ children }: { children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      disabled
+      className="rounded-lg border border-[var(--border)] px-3 py-2 text-right opacity-50"
+    >
+      {children}
+    </button>
+  );
+}
+
+export function AppMainMenu() {
+  const [panel, setPanel] = useState<MainPanel>(null);
+
+  
+
+  function closeMenu() {
+    setPanel(null);
+    
+  }
+
+  function togglePanel(nextPanel: Exclude<MainPanel, null>) {
+    setPanel((current) => (current === nextPanel ? null : nextPanel));
+  }
+
+  return (
+    <header className="sticky top-0 z-50 w-full border-b border-[var(--border)] bg-[var(--background)] shadow-sm" dir="rtl">
+      <div className="w-full max-w-[100vw] min-w-0">
+        <div className="relative mx-auto w-full max-w-7xl min-w-0 px-2 py-1.5 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center justify-between gap-1">
+            <nav
+              aria-label="القائمة الرئيسية"
+              className="flex h-12 min-w-0 flex-1 flex-nowrap items-center gap-0 overflow-x-auto sm:h-14"
+            >
+              <MainMenuLink href="/" label="الرئيسية" onClick={closeMenu}>
+                <HomeIcon />
+              </MainMenuLink>
+
+              <MainMenuLink href="/recherche" label="البحث" onClick={closeMenu}>
+                <SearchIcon />
+              </MainMenuLink>
+              <MainMenuLink href="/objectifs" label="الأهداف" onClick={closeMenu}>
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path d="M5 5h14v14H5z" />
+                  <path d="m8 12 2.5 2.5L16 9" />
+                </svg>
+              </MainMenuLink>
+
+              <MainMenuLink
+                href="/statistiques"
+                label="الإحصائيات"
+                onClick={closeMenu}
+              >
+                <StatisticsIcon />
+              </MainMenuLink>
+
+              <MainMenuLink
+                href="/coran/10/page/605"
+                label="السجل"
+                onClick={closeMenu}
+              >
+                <HistoryIcon />
+              </MainMenuLink>
+
+              <MainMenuButton
+                label="انتقل إلى"
+                onClick={() => togglePanel("goto")}
+              >
+                <GoToIcon />
+              </MainMenuButton>
+
+              <MainMenuButton
+                label="الحساب"
+                onClick={() => togglePanel("account")}
+              >
+                <AccountIcon />
+              </MainMenuButton>
+
+              <MainMenuButton
+                label="الإعدادات"
+                onClick={() => togglePanel("settings")}
+              >
+                <SettingsIcon />
+
+=== 4. GLOBALS.CSS (180-220) ===
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+@media (max-width: 360px) {
+  .irtaki-account-panel .grid.grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+=== 5. TAILWIND VERSION ===
+    "next": "16.3.5",
+    "tailwindcss": "^4",
+
+=== 6. IMPORTS CSS layout.tsx ===
+4:import "./globals.css";

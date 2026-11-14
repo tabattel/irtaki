@@ -1,0 +1,1 @@
+"""IRTAKI Quran recognition service."""

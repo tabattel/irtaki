@@ -28,3 +28,5 @@ export { ProgressRecordRepository } from "./repository/progress-record-repositor
 export { StatisticsRepository } from "./repository/statistics-repository";
 
 export { LearnerPreferenceRepository } from "./repository/learner-preference-repository";
+
+export { PasswordResetTokenRepository } from "./repository/auth/password-reset-token-repository";

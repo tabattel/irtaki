@@ -1,0 +1,7470 @@
+"use client";
+
+import { MushafIcon, type MushafIconName } from "./mushaf-icon";
+
+function emojiToIconName(emoji: string): MushafIconName {
+  const map: Record<string, MushafIconName> = {
+    "🎧": "audio", "📖": "book", "🎙️": "recitation", "🎙": "mic",
+    "🗣️": "dictation", "🧠": "memory", "📌": "fixation", "🔄": "revision",
+    "👓": "meditation", "📿": "completion", "🌙": "night", "📊": "stats",
+    "🎯": "goals", "📅": "calendar", "💾": "data", "🎨": "palette",
+    "⏱": "timer", "📁": "folder", "〰️": "underline", "🖍️": "highlight",
+    "⏭": "next", "⏮": "prev", "↻": "repeat", "🔊": "audio",
+    "👁": "eye", "⋮": "more",
+  };
+  return map[emoji] ?? "book";
+}
+
+
+import dynamic from "next/dynamic";
+
+const MushafColorPalette = dynamic(
+  () => import("./mushaf-color-palette").then((m) => ({ default: m.MushafColorPalette })),
+  { ssr: false, loading: () => null }
+);
+const MushafTafsirPanel = dynamic(
+  () => import("./mushaf-tafsir-panel").then((m) => ({ default: m.MushafTafsirPanel })),
+  { ssr: false, loading: () => null }
+);
+const MushafSimilarPanel = dynamic(
+  () => import("./mushaf-similar-panel").then((m) => ({ default: m.MushafSimilarPanel })),
+  { ssr: false, loading: () => null }
+);
+const MushafQiraatPanel = dynamic(
+  () => import("./mushaf-qiraat-panel").then((m) => ({ default: m.MushafQiraatPanel })),
+  { ssr: false, loading: () => null }
+);
+
+import {
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { useRouter } from "next/navigation";
+
+import {
+  getAllAyahs,
+  getAyahsByPage,
+  getAyahsBySurah,
+  getSurahs,
+  type AyahDto,
+} from "@/lib/api/quran";
+import { getMushafPageLayout, type MushafPageLayout } from "@/lib/api/mushaf";
+
+import { MushafLine } from "./mushaf-line";
+import {
+  MushafHistoryContent,
+  type MushafHistoryView,
+} from "./mushaf-history-content";
+import { recordMushafActionJournalEvent } from "./mushaf-action-journal";
+import { MushafTilawaRecorder } from "./mushaf-tilawa-recorder";
+import { MushafTarteelController } from "./mushaf-tarteel-controller";
+import {
+  findTarteelLongestSuffixCandidates,
+} from "./mushaf-tarteel-matching";
+
+type MushafPageProps = {
+  mushafId: number;
+  riwayaId: number;
+  pageNumber: number;
+  selectedAyahId?: number;
+  restoreSavedPosition?: boolean;
+};
+
+type InteractionMode = "idle" | "possible-tap" | "long-press" | "swipe";
+
+type WordSelection = {
+  key: string;
+  surah: number;
+  ayah: number;
+  word: number;
+};
+
+type MenuState = null | {
+  type: "ayah" | "word" | "selection";
+  ayahId?: number;
+  wordKeys?: string[];
+};
+
+type TrackedTaskAction =
+  | "talkin"
+  | "memorize"
+  | "tathbit"
+  | "revise"
+  | "tadabbur"
+  | "qiraa"
+  | "listen"
+  | "recite"
+  | "khatma"
+  | "tahajjud";
+
+type ActiveLearningTask = {
+  learnerId: string;
+  activityId: string;
+  action: TrackedTaskAction;
+  startedAt: string;
+  ayahIds: number[];
+};
+
+const TRACKED_TASK_OPTIONS: Array<{
+  action: TrackedTaskAction;
+  label: string;
+}> = [
+  { action: "qiraa", label: "القراءة" },
+  { action: "listen", label: "الاستماع" },
+  { action: "recite", label: "التلاوة" },
+  { action: "talkin", label: "التلقين" },
+  { action: "memorize", label: "الحفظ" },
+  { action: "tathbit", label: "التثبيت" },
+  { action: "revise", label: "المراجعة" },
+  { action: "tadabbur", label: "التدبر" },
+  { action: "khatma", label: "الختمة" },
+  { action: "tahajjud", label: "التهجد" },
+];
+
+const TRACKED_TASK_LABELS: Record<TrackedTaskAction, string> = {
+  talkin: "التلقين",
+  memorize: "الحفظ",
+  tathbit: "التثبيت",
+  revise: "المراجعة",
+  tadabbur: "التدبر",
+  qiraa: "القراءة",
+  listen: "الاستماع",
+  recite: "التلاوة",
+  khatma: "الختمة",
+  tahajjud: "التهجد",
+};
+
+function activeTaskStorageKey(learnerId: string): string {
+  return `irtaki.learning.active-task.v1.${learnerId}`;
+}
+
+type MushafAnnotation = {
+  id: string;
+  ayahId: number;
+  content: string;
+  mode: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type SecondaryMode =
+  | "qiraa"
+  | "listening"
+  | "recitation"
+  | "talqin"
+  | "memorization"
+  | "tathbit"
+  | "review"
+  | "tadabbur"
+  | "khatma"
+  | "tahajjud"
+  | "tarteel1"
+  | "tarteel2"
+  | "progress"
+  | "goals"
+  | "history"
+  | "exercises"
+  | "data";
+
+const SECONDARY_MODES: Array<{
+  id: SecondaryMode;
+  label: string;
+  icon: string;
+}> = [
+  { id: "qiraa", label: "القراءة", icon: "📖" },
+  { id: "listening", label: "الاستماع", icon: "🎧" },
+  { id: "recitation", label: "التلاوة", icon: "🎙️" },
+  { id: "talqin", label: "التلقين", icon: "🗣️" },
+  { id: "memorization", label: "الحفظ", icon: "🧠" },
+  { id: "tathbit", label: "التثبيت", icon: "📌" },
+  { id: "review", label: "المراجعة", icon: "🔄" },
+  { id: "tadabbur", label: "التدبر", icon: "👓" },
+  { id: "khatma", label: "الختمة", icon: "📿" },
+  { id: "tahajjud", label: "التهجد", icon: "🌙" },
+  { id: "tarteel1", label: "Tarteel 1", icon: "🎙️" },
+  { id: "tarteel2", label: "Tarteel 2", icon: "🗣️" },
+  { id: "progress", label: "المتابعة", icon: "📊" },
+  { id: "goals", label: "الأهداف", icon: "🎯" },
+  { id: "history", label: "السجل", icon: "📅" },
+  { id: "exercises", label: "التمارين", icon: "🧠" },
+  { id: "data", label: "البيانات", icon: "💾" },
+];
+
+const QURAN_ACTIVITY_MODES = new Set<SecondaryMode>([
+  "qiraa",
+  "listening",
+  "recitation",
+  "talqin",
+  "memorization",
+  "tathbit",
+  "review",
+  "tadabbur",
+  "khatma",
+  "tahajjud",
+  "tarteel1",
+  "tarteel2",
+]);
+
+
+type UnderlineStyle = "single" | "double" | "wavy" | "double-wavy";
+function UnderlineStyleIcon({ style }: { style: UnderlineStyle }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-8"
+      viewBox="0 0 32 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {style === "single" && (
+        <path d="M2 9H30" stroke="currentColor" strokeWidth="1.8" />
+      )}
+      {style === "double" && (
+        <>
+          <path d="M2 6H30" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M2 11H30" stroke="currentColor" strokeWidth="1.5" />
+        </>
+      )}
+      {style === "wavy" && (
+        <path
+          d="M2 8 C5 4 7 12 10 8 S15 4 18 8 S23 12 26 8 S29 4 30 8"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+      )}
+      {style === "double-wavy" && (
+        <>
+          <path
+            d="M2 5 C5 1 7 9 10 5 S15 1 18 5 S23 9 26 5 S29 1 30 5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M2 11 C5 7 7 15 10 11 S15 7 18 11 S23 15 26 11 S29 7 30 11"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+        </>
+      )}
+    </svg>
+  );
+}
+type UnderlineAction = `underline-${UnderlineStyle}`;
+type TextModification =
+  "colors" | "highlight" | "underline" | "hidden" | UnderlineAction;
+
+const UNDERLINE_STYLE_OPTIONS: {
+  style: UnderlineStyle;
+  action: UnderlineAction;
+  label: string;
+}[] = [
+  { style: "single", action: "underline-single", label: "خط مفرد" },
+  { style: "double", action: "underline-double", label: "خط مزدوج" },
+  { style: "wavy", action: "underline-wavy", label: "خط متموج" },
+  {
+    style: "double-wavy",
+    action: "underline-double-wavy",
+    label: "خط متموج مزدوج",
+  },
+];
+
+const TOTAL_PAGES = 604;
+const LONG_PRESS_MS = 550;
+
+const ACTIVE_LEARNER_STORAGE_KEY = "irtaki.activeLearnerId";
+const MAIN_LEARNER_STORAGE_KEY = "irtaki.mainLearnerId";
+
+function getStoredActiveLearnerId(): string | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    return window.localStorage.getItem(ACTIVE_LEARNER_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function getScopedMushafKey(key: string): string {
+  const learnerId = getStoredActiveLearnerId();
+  return learnerId ? `${key}.learner.${learnerId}` : key;
+}
+
+function getMushafStorageItem(key: string): string | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const learnerId = getStoredActiveLearnerId();
+    if (!learnerId) return window.localStorage.getItem(key);
+
+    const scopedKey = `${key}.learner.${learnerId}`;
+    const scopedValue = window.localStorage.getItem(scopedKey);
+    if (scopedValue !== null) return scopedValue;
+
+    // Les anciennes préférences partagées sont reprises uniquement
+    // par le profil principal, jamais par un profil enfant.
+    const mainLearnerId = window.localStorage.getItem(MAIN_LEARNER_STORAGE_KEY);
+
+    if (mainLearnerId === learnerId) {
+      const legacyValue = window.localStorage.getItem(key);
+      if (legacyValue !== null) {
+        window.localStorage.setItem(scopedKey, legacyValue);
+        return legacyValue;
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function setMushafStorageItem(key: string, value: string): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(getScopedMushafKey(key), value);
+  } catch {
+    // Le Mushaf reste utilisable si le stockage local est indisponible.
+  }
+
+  const learnerId = getStoredActiveLearnerId();
+
+  if (learnerId && isCloudMushafPreferenceKey(key)) {
+    window.dispatchEvent(
+      new CustomEvent(MUSHAF_PREFERENCE_CHANGED_EVENT, {
+        detail: learnerId,
+      }),
+    );
+  }
+}
+
+function getMushafSessionStorageItem(key: string): string | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    return window.sessionStorage.getItem(getScopedMushafKey(key));
+  } catch {
+    return null;
+  }
+}
+
+function setMushafSessionStorageItem(key: string, value: string): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.setItem(getScopedMushafKey(key), value);
+  } catch {
+    // La lecture audio reste utilisable sans stockage de session.
+  }
+}
+
+function removeMushafSessionStorageItem(key: string): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.removeItem(getScopedMushafKey(key));
+  } catch {
+    // Ignorer l'indisponibilité du stockage.
+  }
+}
+
+const MUSHAF_PREFERENCE_CHANGED_EVENT = "irtaki:mushaf-preference-changed";
+const MUSHAF_PREFERENCES_READY_EVENT = "irtaki:mushaf-preferences-ready";
+let cloudSyncReadyLearnerId: string | null = null;
+
+function isCloudMushafPreferenceKey(key: string): boolean {
+  return (
+    (key.startsWith("irtaki.mushaf.") || key.startsWith("irtaki.audio.")) &&
+    !key.includes(".learner.")
+  );
+}
+
+function getScopedMushafPreferencesSnapshot(
+  learnerId: string,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  if (typeof window === "undefined") return result;
+
+  const suffix = `.learner.${learnerId}`;
+
+  try {
+    // Importer les anciennes clés uniquement dans le profil principal.
+    const mainLearnerId = window.localStorage.getItem("irtaki.mainLearnerId");
+
+    if (mainLearnerId === learnerId) {
+      const legacyKeys: string[] = [];
+
+      for (let index = 0; index < window.localStorage.length; index += 1) {
+        const key = window.localStorage.key(index);
+        if (
+          key &&
+          isCloudMushafPreferenceKey(key) &&
+          !key.includes(".learner.")
+        ) {
+          legacyKeys.push(key);
+        }
+      }
+
+      for (const key of legacyKeys) {
+        const scopedKey = `${key}${suffix}`;
+
+        if (window.localStorage.getItem(scopedKey) === null) {
+          const legacyValue = window.localStorage.getItem(key);
+          if (legacyValue !== null) {
+            window.localStorage.setItem(scopedKey, legacyValue);
+          }
+        }
+      }
+    }
+
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const storedKey = window.localStorage.key(index);
+      if (!storedKey || !storedKey.endsWith(suffix)) continue;
+
+      const key = storedKey.slice(0, -suffix.length);
+      if (!isCloudMushafPreferenceKey(key)) continue;
+
+      const value = window.localStorage.getItem(storedKey);
+      if (value !== null) result[key] = value;
+    }
+  } catch {
+    // La préférence locale reste utilisable si le stockage est indisponible.
+  }
+
+  return result;
+}
+
+function areMushafPreferenceMapsEqual(
+  left: Record<string, string>,
+  right: Record<string, string>,
+): boolean {
+  const leftKeys = Object.keys(left).sort();
+  const rightKeys = Object.keys(right).sort();
+
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every(
+      (key, index) => key === rightKeys[index] && left[key] === right[key],
+    )
+  );
+}
+
+function normalizeCloudMushafPreferences(
+  value: unknown,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return result;
+  }
+
+  for (const [key, item] of Object.entries(value)) {
+    if (isCloudMushafPreferenceKey(key) && typeof item === "string") {
+      result[key] = item;
+    }
+  }
+
+  return result;
+}
+
+function replaceScopedMushafPreferences(
+  learnerId: string,
+  preferences: Record<string, string>,
+): boolean {
+  if (typeof window === "undefined") return false;
+
+  const current = getScopedMushafPreferencesSnapshot(learnerId);
+  if (areMushafPreferenceMapsEqual(current, preferences)) return false;
+
+  const suffix = `.learner.${learnerId}`;
+
+  try {
+    const removeKeys: string[] = [];
+
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const storedKey = window.localStorage.key(index);
+      if (!storedKey || !storedKey.endsWith(suffix)) continue;
+
+      const baseKey = storedKey.slice(0, -suffix.length);
+      if (isCloudMushafPreferenceKey(baseKey)) removeKeys.push(storedKey);
+    }
+
+    for (const key of removeKeys) {
+      window.localStorage.removeItem(key);
+    }
+
+    for (const [key, value] of Object.entries(preferences)) {
+      if (isCloudMushafPreferenceKey(key) && typeof value === "string") {
+        window.localStorage.setItem(`${key}${suffix}`, value);
+      }
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function saveCloudMushafSnapshot(learnerId: string): Promise<void> {
+  const preferences = getScopedMushafPreferencesSnapshot(learnerId);
+
+  const response = await fetch("/api/learner-preferences", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ learnerId, preferences }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`MUSHAF_PREFERENCES_SAVE_FAILED_${response.status}`);
+  }
+}
+
+const AUDIO_RECITER_STORAGE_KEY = "irtaki.audio.reciter";
+const AUDIO_CONTINUATION_STORAGE_KEY = "irtaki.audio.continuation";
+const AUDIO_RATE_STORAGE_KEY = "irtaki.audio.playback-rate";
+const AUDIO_AUTOPLAY_NEXT_STORAGE_KEY = "irtaki.audio.autoplay-next";
+const AUDIO_SETTINGS_STORAGE_KEY = "irtaki.audio.settings";
+const AUDIO_LOOP_STORAGE_KEY = "irtaki.audio.loop";
+const REPEAT_VALUES = ["1", "2", "3", "5", "n"] as const;
+const SILENCE_VALUES = ["0", "0.5", "0.75", "1", "1.25", "1.5", "2"] as const;
+
+type AudioLoop = {
+  startSurah: number;
+  startAyah: number;
+  startPage: number;
+  pass: number;
+};
+
+type AudioContinuation = {
+  reciterId: string;
+  surahNumber: number;
+  ayahNumber: number;
+  endSurahNumber: number;
+  endAyahNumber: number;
+  playbackRate: number;
+  selectionDurationSeconds?: number;
+};
+const MOVE_THRESHOLD = 20;
+const SWIPE_THRESHOLD = 50;
+
+export function MushafPage({
+  mushafId,
+  riwayaId,
+  pageNumber,
+  selectedAyahId: externalSelectedAyahId,
+  restoreSavedPosition = false,
+}: MushafPageProps) {
+  useEffect(() => {
+    let cancelled = false;
+    let activeLearnerId = getStoredActiveLearnerId();
+    let loadingLearnerId: string | null = null;
+    let requestVersion = 0;
+    let saveTimer: number | null = null;
+    let pendingPreferenceChangesForLearner: string | null = null;
+
+    async function hydrateLearnerPreferences(learnerId: string) {
+      if (loadingLearnerId === learnerId) return;
+
+      loadingLearnerId = learnerId;
+      const version = ++requestVersion;
+      cloudSyncReadyLearnerId = null;
+
+      try {
+        const response = await fetch(
+          `/api/learner-preferences?learnerId=${encodeURIComponent(learnerId)}`,
+          { cache: "no-store" },
+        );
+
+        if (!response.ok) {
+          console.warn("Préférences cloud indisponibles :", response.status);
+
+          if (
+            !cancelled &&
+            version === requestVersion &&
+            getStoredActiveLearnerId() === learnerId
+          ) {
+            cloudSyncReadyLearnerId = learnerId;
+            window.dispatchEvent(
+              new CustomEvent(MUSHAF_PREFERENCES_READY_EVENT, {
+                detail: learnerId,
+              }),
+            );
+          }
+
+          return;
+        }
+
+        const payload = (await response.json()) as {
+          preferences?: unknown;
+        };
+
+        const remote = normalizeCloudMushafPreferences(payload.preferences);
+
+        // Ne jamais appliquer une réponse devenue obsolète.
+        if (
+          cancelled ||
+          version !== requestVersion ||
+          getStoredActiveLearnerId() !== learnerId
+        ) {
+          return;
+        }
+
+        const local = getScopedMushafPreferencesSnapshot(learnerId);
+
+        // Le cloud complète les clés absentes.
+        // Pour le mode actif et les positions, le local gagne en cas
+        // de conflit afin qu'une ancienne réponse distante ne réactive
+        // jamais un ancien mode après une navigation.
+        const merged: Record<string, string> = {
+          ...local,
+          ...remote,
+        };
+
+        for (const [key, value] of Object.entries(local)) {
+          if (
+            key.startsWith("irtaki.mushaf.mode.") ||
+            key.startsWith("irtaki.mushaf.position.")
+          ) {
+            merged[key] = value;
+          }
+        }
+
+        if (!areMushafPreferenceMapsEqual(local, merged)) {
+          replaceScopedMushafPreferences(learnerId, merged);
+        }
+
+        const effectiveLocal =
+          getScopedMushafPreferencesSnapshot(learnerId);
+
+        if (
+          areMushafPreferenceMapsEqual(effectiveLocal, merged) &&
+          !areMushafPreferenceMapsEqual(remote, effectiveLocal)
+        ) {
+          // Synchroniser le résultat fusionné sans recharger la page.
+          try {
+            await saveCloudMushafSnapshot(learnerId);
+          } catch (error) {
+            console.warn(
+              "Synchronisation des préférences fusionnées impossible :",
+              error,
+            );
+          }
+        } else if (!areMushafPreferenceMapsEqual(effectiveLocal, merged)) {
+          console.warn(
+            "Fusion locale incomplète : conservation des données locales.",
+          );
+        }
+
+        if (
+          !cancelled &&
+          version === requestVersion &&
+          getStoredActiveLearnerId() === learnerId
+        ) {
+          cloudSyncReadyLearnerId = learnerId;
+
+          window.dispatchEvent(
+            new CustomEvent(MUSHAF_PREFERENCES_READY_EVENT, {
+              detail: learnerId,
+            }),
+          );
+
+          // Une modification faite pendant l'hydratation doit aussi
+          // être envoyée après que la synchronisation devient prête.
+          if (pendingPreferenceChangesForLearner === learnerId) {
+            pendingPreferenceChangesForLearner = null;
+            scheduleSave(learnerId);
+          }
+        }
+
+      } catch (error) {
+        console.warn("Synchronisation des préférences indisponible :", error);
+
+        // Le stockage local reste utilisable si la connexion échoue.
+        if (
+          !cancelled &&
+          version === requestVersion &&
+          getStoredActiveLearnerId() === learnerId
+        ) {
+          cloudSyncReadyLearnerId = learnerId;
+          window.dispatchEvent(
+            new CustomEvent(MUSHAF_PREFERENCES_READY_EVENT, {
+              detail: learnerId,
+            }),
+          );
+        }
+      } finally {
+        if (loadingLearnerId === learnerId) loadingLearnerId = null;
+      }
+    }
+
+    function scheduleSave(learnerId: string) {
+      if (saveTimer !== null) window.clearTimeout(saveTimer);
+
+      saveTimer = window.setTimeout(() => {
+        saveTimer = null;
+
+        if (
+          cancelled ||
+          cloudSyncReadyLearnerId !== learnerId ||
+          getStoredActiveLearnerId() !== learnerId
+        ) {
+          return;
+        }
+
+        void saveCloudMushafSnapshot(learnerId).catch((error) => {
+          console.warn("Sauvegarde des préférences impossible :", error);
+        });
+      }, 600);
+    }
+
+    function handlePreferenceChange(event: Event) {
+      const learnerId =
+        event instanceof CustomEvent && typeof event.detail === "string"
+          ? event.detail
+          : null;
+
+      if (!learnerId) return;
+      if (getStoredActiveLearnerId() !== learnerId) return;
+
+      if (cloudSyncReadyLearnerId !== learnerId) {
+        pendingPreferenceChangesForLearner = learnerId;
+        return;
+      }
+
+      scheduleSave(learnerId);
+    }
+
+    function handleActiveLearnerChange(event: Event) {
+      let nextId =
+        event instanceof CustomEvent && typeof event.detail === "string"
+          ? event.detail
+          : null;
+
+      if (!nextId) nextId = getStoredActiveLearnerId();
+      if (!nextId) return;
+
+      if (!activeLearnerId) {
+        activeLearnerId = nextId;
+        void hydrateLearnerPreferences(nextId);
+        return;
+      }
+
+      if (nextId !== activeLearnerId) {
+        const previousId = activeLearnerId;
+        const canFlushPrevious = cloudSyncReadyLearnerId === previousId;
+
+        activeLearnerId = nextId;
+        cloudSyncReadyLearnerId = null;
+        requestVersion += 1;
+
+        const flushPrevious = canFlushPrevious
+          ? saveCloudMushafSnapshot(previousId).catch((error) => {
+              console.warn(
+                "Sauvegarde avant changement de profil impossible :",
+                error,
+              );
+            })
+          : Promise.resolve();
+
+        void flushPrevious.finally(() => {
+          if (!cancelled) window.location.replace("/coran/10");
+        });
+        return;
+      }
+
+      if (cloudSyncReadyLearnerId !== nextId && loadingLearnerId !== nextId) {
+        void hydrateLearnerPreferences(nextId);
+      }
+    }
+
+    window.addEventListener(
+      MUSHAF_PREFERENCE_CHANGED_EVENT,
+      handlePreferenceChange,
+    );
+    window.addEventListener(
+      "irtaki:active-learner-changed",
+      handleActiveLearnerChange,
+    );
+    window.addEventListener("storage", handleActiveLearnerChange);
+    window.addEventListener("online", () => {
+      const learnerId = getStoredActiveLearnerId();
+      if (learnerId && cloudSyncReadyLearnerId !== learnerId) {
+        void hydrateLearnerPreferences(learnerId);
+      }
+    });
+
+    if (activeLearnerId) {
+      void hydrateLearnerPreferences(activeLearnerId);
+    }
+
+    return () => {
+      cancelled = true;
+      if (saveTimer !== null) window.clearTimeout(saveTimer);
+
+      window.removeEventListener(
+        MUSHAF_PREFERENCE_CHANGED_EVENT,
+        handlePreferenceChange,
+      );
+      window.removeEventListener(
+        "irtaki:active-learner-changed",
+        handleActiveLearnerChange,
+      );
+      window.removeEventListener("storage", handleActiveLearnerChange);
+    };
+  }, []);
+
+  const router = useRouter();
+
+  const [ayahs, setAyahs] = useState<AyahDto[]>([]);
+  const [layout, setLayout] = useState<MushafPageLayout | null>(null);
+  const [surahs, setSurahs] = useState<Awaited<ReturnType<typeof getSurahs>>>(
+    [],
+  );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [selectedAyahId, setSelectedAyahId] = useState<number | undefined>(
+    externalSelectedAyahId,
+  );
+
+  const [selectedWords, setSelectedWords] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [tarteelCorrectWordsByMode, setTarteelCorrectWordsByMode] =
+    useState<Record<"tarteel1" | "tarteel2", Set<string>>>(() => ({
+      tarteel1: new Set(),
+      tarteel2: new Set(),
+    }));
+
+  const [tarteelRecentWordsByMode, setTarteelRecentWordsByMode] =
+    useState<Record<"tarteel1" | "tarteel2", Set<string>>>(() => ({
+      tarteel1: new Set(),
+      tarteel2: new Set(),
+    }));
+  const tarteelCursorRef = useRef(0);
+  const tarteelGlobalAyahsRef = useRef<AyahDto[]>([]);
+  const tarteelGlobalTargetsRef = useRef<
+    Array<{ key: string; text: string }>
+  >([]);
+  const tarteelLiveSessionRef = useRef<string | null>(null);
+  const tarteelLastProcessedSequenceRef = useRef(-1);
+  const tarteelPendingNavigationKeyRef = useRef<string | null>(null);
+  const tarteelHighlightTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTarteelCatalog() {
+      try {
+        const catalog = await getAllAyahs();
+
+        const layouts: MushafPageLayout[] = [];
+        const pageCount = 604;
+        const batchSize = 20;
+
+        for (let firstPage = 1; firstPage <= pageCount; firstPage += batchSize) {
+          const lastPage = Math.min(
+            firstPage + batchSize - 1,
+            pageCount,
+          );
+
+          const batch = await Promise.all(
+            Array.from(
+              { length: lastPage - firstPage + 1 },
+              (_, index) =>
+                getMushafPageLayout(mushafId, firstPage + index),
+            ),
+          );
+
+          if (cancelled) return;
+
+          layouts.push(...batch);
+        }
+
+        if (cancelled) return;
+
+        tarteelGlobalAyahsRef.current = catalog;
+
+        tarteelGlobalTargetsRef.current = layouts.flatMap((pageLayout) =>
+          pageLayout.lines
+            .filter((line) => line.type === "ayah")
+            .flatMap((line) => line.words)
+            .filter((word) =>
+              /[\u0621-\u064A]/.test(word.text),
+            )
+            .map((word) => ({
+              key: word.key,
+              text: word.text,
+            })),
+        );
+
+        console.info(
+          "[TARTEEL] Catalogue global chargé :",
+          catalog.length,
+          "ayahs,",
+          layouts.length,
+          "pages,",
+          tarteelGlobalTargetsRef.current.length,
+          "mots.",
+        );
+      } catch (error) {
+        console.error(
+          "[TARTEEL] Impossible de charger le catalogue global.",
+          error,
+        );
+      }
+    }
+
+    void loadTarteelCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mushafId]);
+
+  useEffect(() => {
+    function handleLiveTarteelResult(event: Event) {
+      const detail = (
+        event as CustomEvent<{
+          sessionId: string;
+          mode: "tarteel1" | "tarteel2";
+          sequence: number;
+          text: string;
+          final: boolean;
+        }>
+      ).detail;
+
+      if (
+        !detail ||
+        !detail.sessionId ||
+        (detail.mode !== "tarteel1" && detail.mode !== "tarteel2") ||
+        detail.mode !== secondaryModeRef.current ||
+        !Number.isInteger(detail.sequence) ||
+        detail.sequence < 0 ||
+        !detail.text
+      ) {
+        return;
+      }
+
+      const globalTargets = tarteelGlobalTargetsRef.current;
+      const globalAyahs = tarteelGlobalAyahsRef.current;
+
+      if (globalTargets.length === 0 || globalAyahs.length === 0) {
+        return;
+      }
+
+      // Une nouvelle session repart du début du catalogue global.
+      if (tarteelLiveSessionRef.current !== detail.sessionId) {
+        tarteelLiveSessionRef.current = detail.sessionId;
+        tarteelLastProcessedSequenceRef.current = -1;
+        tarteelCursorRef.current = 0;
+        tarteelPendingNavigationKeyRef.current = null;
+      }
+
+      // Protection supplémentaire contre les résultats répétés ou désordonnés.
+      if (
+        detail.sequence <= tarteelLastProcessedSequenceRef.current
+      ) {
+        return;
+      }
+
+      tarteelLastProcessedSequenceRef.current = detail.sequence;
+
+      // Recherche du plus long suffixe reconnu dans les 604 pages.
+      const search = findTarteelLongestSuffixCandidates(
+        globalTargets,
+        detail.text,
+      );
+
+      if (search.candidates.length === 0) {
+        return;
+      }
+
+      // Ne conserver que les occurrences qui peuvent encore faire
+      // progresser le curseur global.
+      const forwardCandidates = search.candidates.filter(
+        (candidate) => candidate.endIndex >= tarteelCursorRef.current,
+      );
+
+      // Plusieurs positions restent possibles : ne pas naviguer.
+      if (forwardCandidates.length !== 1) {
+        return;
+      }
+
+      const candidate = forwardCandidates[0];
+      const matchedTarget = globalTargets[candidate.endIndex];
+
+      if (!matchedTarget) {
+        return;
+      }
+
+      const [targetSurah, targetAyahNumber] = matchedTarget.key
+        .split(":")
+        .map(Number);
+
+      const targetAyah = globalAyahs.find(
+        (ayah) =>
+          ayah.surahNumber === targetSurah &&
+          ayah.number === targetAyahNumber,
+      );
+
+      if (!targetAyah) {
+        return;
+      }
+
+      // Avancer seulement après une correspondance globale unique.
+      tarteelCursorRef.current = candidate.endIndex + 1;
+
+      if (targetAyah.pageNumber !== pageNumber) {
+        tarteelPendingNavigationKeyRef.current = matchedTarget.key;
+
+        setTarteelCorrectWordsByMode((previous) => {
+          const next = new Set(previous[detail.mode]);
+          next.add(matchedTarget.key);
+          return { ...previous, [detail.mode]: next };
+        });
+
+        router.push(
+          `/coran/${riwayaId}/page/${targetAyah.pageNumber}?ayah=${targetAyah.id}`,
+        );
+
+        return;
+      }
+
+      // Conserver tous les mots correctement reconnus pour ce mode.
+      setSelectedAyahId(targetAyah.id);
+
+      setTarteelCorrectWordsByMode((previous) => {
+        const next = new Set(previous[detail.mode]);
+        next.add(matchedTarget.key);
+        return { ...previous, [detail.mode]: next };
+      });
+
+      // Le mot nouvellement reconnu est vert pendant 900 ms.
+      setTarteelRecentWordsByMode((previous) => ({
+        ...previous,
+        [detail.mode]: new Set([matchedTarget.key]),
+      }));
+
+      const targetElement = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-word-key]"),
+      ).find(
+        (element) => element.dataset.wordKey === matchedTarget.key,
+      );
+
+      targetElement?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest",
+      });
+
+      if (tarteelHighlightTimerRef.current !== null) {
+        window.clearTimeout(tarteelHighlightTimerRef.current);
+      }
+
+      tarteelHighlightTimerRef.current = window.setTimeout(() => {
+        setTarteelRecentWordsByMode((previous) => ({
+          ...previous,
+          [detail.mode]: new Set(),
+        }));
+        tarteelHighlightTimerRef.current = null;
+      }, 900);
+    }
+
+    window.addEventListener(
+      "irtaki:tarteel-live-result",
+      handleLiveTarteelResult,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "irtaki:tarteel-live-result",
+        handleLiveTarteelResult,
+      );
+    };
+  }, [pageNumber, riwayaId, router]);
+
+  // Après une navigation, attendre que le nouveau layout soit affiché
+  // avant de sélectionner et de faire défiler jusqu'au mot reconnu.
+  useEffect(() => {
+    const pendingKey = tarteelPendingNavigationKeyRef.current;
+
+    if (
+      !pendingKey ||
+      !layout ||
+      loading ||
+      layout.page !== pageNumber
+    ) {
+      return;
+    }
+
+    const targetAyah = tarteelGlobalAyahsRef.current.find((ayah) => {
+      const prefix = `${ayah.surahNumber}:${ayah.number}:`;
+      return pendingKey.startsWith(prefix);
+    });
+
+    const targetElement = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-word-key]"),
+    ).find((element) => element.dataset.wordKey === pendingKey);
+
+    if (!targetAyah || !targetElement) {
+      return;
+    }
+
+    tarteelPendingNavigationKeyRef.current = null;
+    setSelectedAyahId(targetAyah.id);
+
+    const pendingMode = secondaryModeRef.current;
+    if (pendingMode !== "tarteel1" && pendingMode !== "tarteel2") {
+      return;
+    }
+
+    setTarteelCorrectWordsByMode((previous) => {
+      const next = new Set(previous[pendingMode]);
+      next.add(pendingKey);
+      return { ...previous, [pendingMode]: next };
+    });
+
+    setTarteelRecentWordsByMode((previous) => ({
+      ...previous,
+      [pendingMode]: new Set([pendingKey]),
+    }));
+
+    targetElement.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
+
+    if (tarteelHighlightTimerRef.current !== null) {
+      window.clearTimeout(tarteelHighlightTimerRef.current);
+    }
+
+    tarteelHighlightTimerRef.current = window.setTimeout(() => {
+      setTarteelRecentWordsByMode((previous) => ({
+        ...previous,
+        [pendingMode]: new Set(),
+      }));
+      tarteelHighlightTimerRef.current = null;
+    }, 900);
+  }, [layout, loading, pageNumber]);
+
+  const [menu, setMenu] = useState<MenuState>(null);
+  const [openColorPaletteAction, setOpenColorPaletteAction] = useState<
+    "colors" | "highlight" | null
+  >(null);
+  const [openUnderlinePalette, setOpenUnderlinePalette] = useState(false);
+  const [contextAudioTarget, setContextAudioTarget] = useState<
+    "ayah" | "word" | "selection" | null
+  >(null);
+  const [colorPaletteLabels, setColorPaletteLabels] = useState<
+    Record<string, string>
+  >({});
+  const [colorPaletteLabelsLoaded, setColorPaletteLabelsLoaded] =
+    useState(false);
+  const [colorAssignments, setColorAssignments] = useState<
+    Record<string, string>
+  >({});
+  const [colorAssignmentsLoadedFor, setColorAssignmentsLoadedFor] = useState<
+    string | null
+  >(null);
+  const colorAssignmentStorageKey = `irtaki.mushaf.color-assignments.v1.${mushafId}.${riwayaId}`;
+  const [annotationPanelOpen, setAnnotationPanelOpen] = useState(false);
+  const [annotationAyahId, setAnnotationAyahId] = useState<number | null>(null);
+  const [annotations, setAnnotations] = useState<MushafAnnotation[]>([]);
+  const [annotationContent, setAnnotationContent] = useState("");
+  const [annotationStatus, setAnnotationStatus] = useState("");
+  const [annotationBusy, setAnnotationBusy] = useState(false);
+
+  useEffect(() => {
+    let restored: Record<string, string> = {};
+
+    try {
+      const raw = getMushafStorageItem("irtaki.mushaf.color-palette-labels.v1");
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          !Array.isArray(parsed)
+        ) {
+          for (const [id, value] of Object.entries(parsed)) {
+            if (typeof value !== "string") continue;
+
+            const label = value.slice(0, 40);
+            if (/^c(?:0[1-9]|1[0-2])$/.test(id)) {
+              for (const selectionType of [
+                "ayah",
+                "word",
+                "selection",
+              ] as const) {
+                for (const action of ["colors", "highlight"] as const) {
+                  restored[`${selectionType}.${action}.${id}`] = label;
+                }
+              }
+            } else if (
+              /^(ayah|word|selection)\.(colors|highlight)\.c(?:0[1-9]|1[0-2])$/.test(
+                id,
+              )
+            ) {
+              restored[id] = value.slice(0, 40);
+            }
+          }
+        }
+      }
+    } catch {
+      // La palette reste utilisable si le stockage local est indisponible.
+    }
+
+    setColorPaletteLabels(restored);
+    setColorPaletteLabelsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!colorPaletteLabelsLoaded) return;
+    try {
+      setMushafStorageItem(
+        "irtaki.mushaf.color-palette-labels.v1",
+        JSON.stringify(colorPaletteLabels),
+      );
+    } catch {
+      // Les libellés restent disponibles pendant la session.
+    }
+  }, [colorPaletteLabels, colorPaletteLabelsLoaded]);
+
+  useEffect(() => {
+    let restored: Record<string, string> = {};
+
+    try {
+      const raw = getMushafStorageItem(colorAssignmentStorageKey);
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          !Array.isArray(parsed)
+        ) {
+          for (const [key, value] of Object.entries(parsed)) {
+            if (typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value)) {
+              restored[key] = value;
+            }
+          }
+        }
+      }
+    } catch {
+      // Les couleurs restent utilisables pendant la session.
+    }
+
+    setColorAssignments(restored);
+    setColorAssignmentsLoadedFor(colorAssignmentStorageKey);
+  }, [colorAssignmentStorageKey]);
+
+  useEffect(() => {
+    if (colorAssignmentsLoadedFor !== colorAssignmentStorageKey) return;
+
+    try {
+      setMushafStorageItem(
+        colorAssignmentStorageKey,
+        JSON.stringify(colorAssignments),
+      );
+    } catch {
+      // Les couleurs restent disponibles pendant la session.
+    }
+  }, [colorAssignments, colorAssignmentsLoadedFor, colorAssignmentStorageKey]);
+
+  async function openAnnotations(ayahId?: number) {
+    setAnnotationPanelOpen(true);
+    setAnnotationContent("");
+    setAnnotationStatus("");
+    setAnnotations([]);
+
+    let targetAyahId = ayahId ?? selectedAyahId;
+
+    if (!targetAyahId && selectedWords.size > 0) {
+      const firstKey = [...selectedWords][0] ?? "";
+      const [surahNumber, ayahNumber] = firstKey.split(":").map(Number);
+
+      if (Number.isInteger(surahNumber) && Number.isInteger(ayahNumber)) {
+        targetAyahId = ayahs.find(
+          (ayah) =>
+            ayah.surahNumber === surahNumber && ayah.number === ayahNumber,
+        )?.id;
+      }
+    }
+
+    if (!targetAyahId) {
+      setAnnotationAyahId(null);
+      setAnnotationStatus("حدد آية أو كلمة أولاً");
+      setMenu(null);
+      return;
+    }
+
+    setAnnotationAyahId(targetAyahId);
+    setMenu(null);
+    setAnnotationBusy(true);
+
+    try {
+      const response = await fetch(
+        `/api/annotations?mode=${encodeURIComponent(secondaryMode)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          response.status === 401
+            ? "يلزم تسجيل الدخول لعرض الملاحظات وحفظها."
+            : "تعذر تحميل الملاحظات.",
+        );
+      }
+
+      const data: unknown = await response.json();
+
+      if (!Array.isArray(data)) {
+        throw new Error("استجابة الملاحظات غير صالحة.");
+      }
+
+      setAnnotations(data as MushafAnnotation[]);
+    } catch (error) {
+      setAnnotationStatus(
+        error instanceof Error ? error.message : "تعذر تحميل الملاحظات.",
+      );
+    } finally {
+      setAnnotationBusy(false);
+    }
+  }
+
+  async function saveAnnotation() {
+    const content = annotationContent.trim();
+
+    if (annotationAyahId === null || !content || annotationBusy) {
+      return;
+    }
+
+    setAnnotationBusy(true);
+    setAnnotationStatus("");
+
+    try {
+      const response = await fetch("/api/annotations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ayahId: annotationAyahId,
+          content,
+          mode: secondaryMode,
+        }),
+      });
+
+      const payload: unknown = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const errorCode =
+          payload !== null && typeof payload === "object" && "error" in payload
+            ? payload.error
+            : undefined;
+
+        if (response.status === 401 || errorCode === "UNAUTHORIZED") {
+          throw new Error("يلزم تسجيل الدخول لحفظ الملاحظات.");
+        }
+        if (errorCode === "INVALID_ANNOTATION_CONTENT") {
+          throw new Error("اكتب ملاحظة غير فارغة.");
+        }
+        if (errorCode === "AYAH_NOT_FOUND") {
+          throw new Error("تعذر العثور على الآية المحددة.");
+        }
+
+        throw new Error("تعذر حفظ الملاحظة.");
+      }
+
+      if (
+        payload === null ||
+        typeof payload !== "object" ||
+        !("id" in payload) ||
+        !("ayahId" in payload) ||
+        !("content" in payload)
+      ) {
+        throw new Error("استجابة حفظ الملاحظة غير صالحة.");
+      }
+
+      const annotation = payload as MushafAnnotation;
+      setAnnotations((current) => [
+        annotation,
+        ...current.filter((item) => item.id !== annotation.id),
+      ]);
+      journalMushafAction(
+        "comment",
+        "تعليق",
+        [`ayah:${annotation.ayahId}`],
+        content,
+      );
+      setAnnotationContent("");
+      setAnnotationStatus("تم حفظ الملاحظة.");
+    } catch (error) {
+      setAnnotationStatus(
+        error instanceof Error ? error.message : "تعذر حفظ الملاحظة.",
+      );
+    } finally {
+      setAnnotationBusy(false);
+    }
+  }
+
+  const [secondaryMode, setSecondaryMode] = useState<SecondaryMode>(
+    pageNumber === 605 ? "history" : "listening",
+  );
+  const secondaryModeRef = useRef<SecondaryMode>(
+    pageNumber === 605 ? "history" : "listening",
+  );
+
+  const modeInitializationContextRef = useRef<string | null>(null);
+  const positionInitializationReadyContextRef = useRef<string | null>(null);
+
+  const pendingModePositionRestoreRef = useRef<{
+    learnerId: string | null;
+    contextKey: string;
+    mode: SecondaryMode;
+    sourcePage: number;
+    targetPage: number;
+  } | null>(null);
+  const [historyView, setHistoryView] = useState<MushafHistoryView>("pages");
+
+  function journalReferencesForTargets(targets: string[]): string[] {
+    const references = targets.map((target) => {
+      const wordMatch = target.match(/^word:(\d+)[:/.-](\d+)[:/.-]\d+$/);
+      if (wordMatch) return `${wordMatch[1]}:${wordMatch[2]}`;
+
+      const ayahMatch = target.match(/^ayah:(\d+)$/);
+      if (ayahMatch) {
+        const id = Number(ayahMatch[1]);
+        const candidate = ayahs.find((item) => item.id === id) as
+          (Record<string, unknown> & { id: number }) | undefined;
+
+        if (candidate) {
+          const surahValue =
+            candidate.surahNumber ??
+            (typeof candidate.surah === "object" && candidate.surah !== null
+              ? (candidate.surah as Record<string, unknown>).number
+              : undefined);
+          const ayahValue =
+            candidate.numberInSurah ?? candidate.ayahNumber ?? candidate.number;
+
+          if (
+            typeof surahValue === "number" &&
+            typeof ayahValue === "number" &&
+            surahValue >= 1 &&
+            surahValue <= 114 &&
+            ayahValue >= 1
+          ) {
+            return `${surahValue}:${ayahValue}`;
+          }
+        }
+
+        return `معرّف الآية ${id}`;
+      }
+
+      return target;
+    });
+
+    return [...new Set(references)];
+  }
+
+  function journalMushafAction(
+    action: string,
+    label: string,
+    targets: string[],
+    details?: string,
+  ) {
+    const references = journalReferencesForTargets(targets);
+    if (references.length === 0) return;
+
+    recordMushafActionJournalEvent({
+      action,
+      label,
+      references,
+      ...(details ? { details } : {}),
+    });
+  }
+  const [listeningAyahsHidden, setListeningAyahsHidden] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return (
+        getMushafStorageItem("irtaki.mushaf.global-text-hidden.v1") === "true"
+      );
+    } catch {
+      return false;
+    }
+  });
+  const [listeningRevealedAyahIds, setListeningRevealedAyahIds] = useState<
+    Set<number>
+  >(() => new Set());
+  const listeningAyahsHiddenRef = useRef(false);
+  const audioCurrentAyahIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    listeningAyahsHiddenRef.current = listeningAyahsHidden;
+    try {
+      setMushafStorageItem(
+        "irtaki.mushaf.global-text-hidden.v1",
+        String(listeningAyahsHidden),
+      );
+    } catch {
+      // Le lecteur reste utilisable sans stockage local.
+    }
+  }, [listeningAyahsHidden]);
+  const [modePickerOpen, setModePickerOpen] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [tilawaUiStatus, setTilawaUiStatus] = useState<
+    "idle" | "recording" | "paused" | "stopped" | "playing" | "playback-paused"
+  >("idle");
+
+  useEffect(() => {
+    function handleTilawaStatus(event: Event) {
+      const status = (event as CustomEvent<{ status?: string }>).detail?.status;
+      if (
+        status === "idle" || status === "recording" || status === "paused" ||
+        status === "stopped" || status === "playing" || status === "playback-paused"
+      ) {
+        setTilawaUiStatus(status);
+      }
+    }
+
+    window.addEventListener("irtaki:tilawa-status", handleTilawaStatus);
+    return () => window.removeEventListener("irtaki:tilawa-status", handleTilawaStatus);
+  }, []);
+  const [repeatEnabled, setRepeatEnabled] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [reciterPickerOpen, setReciterPickerOpen] = useState(false);
+  const [selectedReciter, setSelectedReciter] = useState(() => {
+    if (typeof window === "undefined") {
+      return "hafs-afassi";
+    }
+
+    return getMushafStorageItem(AUDIO_RECITER_STORAGE_KEY) ?? "hafs-afassi";
+  });
+  const [audioStartSurah, setAudioStartSurah] = useState("");
+  const [audioStartAyah, setAudioStartAyah] = useState("");
+  const [audioEndSurah, setAudioEndSurah] = useState("114");
+  const [audioEndAyah, setAudioEndAyah] = useState("6");
+  const [audioStartSurahQuery, setAudioStartSurahQuery] = useState("");
+  const [audioEndSurahQuery, setAudioEndSurahQuery] = useState("");
+  const [audioStartSurahPickerOpen, setAudioStartSurahPickerOpen] =
+    useState(false);
+  const [audioEndSurahPickerOpen, setAudioEndSurahPickerOpen] = useState(false);
+  const [audioStartSurahPickerQuery, setAudioStartSurahPickerQuery] =
+    useState("");
+  const [audioEndSurahPickerQuery, setAudioEndSurahPickerQuery] = useState("");
+  const [audioStartPage, setAudioStartPage] = useState(String(pageNumber));
+  const [audioEndPage, setAudioEndPage] = useState("604");
+  const audioRangeUserModifiedRef = useRef(false);
+  const modeSelectionContextRef = useRef<string | null>(null);
+  const [ayahRepeatCount, setAyahRepeatCount] = useState("1");
+  const [selectionRepeatCount, setSelectionRepeatCount] = useState("1");
+  const [ayahRepeatOptionsOpen, setAyahRepeatOptionsOpen] = useState(false);
+  const [selectionRepeatOptionsOpen, setSelectionRepeatOptionsOpen] =
+    useState(false);
+  const [ayahRepeatToolbarOpen, setAyahRepeatToolbarOpen] = useState(false);
+  const [selectionRepeatToolbarOpen, setSelectionRepeatToolbarOpen] =
+    useState(false);
+  const [silenceBeforeAyah, setSilenceBeforeAyah] = useState("0");
+  const [silenceAfterAyah, setSilenceAfterAyah] = useState("0");
+  const [silenceBeforeSelection, setSilenceBeforeSelection] = useState("0");
+  const [silenceAfterSelection, setSilenceAfterSelection] = useState("0");
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [annotationOptions, setAnnotationOptions] = useState<
+    Record<string, boolean>
+  >({});
+  const [showAllTextByMode, setShowAllTextByMode] = useState<
+    Record<string, boolean>
+  >({});
+  const [hiddenModificationModes, setHiddenModificationModes] = useState<
+    Record<string, boolean>
+  >({});
+  const [textModifications, setTextModifications] = useState<
+    Record<string, boolean>
+  >({});
+  const [previewOriginalOptions, setPreviewOriginalOptions] = useState<
+    Record<string, boolean>
+  >({});
+  const [secondaryMessage, setSecondaryMessage] = useState<string | null>(null);
+
+  const [contextSettingsReady, setContextSettingsReady] = useState(false);
+
+  useEffect(() => {
+    const isBooleanRecord = (
+      value: unknown,
+    ): value is Record<string, boolean> => {
+      return (
+        value !== null &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        Object.values(value).every((item) => typeof item === "boolean")
+      );
+    };
+
+    try {
+      const raw = getMushafStorageItem(
+        "irtaki.mushaf.context-menu-settings.v1",
+      );
+
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+
+        if (
+          parsed !== null &&
+          typeof parsed === "object" &&
+          !Array.isArray(parsed)
+        ) {
+          const saved = parsed as Record<string, unknown>;
+
+          if (isBooleanRecord(saved.textModifications)) {
+            setTextModifications(saved.textModifications);
+          }
+
+          if (isBooleanRecord(saved.annotationOptions)) {
+            setAnnotationOptions(saved.annotationOptions);
+          }
+
+          if (isBooleanRecord(saved.showAllTextByMode)) {
+            setShowAllTextByMode(saved.showAllTextByMode);
+          }
+        }
+      }
+    } catch {
+      // Le stockage peut être indisponible ou contenir des données invalides.
+    } finally {
+      setContextSettingsReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Ne jamais écraser les valeurs sauvegardées avant leur lecture.
+    if (!contextSettingsReady) return;
+
+    try {
+      setMushafStorageItem(
+        "irtaki.mushaf.context-menu-settings.v1",
+        JSON.stringify({
+          textModifications,
+          annotationOptions,
+          showAllTextByMode,
+        }),
+      );
+    } catch {
+      // Le navigateur peut refuser l'accès au stockage.
+    }
+  }, [
+    contextSettingsReady,
+    textModifications,
+    annotationOptions,
+    showAllTextByMode,
+  ]);
+  const [taskMenuOpen, setTaskMenuOpen] = useState(false);
+  const [taskBusy, setTaskBusy] = useState(false);
+  const [taskError, setTaskError] = useState<string | null>(null);
+  const [activeTask, setActiveTask] = useState<ActiveLearningTask | null>(null);
+  const [contextMenuMessage, setContextMenuMessage] = useState<string | null>(
+    null,
+  );
+  const [tafsirAyahId, setTafsirAyahId] = useState<number | null>(null);
+  const [similarAyah, setSimilarAyah] = useState<{
+    surahNumber: number;
+    ayahNumber: number;
+  } | null>(null);
+  const [qiraatAyah, setQiraatAyah] = useState<{
+    surahNumber: number;
+    ayahNumber: number;
+  } | null>(null);
+
+  const visibleModificationModes =
+    secondaryMode === "progress"
+      ? SECONDARY_MODES.filter(
+          (item) => hiddenModificationModes[item.id] !== true,
+        ).map((item) => item.id)
+      : [secondaryMode];
+
+  useEffect(() => {
+    setHiddenModificationModes({});
+  }, [mushafId, riwayaId, pageNumber]);
+
+  function toggleOriginalPreview(optionId: string) {
+    const key = `${secondaryMode}:${optionId}`;
+
+    // Ne touche ni au réglage enregistré ni aux styles des cibles.
+    setPreviewOriginalOptions((current) => ({
+      ...current,
+      [key]: current[key] !== true,
+    }));
+  }
+
+  function contextTextTargetKeys(): string[] {
+    if (!menu) return [];
+
+    if (menu.type === "ayah") {
+      return menu.ayahId === undefined ? [] : [`ayah:${menu.ayahId}`];
+    }
+
+    if (menu.type === "word" || menu.type === "selection") {
+      const keys = menu.wordKeys ?? [...selectedWords];
+      return keys.map((wordKey) => `word:${wordKey}`);
+    }
+
+    return [];
+  }
+
+  function isContextTextActionEnabled(action: TextModification): boolean {
+    const targets = contextTextTargetKeys();
+    if (action === "hidden" && showAllTextByMode[secondaryMode] === true) {
+      return false;
+    }
+    return (
+      targets.length > 0 &&
+      targets.every(
+        (target) =>
+          textModifications[`${secondaryMode}:${target}:${action}`] === true,
+      )
+    );
+  }
+
+  function toggleContextTextAction(action: TextModification) {
+    const targets = contextTextTargetKeys();
+    if (targets.length === 0) {
+      setContextMenuMessage("حدد آية أو كلمة أو تحديداً أولاً");
+      return;
+    }
+    if (action === "hidden" && showAllTextByMode[secondaryMode] === true) {
+      setShowAllTextByMode((current) => ({
+        ...current,
+        [secondaryMode]: false,
+      }));
+      setTextModifications((current) => {
+        const next = { ...current };
+        for (const target of targets) {
+          next[`${secondaryMode}:${target}:hidden`] = true;
+        }
+        return next;
+      });
+      journalMushafAction("text-modification", "تعديل النص", targets, action);
+      setContextMenuMessage(null);
+      return;
+    }
+
+    const allEnabled = targets.every(
+      (target) =>
+        textModifications[`${secondaryMode}:${target}:${action}`] === true,
+    );
+    setTextModifications((current) => {
+      const next = { ...current };
+      for (const target of targets) {
+        next[`${secondaryMode}:${target}:${action}`] = !allEnabled;
+      }
+      return next;
+    });
+    journalMushafAction(
+      "text-modification",
+      allEnabled ? "إلغاء تعديل النص" : "تعديل النص",
+      targets,
+      action,
+    );
+    setContextMenuMessage(null);
+  }
+
+  function toggleContextUnderlineStyle(style: UnderlineStyle) {
+    const targets = contextTextTargetKeys();
+
+    if (targets.length === 0) {
+      setContextMenuMessage("حدد آية أو كلمة أو تحديداً أولاً");
+      return;
+    }
+
+    const action: UnderlineAction = `underline-${style}`;
+    const allEnabled = targets.every(
+      (target) =>
+        textModifications[`${secondaryMode}:${target}:${action}`] === true,
+    );
+
+    setTextModifications((current) => {
+      const next = { ...current };
+
+      for (const target of targets) {
+        // Retirer les anciens styles pour éviter leur superposition.
+        next[`${secondaryMode}:${target}:underline`] = false;
+
+        for (const option of UNDERLINE_STYLE_OPTIONS) {
+          next[`${secondaryMode}:${target}:${option.action}`] = false;
+        }
+
+        if (!allEnabled) {
+          next[`${secondaryMode}:${target}:${action}`] = true;
+        }
+      }
+
+      return next;
+    });
+
+    journalMushafAction(
+      "underline",
+      allEnabled ? "إزالة التسطير" : "تسطير",
+      targets,
+      style,
+    );
+    setContextMenuMessage(null);
+  }
+
+  function applyContextColor(action: "colors" | "highlight", color: string) {
+    const activeColorButton =
+      typeof document !== "undefined"
+        ? (document.activeElement?.closest(
+            'button[aria-label^="Appliquer la couleur"]',
+          ) as HTMLButtonElement | null)
+        : null;
+
+    const rectangleLabels = activeColorButton
+      ? Array.from(activeColorButton.querySelectorAll("span"))
+          .map((element) => element.textContent?.trim() ?? "")
+          .filter(Boolean)
+      : [];
+
+    const rectangleName =
+      rectangleLabels.length > 0
+        ? rectangleLabels[rectangleLabels.length - 1]
+        : "";
+
+    const targets: string[] = [];
+
+    if (menu?.type === "ayah") {
+      targets.push(`ayah:${menu.ayahId}`);
+    } else if (menu?.type === "word") {
+      const keys = menu.wordKeys ?? [...selectedWords];
+      for (const key of keys) {
+        targets.push(`word:${key}`);
+      }
+    } else if (menu?.type === "selection") {
+      for (const key of selectedWords) {
+        targets.push(`word:${key}`);
+      }
+    }
+
+    if (targets.length === 0) {
+      setContextMenuMessage("حدد آية أو كلمة أولاً");
+      setOpenColorPaletteAction(null);
+      return;
+    }
+
+    const keys = targets.map(
+      (target) => `${secondaryMode}:${target}:${action}`,
+    );
+    const removeColor = keys.every(
+      (key) =>
+        colorAssignments[key] === color && textModifications[key] === true,
+    );
+
+    setColorAssignments((current) => {
+      const next = { ...current };
+      for (const key of keys) {
+        if (removeColor) {
+          delete next[key];
+        } else {
+          next[key] = color;
+        }
+      }
+      return next;
+    });
+
+    setTextModifications((current) => {
+      const next = { ...current };
+      for (const key of keys) {
+        next[key] = !removeColor;
+      }
+      return next;
+    });
+
+    journalMushafAction(
+      action === "colors" ? "color" : "highlight",
+      removeColor
+        ? action === "colors"
+          ? "إلغاء اللون"
+          : "إلغاء التظليل"
+        : action === "colors"
+          ? "تلوين"
+          : "تظليل",
+      targets,
+      rectangleName || "اسم المستطيل غير متاح",
+    );
+
+    setOpenColorPaletteAction(null);
+    setContextMenuMessage(
+      removeColor
+        ? action === "colors"
+          ? "تم إلغاء اللون"
+          : "تم إلغاء التظليل"
+        : action === "colors"
+          ? "تم تطبيق اللون على التحديد"
+          : "تم تطبيق التظليل على التحديد",
+    );
+  }
+
+  function toggleGlobalTextVisibility() {
+    const nextHidden = !listeningAyahsHidden;
+    listeningAyahsHiddenRef.current = nextHidden;
+    setListeningAyahsHidden(nextHidden);
+    setListeningRevealedAyahIds(new Set());
+
+    showSecondaryMessage(nextHidden ? "إخفاء نص الآيات" : "إظهار نص الآيات");
+  }
+
+  function contextAyahId(): number | undefined {
+    if (menu?.type === "ayah") return menu.ayahId;
+    const firstKey = [...selectedWords][0];
+    if (firstKey) {
+      const [surahNumber, ayahNumber] = firstKey.split(":").map(Number);
+      if (Number.isInteger(surahNumber) && Number.isInteger(ayahNumber)) {
+        const target = ayahs.find(
+          (ayah) =>
+            ayah.surahNumber === surahNumber && ayah.number === ayahNumber,
+        );
+        if (target) return target.id;
+      }
+    }
+    return selectedAyahId;
+  }
+
+  const interactionRef = useRef<{
+    mode: InteractionMode;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    currentKey?: string;
+    timer?: ReturnType<typeof setTimeout>;
+  }>({
+    mode: "idle",
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+  });
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioSourceKeyRef = useRef<string | null>(null);
+  const audioContinuationHandledRef = useRef(false);
+  const audioShouldContinueRef = useRef(false);
+  const audioPlaybackCancelledRef = useRef(false);
+  const silenceCancelRef = useRef<(() => void) | null>(null);
+  const silenceDoneRef = useRef(false);
+  const ayahPlayCountRef = useRef(1);
+  const handleEndedRef = useRef<() => void>(() => {});
+  const audioSettingsRef = useRef({
+    ayahRepeat: "1",
+    selectionRepeat: "1",
+    silenceBeforeAyah: "0",
+    silenceAfterAyah: "0",
+    silenceBeforeSelection: "0",
+    silenceAfterSelection: "0",
+  });
+  const audioPreloadedUrlsRef = useRef<Map<string, string>>(new Map());
+  const audioPreloadedPlayersRef = useRef<Map<string, HTMLAudioElement>>(
+    new Map(),
+  );
+  const audioPreloadInFlightRef = useRef<Set<string>>(new Set());
+  const audioPreloadUnmountedRef = useRef(false);
+  const [audioSettingsLoaded, setAudioSettingsLoaded] = useState(false);
+  const selectionRepeatRemainingRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      if (pageNumber === 605) {
+        setAyahs([]);
+        setLayout(null);
+        setLoading(false);
+        setError(null);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [ayahData, layoutData, surahData] = await Promise.all([
+          getAyahsByPage(pageNumber),
+          getMushafPageLayout(mushafId, pageNumber),
+          getSurahs(),
+        ]);
+
+        if (!cancelled) {
+          setAyahs(ayahData);
+          setLayout(layoutData);
+          setSurahs(surahData);
+          setSelectedAyahId(externalSelectedAyahId);
+          setSelectedWords(new Set());
+          setMenu(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("تعذر تحميل الصفحة.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mushafId, pageNumber]);
+
+  // Synchroniser la sélection lorsque l'ayah externe change,
+  // même si la page du Mushaf reste identique.
+  useEffect(() => {
+    if (!externalSelectedAyahId) {
+      setSelectedAyahId(undefined);
+      return;
+    }
+
+    if (loading || ayahs.length === 0) {
+      return;
+    }
+
+    const targetAyah = ayahs.find(
+      (ayah) => ayah.id === externalSelectedAyahId,
+    );
+
+    if (!targetAyah) {
+      return;
+    }
+
+    setSelectedAyahId(targetAyah.id);
+
+    const scrollTimer = window.setTimeout(() => {
+      const element = document.querySelector<HTMLElement>(
+        `[data-ayah-id="${targetAyah.id}"]`,
+      );
+
+      element?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 0);
+
+    return () => {
+      window.clearTimeout(scrollTimer);
+    };
+  }, [externalSelectedAyahId, ayahs, loading]);
+
+  // Restaurer le mode et la page uniquement après l'hydratation
+  // des préférences du current-learner.
+  useEffect(() => {
+    function initializeModeForLearner() {
+      const learnerId = getStoredActiveLearnerId();
+
+      // Ne pas utiliser les valeurs par défaut avant la réponse cloud.
+      if (learnerId && cloudSyncReadyLearnerId !== learnerId) {
+        return;
+      }
+
+      const contextKey = JSON.stringify([
+        learnerId,
+        mushafId,
+        riwayaId,
+      ]);
+
+      if (modeInitializationContextRef.current === contextKey) {
+        return;
+      }
+
+      modeInitializationContextRef.current = contextKey;
+      positionInitializationReadyContextRef.current = null;
+      pendingModePositionRestoreRef.current = null;
+
+      const storageKey = `irtaki.mushaf.mode.${mushafId}.${riwayaId}`;
+      let storedMode: string | null = null;
+
+      try {
+        storedMode = getMushafStorageItem(storageKey);
+      } catch {
+        // Utiliser le mode par défaut si le stockage est indisponible.
+      }
+
+      const savedMode = SECONDARY_MODES.find(
+        (candidate) => candidate.id === storedMode,
+      )?.id;
+
+      const initialMode: SecondaryMode =
+        pageNumber === 605 ? "history" : (savedMode ?? "listening");
+
+      secondaryModeRef.current = initialMode;
+      setSecondaryMode(initialMode);
+
+      if (!savedMode) {
+        setMushafStorageItem(storageKey, initialMode);
+      }
+
+      // Les outils de suivi ne possèdent pas de position indépendante.
+      if (!QURAN_ACTIVITY_MODES.has(initialMode)) {
+        positionInitializationReadyContextRef.current = contextKey;
+        return;
+      }
+
+      if (
+        !Number.isInteger(pageNumber) ||
+        pageNumber < 1 ||
+        pageNumber > TOTAL_PAGES
+      ) {
+        return;
+      }
+
+      const positionKey =
+        `irtaki.mushaf.position.${mushafId}.${riwayaId}.${initialMode}`;
+
+      // Une route /page/[page] représente une navigation explicite.
+      // Seule la route d'entrée du Mushaf autorise la restauration.
+      if (!restoreSavedPosition) {
+        positionInitializationReadyContextRef.current = contextKey;
+        setMushafStorageItem(positionKey, String(pageNumber));
+        return;
+      }
+
+      const rawSavedPage = getMushafStorageItem(positionKey);
+      const savedPage =
+        rawSavedPage === null ? Number.NaN : Number(rawSavedPage);
+
+      const hasSavedPage =
+        Number.isInteger(savedPage) &&
+        savedPage >= 1 &&
+        savedPage <= TOTAL_PAGES;
+
+      if (hasSavedPage && savedPage !== pageNumber) {
+        pendingModePositionRestoreRef.current = {
+          learnerId,
+          contextKey,
+          mode: initialMode,
+          sourcePage: pageNumber,
+          targetPage: savedPage,
+        };
+
+        router.replace(`/coran/${riwayaId}/page/${savedPage}`);
+        return;
+      }
+
+      // Première utilisation : conserver la page courante.
+      positionInitializationReadyContextRef.current = contextKey;
+
+      setMushafStorageItem(
+        positionKey,
+        String(hasSavedPage ? savedPage : pageNumber),
+      );
+    }
+
+    function handlePreferencesReady(event: Event) {
+      const learnerId =
+        event instanceof CustomEvent &&
+        typeof event.detail === "string"
+          ? event.detail
+          : null;
+
+      if (!learnerId) return;
+      if (learnerId !== getStoredActiveLearnerId()) return;
+
+      initializeModeForLearner();
+    }
+
+    initializeModeForLearner();
+
+    window.addEventListener(
+      MUSHAF_PREFERENCES_READY_EVENT,
+      handlePreferencesReady,
+    );
+
+    return () => {
+      window.removeEventListener(
+        MUSHAF_PREFERENCES_READY_EVENT,
+        handlePreferencesReady,
+      );
+    };
+  }, [mushafId, riwayaId, pageNumber, router, restoreSavedPosition]);
+
+  useEffect(() => {
+    const activeMode = secondaryModeRef.current;
+
+    if (!QURAN_ACTIVITY_MODES.has(activeMode)) return;
+
+    const learnerId = getStoredActiveLearnerId();
+
+    const contextKey = JSON.stringify([
+      learnerId,
+      mushafId,
+      riwayaId,
+    ]);
+
+    const pendingRestore = pendingModePositionRestoreRef.current;
+
+    if (pendingRestore) {
+      if (
+        pendingRestore.learnerId !== learnerId ||
+        pendingRestore.contextKey !== contextKey ||
+        pendingRestore.mode !== activeMode
+      ) {
+        pendingModePositionRestoreRef.current = null;
+        return;
+      }
+
+      // L'ancienne page est toujours affichée : ne pas la sauvegarder.
+      if (pageNumber === pendingRestore.sourcePage) {
+        return;
+      }
+
+      // La redirection est arrivée à destination, ou une navigation
+      // volontaire a remplacé la restauration.
+      pendingModePositionRestoreRef.current = null;
+      positionInitializationReadyContextRef.current = contextKey;
+    }
+
+    // Aucune position ne doit être enregistrée avant l'initialisation.
+    if (positionInitializationReadyContextRef.current !== contextKey) {
+      return;
+    }
+
+    if (
+      !Number.isInteger(pageNumber) ||
+      pageNumber < 1 ||
+      pageNumber > TOTAL_PAGES
+    ) {
+      return;
+    }
+
+    try {
+      setMushafStorageItem(
+        getModePositionKey(activeMode),
+        String(pageNumber),
+      );
+    } catch {
+      // Le lecteur reste utilisable si le stockage est indisponible.
+    }
+  }, [pageNumber, mushafId, riwayaId]);
+
+  function navigatePage(delta: number) {
+    const nextPage = Math.max(
+      1,
+      Math.min(
+        secondaryMode === "history" ? 605 : TOTAL_PAGES,
+        pageNumber + delta,
+      ),
+    );
+
+    if (nextPage === pageNumber) {
+      return;
+    }
+
+    // Enregistrer la destination avant la navigation.
+    // Cela protège la restauration si le composant est remonté.
+    const activeMode = secondaryModeRef.current;
+
+    if (QURAN_ACTIVITY_MODES.has(activeMode)) {
+      setMushafStorageItem(
+        getModePositionKey(activeMode),
+        String(nextPage),
+      );
+    }
+
+    router.push(`/coran/${riwayaId}/page/${nextPage}`);
+  }
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      switch (event.key) {
+        case "ArrowLeft":
+          event.preventDefault();
+          navigatePage(1);
+          break;
+
+        case "ArrowRight":
+          event.preventDefault();
+          navigatePage(-1);
+          break;
+
+        case "ArrowUp":
+          event.preventDefault();
+          setMenu({
+            type: "selection",
+            wordKeys: [...selectedWords],
+          });
+          break;
+
+        case "ArrowDown":
+          event.preventDefault();
+          setMenu({
+            type: "ayah",
+            ayahId: selectedAyahId,
+          });
+          break;
+
+        default:
+          break;
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [pageNumber, selectedAyahId]);
+
+  useEffect(() => {
+    const restoreActiveTask = () => {
+      const learnerId = getStoredActiveLearnerId();
+      if (!learnerId) {
+        setActiveTask(null);
+        return;
+      }
+
+      try {
+        const raw = window.sessionStorage.getItem(
+          activeTaskStorageKey(learnerId),
+        );
+        if (!raw) {
+          setActiveTask(null);
+          return;
+        }
+
+        const parsed: unknown = JSON.parse(raw);
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          "learnerId" in parsed &&
+          "activityId" in parsed &&
+          "action" in parsed &&
+          "startedAt" in parsed &&
+          "ayahIds" in parsed &&
+          parsed.learnerId === learnerId &&
+          typeof parsed.activityId === "string" &&
+          typeof parsed.startedAt === "string" &&
+          Array.isArray(parsed.ayahIds) &&
+          parsed.ayahIds.every(
+            (id: unknown) =>
+              typeof id === "number" && Number.isInteger(id) && id > 0,
+          ) &&
+          TRACKED_TASK_OPTIONS.some((option) => option.action === parsed.action)
+        ) {
+          setActiveTask(parsed as ActiveLearningTask);
+        } else {
+          setActiveTask(null);
+        }
+      } catch {
+        setActiveTask(null);
+      }
+    };
+
+    restoreActiveTask();
+    window.addEventListener("irtaki:active-learner-changed", restoreActiveTask);
+    window.addEventListener("storage", restoreActiveTask);
+
+    return () => {
+      window.removeEventListener(
+        "irtaki:active-learner-changed",
+        restoreActiveTask,
+      );
+      window.removeEventListener("storage", restoreActiveTask);
+    };
+  }, []);
+
+  function getTaskAyahIds(): number[] {
+    if (!menu) return [];
+
+    if (menu.type === "ayah") {
+      const id = menu.ayahId ?? selectedAyahId;
+      return typeof id === "number" && ayahs.some((ayah) => ayah.id === id)
+        ? [id]
+        : [];
+    }
+
+    if (menu.type !== "selection") return [];
+
+    const keys = menu.wordKeys?.length ? menu.wordKeys : [...selectedWords];
+    const selectedKeys = new Set(keys);
+    const ids = new Set<number>();
+
+    document
+      .querySelectorAll<HTMLElement>("[data-word-key][data-mushaf-word]")
+      .forEach((wordElement) => {
+        const wordKey = wordElement.dataset.wordKey;
+        if (!wordKey || !selectedKeys.has(wordKey)) return;
+
+        const ayahElement = wordElement.closest<HTMLElement>("[data-ayah-id]");
+        const ayahId = Number(ayahElement?.dataset.ayahId);
+        if (Number.isInteger(ayahId) && ayahId > 0) ids.add(ayahId);
+      });
+
+    return [...ids];
+  }
+
+  function getTaskPageLineMetadata(ayahIds: number[]) {
+    if (
+      !menu ||
+      (menu.type !== "ayah" && menu.type !== "selection") ||
+      !layout ||
+      layout.page !== pageNumber ||
+      !Number.isInteger(pageNumber) ||
+      pageNumber < 1 ||
+      pageNumber > 604
+    ) {
+      return null;
+    }
+
+    // Source canonique : le layout réellement chargé et rendu par le Mushaf.
+    // Les titres de sourates et basmalas sont exclus du dénominateur.
+    const lineRows = layout.lines.filter((line) => line.type === "ayah");
+    const pageLineCount = lineRows.length;
+
+    if (pageLineCount < 1 || pageLineCount > 100) {
+      return null;
+    }
+
+    const ayahById = new Map(ayahs.map((ayah) => [ayah.id, ayah] as const));
+
+    // Correspondance entre les références présentes dans les mots du layout
+    // (sourate:aya) et les identifiants persistés dans les traces.
+    const ayahIdByReference = new Map<string, number>();
+
+    for (const ayahId of ayahIds) {
+      const ayah = ayahById.get(ayahId);
+      if (!ayah) return null;
+
+      ayahIdByReference.set(`${ayah.surahNumber}:${ayah.number}`, ayah.id);
+    }
+
+    const linesByAyah = new Map<number, Set<number>>();
+    for (const ayahId of ayahIds) {
+      linesByAyah.set(ayahId, new Set<number>());
+    }
+
+    const addLineForReference = (
+      surahNumber: number,
+      ayahNumber: number,
+      lineNumber: number,
+    ) => {
+      const ayahId = ayahIdByReference.get(`${surahNumber}:${ayahNumber}`);
+
+      if (ayahId === undefined) return;
+
+      linesByAyah.get(ayahId)?.add(lineNumber);
+    };
+
+    if (menu.type === "ayah") {
+      // Une aya peut apparaître sur plusieurs lignes du layout :
+      // toutes ses lignes visibles doivent être comptées.
+      lineRows.forEach((line, index) => {
+        for (const word of line.words) {
+          addLineForReference(word.surah, word.ayah, index + 1);
+        }
+      });
+    } else {
+      // Pour une sélection de mots, compter seulement les lignes qui
+      // contiennent les mots sélectionnés, pas toute l'aya par approximation.
+      const keys = menu.wordKeys?.length ? menu.wordKeys : [...selectedWords];
+
+      const selectedKeys = new Set(keys);
+      if (selectedKeys.size === 0) return null;
+
+      lineRows.forEach((line, index) => {
+        for (const word of line.words) {
+          const wordKey = `${word.surah}:${word.ayah}:${word.word}`;
+          if (!selectedKeys.has(wordKey)) continue;
+
+          addLineForReference(word.surah, word.ayah, index + 1);
+        }
+      });
+    }
+
+    const lineNumbersByAyah: Record<string, number[]> = {};
+
+    for (const ayahId of ayahIds) {
+      const actualLines = [
+        ...(linesByAyah.get(ayahId) ?? new Set<number>()),
+      ].sort((a, b) => a - b);
+
+      // Ne jamais créer une fausse fraction si une aya ne correspond
+      // à aucune ligne du layout actuel.
+      if (actualLines.length === 0) return null;
+
+      lineNumbersByAyah[String(ayahId)] = actualLines;
+    }
+
+    return {
+      lineNumbersByAyah,
+      pageLineCount,
+      pageNumber: layout.page,
+    };
+  }
+
+  function getTaskAudioRange(ayahIds: number[]): {
+    startSurah: number;
+    startAyah: number;
+    endSurah: number;
+    endAyah: number;
+  } | null {
+    const selectedAyahs = ayahIds
+      .map((id) => ayahs.find((ayah) => ayah.id === id))
+      .filter(
+        (ayah): ayah is (typeof ayahs)[number] => ayah !== undefined,
+      );
+
+    if (
+      selectedAyahs.length === 0 ||
+      selectedAyahs.length !== ayahIds.length
+    ) {
+      return null;
+    }
+
+    const orderedAyahs = [...selectedAyahs].sort(
+      (a, b) =>
+        a.surahNumber - b.surahNumber ||
+        a.number - b.number,
+    );
+
+    const first = orderedAyahs[0];
+    const last = orderedAyahs[orderedAyahs.length - 1];
+
+    if (!first || !last) return null;
+
+    return {
+      startSurah: first.surahNumber,
+      startAyah: first.number,
+      endSurah: last.surahNumber,
+      endAyah: last.number,
+    };
+  }
+
+  async function completeContextTask(action: TrackedTaskAction) {
+    const learnerId = getStoredActiveLearnerId();
+
+    if (!learnerId) {
+      setTaskError("اختر المستخدم الحالي أولاً");
+      return;
+    }
+
+    const ayahIds = getTaskAyahIds();
+    if (ayahIds.length === 0) {
+      setTaskError("حدد آية أو كلمات من المصحف أولاً");
+      return;
+    }
+
+    const pageMetadata = getTaskPageLineMetadata(ayahIds);
+    const taskAudioRange =
+      action === "listen" ? getTaskAudioRange(ayahIds) : null;
+
+    if (action === "listen" && !taskAudioRange) {
+      setTaskError("تعذر تحديد نطاق الاستماع");
+      return;
+    }
+
+    setTaskBusy(true);
+    setTaskError(null);
+
+    try {
+      let requestBody: Record<string, unknown>;
+      let finishingExistingActivity = false;
+
+      const sameActiveTask =
+        activeTask !== null &&
+        activeTask !== undefined &&
+        activeTask.action === action &&
+        activeTask.ayahIds.length === ayahIds.length &&
+        activeTask.ayahIds.every((id) => ayahIds.includes(id));
+
+      if (sameActiveTask && activeTask) {
+        requestBody = {
+          intent: "finish",
+          learnerId,
+          activityId: activeTask.activityId,
+          status: "completed",
+          ayahIds,
+          ...(pageMetadata
+            ? {
+                lineNumbersByAyah: pageMetadata.lineNumbersByAyah,
+                pageLineCount: pageMetadata.pageLineCount,
+                pageNumber: pageMetadata.pageNumber,
+              }
+            : {}),
+        };
+        finishingExistingActivity = true;
+      } else {
+        requestBody = {
+          intent: "complete",
+          learnerId,
+          action,
+          ayahIds,
+          ...(pageMetadata
+            ? {
+                lineNumbersByAyah: pageMetadata.lineNumbersByAyah,
+                pageLineCount: pageMetadata.pageLineCount,
+                pageNumber: pageMetadata.pageNumber,
+              }
+            : {}),
+        };
+      }
+
+      const response = await fetch("/api/learning/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        throw new Error("تعذر تسجيل النشاط");
+      }
+
+      if (finishingExistingActivity) {
+        setActiveTask(null);
+        try {
+          window.sessionStorage.removeItem(activeTaskStorageKey(learnerId));
+        } catch {
+          // L'activité est déjà clôturée côté serveur.
+        }
+      }
+
+      setTaskMenuOpen(false);
+
+      if (action === "listen" && taskAudioRange) {
+        setContextAudioTarget(
+          menu?.type === "selection" ? "selection" : "ayah",
+        );
+        setContextMenuMessage(null);
+        await validateAndStartAudio(taskAudioRange);
+        return;
+      }
+
+      showSecondaryMessage("اكتمل النشاط");
+    } catch {
+      setTaskError("تعذر تسجيل النشاط");
+    } finally {
+      setTaskBusy(false);
+    }
+  }
+
+  function renderTaskControls() {
+    const learnerId = getStoredActiveLearnerId();
+
+    return (
+      <div
+        className="mt-2 flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3 rounded-lg border p-3"
+        role="group"
+        aria-label="نشاط"
+      >
+        <div className="font-semibold">نشاط</div>
+
+        <div className="flex flex-wrap gap-2">
+          {TRACKED_TASK_OPTIONS.map((option) => (
+            <button
+              key={option.action}
+              type="button"
+              className="rounded-lg border px-3 py-2 text-right"
+              disabled={
+                taskBusy || !learnerId ||
+                (option.action === "recite" && tilawaUiStatus !== "idle")
+              }
+              onClick={() => {
+                if (option.action === "recite") {
+                  setTaskError(null);
+                  dispatchTilawaCommand("start", true);
+                } else {
+                  void completeContextTask(option.action);
+                }
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        {taskBusy && (
+          <p className="text-sm" role="status">
+            جارٍ تسجيل النشاط…
+          </p>
+        )}
+        {taskError && (
+          <p className="text-sm" role="alert">
+            {taskError}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+
+  function dispatchTilawaCommand(
+    command: "activate" | "toggle" | "start" | "open-library",
+    tracked = false,
+  ) {
+    const learnerId = getStoredActiveLearnerId();
+
+    if (!learnerId) {
+      showSecondaryMessage("اختر المستخدم الحالي أولاً");
+      return;
+    }
+
+    if (command === "open-library") {
+      window.dispatchEvent(
+        new CustomEvent("irtaki:tilawa-command", {
+          detail: {
+            command,
+            learnerId,
+            ayahIds: [],
+            ayahs: [],
+            tracked: false,
+          },
+        }),
+      );
+      return;
+    }
+
+    // Une commande sur un enregistrement déjà démarré ne doit pas
+    // recalculer son propriétaire ni ses ayahs.
+    if (command === "toggle" && tilawaUiStatus !== "idle") {
+      window.dispatchEvent(
+        new CustomEvent("irtaki:tilawa-command", {
+          detail: {
+            command,
+            learnerId,
+            ayahIds: [],
+            ayahs: [],
+            tracked: false,
+          },
+        }),
+      );
+      return;
+    }
+
+    let ayahIds = getTaskAyahIds();
+
+    if (ayahIds.length === 0) {
+      const fallbackId =
+        menu?.type === "word"
+          ? contextAyahId()
+          : menu?.type === "ayah"
+            ? menu.ayahId
+            : selectedAyahId;
+
+      const targetId = fallbackId ?? ayahs[0]?.id;
+      if (typeof targetId === "number") ayahIds = [targetId];
+    }
+
+    ayahIds = [...new Set(ayahIds)];
+
+    const references = ayahIds
+      .map((id) => ayahs.find((ayah) => ayah.id === id))
+      .filter((ayah): ayah is AyahDto => Boolean(ayah))
+      .map((ayah) => ({
+        surahNumber: ayah.surahNumber,
+        ayahNumber: ayah.number,
+        surahName:
+          surahs.find((surah) => surah.number === ayah.surahNumber)?.name ??
+          `سورة ${ayah.surahNumber}`,
+      }));
+
+    if (references.length === 0) {
+      showSecondaryMessage("حدد آية من المصحف أولاً");
+      return;
+    }
+
+    const effectiveAyahIds = references.map((ayah) =>
+      ayahs.find(
+        (item) =>
+          item.surahNumber === ayah.surahNumber &&
+          item.number === ayah.ayahNumber,
+      )!.id,
+    );
+
+    const pageMetadata = getTaskPageLineMetadata(effectiveAyahIds);
+
+    window.dispatchEvent(
+      new CustomEvent("irtaki:tilawa-command", {
+        detail: {
+          command,
+          learnerId,
+          ayahIds: effectiveAyahIds,
+          ayahs: references,
+          tracked,
+          pageMetadata: pageMetadata
+            ? {
+                lineNumbersByAyah: pageMetadata.lineNumbersByAyah,
+                pageLineCount: pageMetadata.pageLineCount,
+                pageNumber: pageMetadata.pageNumber,
+              }
+            : null,
+        },
+      }),
+    );
+  }
+
+  function renderTilawaMainButton(label: string) {
+    const recording = tilawaUiStatus === "recording";
+    const playing = tilawaUiStatus === "playing";
+    const paused = tilawaUiStatus === "paused";
+    const isActive = recording || playing;
+
+    const ariaLabel = recording
+      ? "إيقاف التسجيل مؤقتاً"
+      : paused
+        ? "استئناف التسجيل"
+        : playing
+          ? "إيقاف التشغيل مؤقتاً"
+          : tilawaUiStatus === "playback-paused"
+            ? "استئناف التشغيل"
+            : tilawaUiStatus === "stopped"
+              ? "تشغيل التسجيل"
+              : "بدء تسجيل التلاوة";
+
+    return (
+      <button
+        type="button"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-600 text-white shadow-md shadow-rose-600/20 transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
+        aria-label={`${label}: ${ariaLabel}`}
+        title={ariaLabel}
+        onClick={() => {
+          const startTrackedActivity = tilawaUiStatus === "idle";
+
+          dispatchTilawaCommand(
+            startTrackedActivity ? "start" : "toggle",
+            startTrackedActivity,
+          );
+        }}
+      >
+        {isActive ? (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="h-6 w-6"
+            fill="white"
+          >
+            <rect x="6" y="4" width="4" height="16" rx="1" />
+            <rect x="14" y="4" width="4" height="16" rx="1" />
+          </svg>
+        ) : paused || tilawaUiStatus === "stopped" ||
+          tilawaUiStatus === "playback-paused" ? (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="h-6 w-6"
+            fill="white"
+          >
+            <path d="M7 4.5a1 1 0 0 1 1.5-.86l11 7.5a1 1 0 0 1 0 1.72l-11 7.5A1 1 0 0 1 7 19.5z" />
+          </svg>
+        ) : (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="h-6 w-6"
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="9" y="2" width="6" height="12" rx="3" />
+            <path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8" />
+          </svg>
+        )}
+      </button>
+    );
+  }
+
+  function getWordFromPoint(x: number, y: number): WordSelection | null {
+    const element = document.elementFromPoint(x, y);
+
+    const word = element?.closest<HTMLElement>("[data-mushaf-word]");
+
+    if (!word) {
+      return null;
+    }
+
+    const key = word.dataset.wordKey;
+
+    if (!key) {
+      return null;
+    }
+
+    return {
+      key,
+      surah: Number(word.dataset.surahNumber),
+      ayah: Number(word.dataset.ayahNumber),
+      word: Number(word.dataset.wordNumber),
+    };
+  }
+
+  function getAyahFromPoint(x: number, y: number): AyahDto | null {
+    const element = document.elementFromPoint(x, y);
+
+    const ayahElement = element?.closest<HTMLElement>("[data-mushaf-ayah]");
+
+    if (!ayahElement) {
+      return null;
+    }
+
+    const ayahId = Number(ayahElement.dataset.ayahId);
+
+    return ayahs.find((ayah) => ayah.id === ayahId) ?? null;
+  }
+
+  /**
+   * Sélectionne toute la plage située entre le premier
+   * et le dernier mot dans l'ordre du Mushaf.
+   */
+  function getWordRange(firstKey: string, lastKey: string): Set<string> {
+    const words = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-mushaf-word]"),
+    );
+
+    const firstIndex = words.findIndex(
+      (word) => word.dataset.wordKey === firstKey,
+    );
+
+    const lastIndex = words.findIndex(
+      (word) => word.dataset.wordKey === lastKey,
+    );
+
+    if (firstIndex === -1 || lastIndex === -1) {
+      return new Set([firstKey, lastKey]);
+    }
+
+    const start = Math.min(firstIndex, lastIndex);
+
+    const end = Math.max(firstIndex, lastIndex);
+
+    return new Set(
+      words
+        .slice(start, end + 1)
+        .map((word) => word.dataset.wordKey)
+        .filter((key): key is string => Boolean(key)),
+    );
+  }
+
+  function selectWord(word: WordSelection) {
+    setSelectedWords(new Set([word.key]));
+    setSelectedAyahId(undefined);
+    setMenu({
+      type: "word",
+      wordKeys: [word.key],
+    });
+  }
+
+  function handleDoubleClick(event: ReactPointerEvent<HTMLElement>) {
+    const word = getWordFromPoint(event.clientX, event.clientY);
+
+    if (!word) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    selectWord(word);
+  }
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLElement>) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const word = getWordFromPoint(event.clientX, event.clientY);
+
+    const ayah = getAyahFromPoint(event.clientX, event.clientY);
+
+    // La page 605 n'a ni ayah ni mot, mais doit conserver
+    // les gestes de navigation et d'ouverture des menus du Mushaf.
+    if (!word && !ayah && pageNumber !== 605) {
+      return;
+    }
+
+    const state = interactionRef.current;
+
+    state.mode = "possible-tap";
+    state.pointerId = event.pointerId;
+    state.startX = event.clientX;
+    state.startY = event.clientY;
+    state.currentKey = word?.key;
+
+    /*
+     * Appui long :
+     * uniquement si le doigt reste suffisamment stable.
+     */
+    state.timer = setTimeout(() => {
+      const current = interactionRef.current;
+
+      if (current.mode !== "possible-tap" || !current.currentKey) {
+        return;
+      }
+
+      const longWord = getWordFromPoint(current.startX, current.startY);
+
+      if (!longWord) {
+        return;
+      }
+
+      current.mode = "long-press";
+
+      selectWord(longWord);
+    }, LONG_PRESS_MS);
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLElement>) {
+    const state = interactionRef.current;
+
+    if (state.pointerId !== event.pointerId || state.mode === "idle") {
+      return;
+    }
+
+    const dx = event.clientX - state.startX;
+    const dy = event.clientY - state.startY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    /*
+     * APPUI LONG DEJA ACTIF
+     *
+     * Le premier mot reste le point de départ.
+     * Tout déplacement vers un autre mot sélectionne
+     * toute la plage entre les deux mots.
+     */
+    if (state.mode === "long-press") {
+      const word = getWordFromPoint(event.clientX, event.clientY);
+
+      if (word && state.currentKey) {
+        const range = getWordRange(state.currentKey, word.key);
+
+        setSelectedWords(range);
+        setSelectedAyahId(undefined);
+        setMenu({
+          type: "selection",
+          wordKeys: [...range],
+        });
+      }
+
+      return;
+    }
+
+    /*
+     * AVANT L'APPUI LONG
+     *
+     * Petit mouvement : toléré.
+     * Grand mouvement : véritable swipe.
+     *
+     * Le seuil est volontairement supérieur à la tolérance
+     * pour éviter qu'un mouvement naturel du doigt annule
+     * immédiatement l'appui long.
+     */
+    if (state.mode === "possible-tap") {
+      if (distance <= MOVE_THRESHOLD) {
+        return;
+      }
+
+      if (state.timer) {
+        clearTimeout(state.timer);
+        state.timer = undefined;
+      }
+
+      if (distance >= SWIPE_THRESHOLD) {
+        state.mode = "swipe";
+      }
+    }
+  }
+
+  function handlePointerUp(event: ReactPointerEvent<HTMLElement>) {
+    const state = interactionRef.current;
+
+    if (state.pointerId !== event.pointerId) {
+      return;
+    }
+
+    if (state.timer) {
+      clearTimeout(state.timer);
+
+      state.timer = undefined;
+    }
+
+    /*
+     * ----------------------------------------------------
+     * DOUBLE CLIC
+     * ----------------------------------------------------
+     *
+     * Le deuxième pointer-up porte normalement detail=2.
+     * On donne alors priorité au mot.
+     */
+    if (event.detail >= 2 && state.currentKey) {
+      const word = getWordFromPoint(event.clientX, event.clientY);
+
+      if (word) {
+        selectWord(word);
+      }
+
+      state.mode = "idle";
+      state.pointerId = -1;
+      state.currentKey = undefined;
+
+      return;
+    }
+
+    /*
+     * ----------------------------------------------------
+     * APPUI COURT
+     * ----------------------------------------------------
+     */
+    if (state.mode === "possible-tap") {
+      const ayah = getAyahFromPoint(event.clientX, event.clientY);
+
+      if (ayah) {
+        setSelectedAyahId(ayah.id);
+
+        setSelectedWords(new Set());
+
+        setMenu({
+          type: "ayah",
+          ayahId: ayah.id,
+        });
+      }
+    }
+
+    /*
+     * ----------------------------------------------------
+     * SWIPE
+     * ----------------------------------------------------
+     */
+    else if (state.mode === "swipe") {
+      const dx = event.clientX - state.startX;
+
+      const dy = event.clientY - state.startY;
+
+      if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) {
+        state.mode = "idle";
+        state.pointerId = -1;
+        state.currentKey = undefined;
+
+        return;
+      }
+
+      /*
+       * HORIZONTAL
+       *
+       * gauche  = page suivante
+       * droite  = page précédente
+       */
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        navigatePage(dx < 0 ? -1 : 1);
+      }
+
+      /*
+       * VERTICAL
+       *
+       * haut = menu secondaire du Mushaf
+       * bas  = géré globalement par AppShell
+       *
+       * IMPORTANT :
+       * le menu vertical est indépendant de la sélection
+       * courante (ayah / mot / plage de mots).
+       *
+       * Le contenu réel de ces menus sera implémenté
+       * ultérieurement.
+       */
+      else {
+        if (dy >= 0) { setMenu(null); }
+      }
+    }
+
+    state.mode = "idle";
+    state.pointerId = -1;
+    state.currentKey = undefined;
+  }
+
+  function handlePointerCancel() {
+    const state = interactionRef.current;
+
+    if (state.timer) {
+      clearTimeout(state.timer);
+
+      state.timer = undefined;
+    }
+
+    state.mode = "idle";
+    state.pointerId = -1;
+    state.currentKey = undefined;
+  }
+
+  function showSecondaryMessage(message: string) {
+    setSecondaryMessage(message);
+
+    window.setTimeout(() => {
+      setSecondaryMessage((current) => (current === message ? null : current));
+    }, 1600);
+  }
+
+  useEffect(() => {
+    setMushafStorageItem(AUDIO_RECITER_STORAGE_KEY, selectedReciter);
+  }, [selectedReciter]);
+
+  useEffect(() => {
+    const stored = Number(getMushafStorageItem(AUDIO_RATE_STORAGE_KEY));
+
+    if (Number.isFinite(stored) && stored >= 0.25 && stored <= 4) {
+      setPlaybackRate(stored);
+    }
+  }, []);
+
+  function getCurrentAudioAyah() {
+    if (ayahs.length === 0) {
+      return undefined;
+    }
+
+    if (selectedAyahId !== undefined) {
+      const selected = ayahs.find((ayah) => ayah.id === selectedAyahId);
+
+      if (selected) {
+        return selected;
+      }
+    }
+
+    return ayahs[0];
+  }
+
+  function activatePreloadedAudio(targetAyah: (typeof ayahs)[number]): boolean {
+    const key = [
+      selectedReciter,
+      targetAyah.surahNumber,
+      targetAyah.number,
+    ].join(":");
+
+    const nextAudio = audioPreloadedPlayersRef.current.get(key);
+
+    if (
+      !nextAudio ||
+      nextAudio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
+    ) {
+      return false;
+    }
+
+    // Respecter les silences volontaires : le basculement immédiat n'est
+    // utilisé que si le silence configuré avant cette ayah vaut zéro.
+    const continuation = readAudioContinuation();
+    const loop = readAudioLoop();
+    const isRangeStart = Boolean(
+      continuation &&
+      loop &&
+      loop.startSurah === targetAyah.surahNumber &&
+      loop.startAyah === targetAyah.number,
+    );
+    const beforeSeconds = Number(
+      isRangeStart
+        ? audioSettingsRef.current.silenceBeforeSelection
+        : audioSettingsRef.current.silenceBeforeAyah,
+    );
+
+    if (beforeSeconds > 0) return false;
+
+    const previousAudio = audioRef.current;
+    if (previousAudio && previousAudio !== nextAudio) {
+      previousAudio.pause();
+    }
+
+    audioPreloadedPlayersRef.current.delete(key);
+    audioRef.current = nextAudio;
+    audioSourceKeyRef.current = key;
+    audioCurrentAyahIdRef.current = targetAyah.id;
+    audioShouldContinueRef.current = false;
+
+    nextAudio.playbackRate = playbackRate;
+    nextAudio.defaultPlaybackRate = playbackRate;
+    setSelectedAyahId(targetAyah.id);
+
+    console.log("[AUDIO][GAPLESS] lecteur préchargé activé", {
+      key,
+      readyState: nextAudio.readyState,
+    });
+
+    void nextAudio.play().then(
+      () => setIsPlaying(true),
+      (error) => {
+        console.warn("[AUDIO][GAPLESS] lecture refusée", error);
+        setIsPlaying(false);
+        showSecondaryMessage("تعذر تشغيل الصوت");
+      },
+    );
+
+    return true;
+  }
+
+  function getEndedAudioPosition():
+    { surahNumber: number; number: number } | undefined {
+    const audio = audioRef.current;
+    const source = audio?.currentSrc || audio?.src || "";
+    const match = source.match(/\/api\/audio\/[^/]+\/(\d+)\/(\d+)(?:[?#]|$)/);
+
+    if (match) {
+      return {
+        surahNumber: Number(match[1]),
+        number: Number(match[2]),
+      };
+    }
+
+    const currentAyah = getCurrentAudioAyah();
+    return currentAyah
+      ? {
+          surahNumber: currentAyah.surahNumber,
+          number: currentAyah.number,
+        }
+      : undefined;
+  }
+
+  function getEndedAudioAyah() {
+    const audio = audioRef.current;
+    const source = audio?.currentSrc || audio?.src || "";
+    const match = source.match(/\/api\/audio\/[^/]+\/(\d+)\/(\d+)(?:[?#]|$)/);
+
+    if (match) {
+      const surahNumber = Number(match[1]);
+      const ayahNumber = Number(match[2]);
+      const endedAyah = ayahs.find(
+        (ayah) =>
+          ayah.surahNumber === surahNumber && ayah.number === ayahNumber,
+      );
+
+      if (endedAyah) return endedAyah;
+    }
+
+    return getCurrentAudioAyah();
+  }
+
+  function getAudioUrl(
+    reciterId: string,
+    surahNumber: number,
+    ayahNumber: number,
+  ) {
+    return `/api/audio/${reciterId}/${surahNumber}/${ayahNumber}`;
+  }
+
+  function readAudioContinuation(): AudioContinuation | undefined {
+    const raw = getMushafSessionStorageItem(AUDIO_CONTINUATION_STORAGE_KEY);
+
+    if (!raw) {
+      return undefined;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<AudioContinuation>;
+
+      if (
+        typeof parsed.reciterId !== "string" ||
+        typeof parsed.surahNumber !== "number" ||
+        typeof parsed.ayahNumber !== "number" ||
+        typeof parsed.endSurahNumber !== "number" ||
+        typeof parsed.endAyahNumber !== "number" ||
+        typeof parsed.playbackRate !== "number"
+      ) {
+        return undefined;
+      }
+
+      return {
+        reciterId: parsed.reciterId,
+        surahNumber: parsed.surahNumber,
+        ayahNumber: parsed.ayahNumber,
+        endSurahNumber: parsed.endSurahNumber,
+        endAyahNumber: parsed.endAyahNumber,
+        playbackRate: parsed.playbackRate,
+        ...(typeof parsed.selectionDurationSeconds === "number" &&
+        Number.isFinite(parsed.selectionDurationSeconds) &&
+        parsed.selectionDurationSeconds > 0
+          ? { selectionDurationSeconds: parsed.selectionDurationSeconds }
+          : {}),
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  function writeAudioContinuation(continuation: AudioContinuation) {
+    setMushafSessionStorageItem(
+      AUDIO_CONTINUATION_STORAGE_KEY,
+      JSON.stringify(continuation),
+    );
+  }
+
+  function clearAudioContinuation() {
+    removeMushafSessionStorageItem(AUDIO_CONTINUATION_STORAGE_KEY);
+  }
+
+  function isAudioEndReached(
+    ayah: { surahNumber: number; number: number },
+    continuation: AudioContinuation,
+  ) {
+    if (ayah.surahNumber > continuation.endSurahNumber) {
+      return true;
+    }
+
+    if (
+      ayah.surahNumber === continuation.endSurahNumber &&
+      ayah.number >= continuation.endAyahNumber
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function readAudioLoop(): AudioLoop | undefined {
+    try {
+      const raw = getMushafSessionStorageItem(AUDIO_LOOP_STORAGE_KEY);
+      if (!raw) return undefined;
+      const l = JSON.parse(raw) as Partial<AudioLoop>;
+      if (
+        typeof l.startSurah !== "number" ||
+        typeof l.startAyah !== "number" ||
+        typeof l.startPage !== "number" ||
+        typeof l.pass !== "number"
+      ) {
+        return undefined;
+      }
+      return {
+        startSurah: l.startSurah,
+        startAyah: l.startAyah,
+        startPage: l.startPage,
+        pass: l.pass,
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  function writeAudioLoop(loop: AudioLoop) {
+    setMushafSessionStorageItem(AUDIO_LOOP_STORAGE_KEY, JSON.stringify(loop));
+  }
+
+  function clearAudioLoop() {
+    removeMushafSessionStorageItem(AUDIO_LOOP_STORAGE_KEY);
+  }
+
+  function cancelSilence() {
+    silenceCancelRef.current?.();
+    silenceCancelRef.current = null;
+    silenceDoneRef.current = false;
+  }
+
+  async function playCurrentAyah() {
+    const audio = audioRef.current;
+    const currentAyah = getCurrentAudioAyah();
+
+    if (!audio || !currentAyah) {
+      showSecondaryMessage("لا توجد آية للاستماع");
+      return;
+    }
+
+    const sourceKey = [
+      selectedReciter,
+      currentAyah.surahNumber,
+      currentAyah.number,
+    ].join(":");
+
+    if (audioSourceKeyRef.current !== sourceKey) {
+      audio.src = getAudioUrl(
+        selectedReciter,
+        currentAyah.surahNumber,
+        currentAyah.number,
+      );
+      audioSourceKeyRef.current = sourceKey;
+      audio.load();
+    }
+
+    audio.playbackRate = playbackRate;
+
+    try {
+      await audio.play();
+      setIsPlaying(true);
+      showSecondaryMessage("تشغيل");
+    } catch {
+      setIsPlaying(false);
+      showSecondaryMessage("تعذر تشغيل الصوت");
+    }
+  }
+
+  function pausePlayback() {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    removeMushafSessionStorageItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY);
+    cancelSilence();
+    audio.pause();
+    setIsPlaying(false);
+    showSecondaryMessage("إيقاف");
+  }
+
+  function togglePlayback() {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    if (!audio.paused || silenceCancelRef.current) {
+      pausePlayback();
+      return;
+    }
+
+    void playCurrentAyah();
+  }
+
+  function toggleRepeat() {
+    setRepeatEnabled((enabled) => {
+      const next = !enabled;
+      showSecondaryMessage(next ? "التكرار مفعّل" : "التكرار متوقف");
+      return next;
+    });
+  }
+
+  function cyclePlaybackRate() {
+    const rates = [1, 1.25, 1.5, 2, 0.75];
+    const currentIndex = rates.indexOf(playbackRate);
+    const nextRate = rates[(currentIndex + 1) % rates.length];
+
+    setPlaybackRate(nextRate);
+
+    if (audioRef.current) {
+      setMushafStorageItem(AUDIO_RATE_STORAGE_KEY, String(nextRate));
+      audioRef.current.playbackRate = nextRate;
+    }
+
+    showSecondaryMessage(`السرعة ${nextRate}×`);
+  }
+
+  function navigateAyah(delta: number) {
+    clearAudioContinuation();
+    clearAudioLoop();
+    cancelSilence();
+    ayahPlayCountRef.current = 1;
+
+    if (ayahs.length === 0) {
+      return;
+    }
+
+    const currentIndex = selectedAyahId
+      ? ayahs.findIndex((ayah) => ayah.id === selectedAyahId)
+      : -1;
+
+    const nextIndex =
+      currentIndex === -1
+        ? delta > 0
+          ? 0
+          : ayahs.length - 1
+        : currentIndex + delta;
+
+    if (nextIndex >= 0 && nextIndex < ayahs.length) {
+      setSelectedAyahId(ayahs[nextIndex].id);
+      showSecondaryMessage(delta > 0 ? "الآية التالية" : "الآية السابقة");
+      return;
+    }
+
+    navigatePage(delta);
+  }
+
+  function getAudioSurahLabel(surah: (typeof surahs)[number]) {
+    return (surah.translatedName || surah.name || surah.codedName || "")
+      .trim()
+      .replace(/^(surah|sourate)\\s+(de\\s+|of\\s+)?/i, "")
+      .replace(/^سورة\\s*/u, "")
+      .trim();
+  }
+
+  function resolveAudioSurah(value: string) {
+    const query = value.trim();
+    if (!query) return undefined;
+
+    const numberPrefix = query.match(/^(\d+)\s*[-–—]/);
+    const numericValue = numberPrefix ? numberPrefix[1] : query;
+    if (/^\d+$/.test(numericValue)) {
+      return surahs.find((surah) => surah.number === Number(numericValue));
+    }
+
+    const normalize = (text: string) =>
+      text
+        .replace(/^\d+\s*[-–—]\s*/, "")
+        .replace(/^(surah|sourate)\s+(de\s+|of\s+)?/i, "")
+        .replace(/^سورة\s*/u, "")
+        .trim()
+        .toLocaleLowerCase();
+
+    const normalized = normalize(query);
+    return surahs.find((surah) =>
+      [
+        surah.name,
+        surah.codedName ?? "",
+        surah.translatedName ?? "",
+        getAudioSurahLabel(surah),
+      ].some((name) => normalize(name) === normalized),
+    );
+  }
+
+  function getFilteredAudioSurahs(query: string) {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+
+    if (!normalizedQuery) return surahs;
+
+    return surahs.filter((surah) => {
+      const number = String(surah.number);
+      const labels = [
+        number,
+        `${number} - ${getAudioSurahLabel(surah)}`,
+        surah.name,
+        surah.codedName ?? "",
+        surah.translatedName ?? "",
+        getAudioSurahLabel(surah),
+      ];
+
+      return labels.some((label) =>
+        label.toLocaleLowerCase().includes(normalizedQuery),
+      );
+    });
+  }
+
+  function changeAudioStartSurah(value: string) {
+    audioRangeUserModifiedRef.current = true;
+    setAudioStartSurahQuery(value);
+
+    const surah = resolveAudioSurah(value);
+    if (!surah) {
+      // Garder la dernière sélection valide pendant la saisie du filtre.
+      return;
+    }
+
+    setAudioStartSurah(String(surah.number));
+    setAudioStartAyah("1");
+    setAudioEndSurah(String(surah.number));
+    setAudioEndAyah(String(surah.numberOfAyahs));
+    setAudioEndSurahQuery(getAudioSurahLabel(surah));
+  }
+
+  function changeAudioEndSurah(value: string) {
+    audioRangeUserModifiedRef.current = true;
+    setAudioEndSurahQuery(value);
+
+    const surah = resolveAudioSurah(value);
+    if (!surah) {
+      // Garder la dernière sélection valide pendant la saisie du filtre.
+      return;
+    }
+
+    setAudioEndSurah(String(surah.number));
+    setAudioEndAyah(String(surah.numberOfAyahs));
+    setAudioEndSurahQuery(getAudioSurahLabel(surah));
+  }
+
+  async function applyAudioPages(
+    startPageValue = audioStartPage,
+    endPageValue = audioEndPage,
+  ) {
+    const startPage = Number(startPageValue);
+    const endPage = Number(endPageValue);
+
+    if (
+      !Number.isInteger(startPage) ||
+      !Number.isInteger(endPage) ||
+      startPage < 1 ||
+      startPage > TOTAL_PAGES ||
+      endPage > TOTAL_PAGES ||
+      endPage < startPage
+    ) {
+      showSecondaryMessage("الرجاء التحقق من صفحات البداية والنهاية");
+      return;
+    }
+
+    try {
+      const [startAyahs, endAyahs] = await Promise.all([
+        getAyahsByPage(startPage),
+        getAyahsByPage(endPage),
+      ]);
+
+      const first = startAyahs[0];
+      const last = endAyahs[endAyahs.length - 1];
+
+      if (!first || !last) {
+        showSecondaryMessage("تعذر تحميل آيات الصفحة المحددة");
+        return;
+      }
+
+      const firstSurah = surahs.find(
+        (surah) => surah.number === first.surahNumber,
+      );
+      const lastSurah = surahs.find(
+        (surah) => surah.number === last.surahNumber,
+      );
+
+      if (!firstSurah || !lastSurah) {
+        showSecondaryMessage("تعذر العثور على السورة");
+        return;
+      }
+
+      audioRangeUserModifiedRef.current = true;
+      setAudioStartSurah(String(first.surahNumber));
+      setAudioStartAyah(String(first.number));
+      setAudioStartSurahQuery(getAudioSurahLabel(firstSurah));
+      setAudioEndSurah(String(last.surahNumber));
+      setAudioEndAyah(String(last.number));
+      setAudioEndSurahQuery(getAudioSurahLabel(lastSurah));
+      showSecondaryMessage("تم تحديث نطاق القراءة حسب الصفحات");
+    } catch {
+      showSecondaryMessage("تعذر تحميل الصفحات المحددة");
+    }
+  }
+
+  function getContextAudioRange(): {
+    startSurah: number;
+    startAyah: number;
+    endSurah: number;
+    endAyah: number;
+  } | null {
+    if (!menu) return null;
+
+    if (menu.type === "ayah") {
+      const target = ayahs.find((ayah) => ayah.id === menu.ayahId);
+      if (!target) return null;
+      return {
+        startSurah: target.surahNumber,
+        startAyah: target.number,
+        endSurah: target.surahNumber,
+        endAyah: target.number,
+      };
+    }
+
+    const keys = menu.wordKeys?.length ? menu.wordKeys : [...selectedWords];
+
+    const positions = keys
+      .map((key) => {
+        const parts = key.split(":").map(Number);
+        return {
+          surahNumber: parts[0],
+          ayahNumber: parts[1],
+          wordNumber: Number.isInteger(parts[2]) ? parts[2] : 0,
+        };
+      })
+      .filter(
+        (position) =>
+          Number.isInteger(position.surahNumber) &&
+          position.surahNumber >= 1 &&
+          position.surahNumber <= 114 &&
+          Number.isInteger(position.ayahNumber) &&
+          position.ayahNumber >= 1,
+      );
+
+    if (positions.length === 0) return null;
+
+    // Ordonner selon la progression du Coran, même si les mots ont été
+    // sélectionnés dans le sens inverse.
+    positions.sort(
+      (a, b) =>
+        a.surahNumber - b.surahNumber ||
+        a.ayahNumber - b.ayahNumber ||
+        a.wordNumber - b.wordNumber,
+    );
+
+    const first = positions[0];
+    const last = positions[positions.length - 1];
+
+    return {
+      startSurah: first.surahNumber,
+      startAyah: first.ayahNumber,
+      endSurah: last.surahNumber,
+      endAyah: last.ayahNumber,
+    };
+  }
+
+  function toggleContextAudioControls(target: "ayah" | "word" | "selection") {
+    if (contextAudioTarget === target) {
+      setContextAudioTarget(null);
+      return;
+    }
+
+    setContextAudioTarget(target);
+    setOpenColorPaletteAction(null);
+    setOpenUnderlinePalette(false);
+    setContextMenuMessage(null);
+
+    const range = getContextAudioRange();
+    if (!range) return;
+
+    const firstAyah = ayahs.find(
+      (ayah) =>
+        ayah.surahNumber === range.startSurah &&
+        ayah.number === range.startAyah,
+    );
+    if (firstAyah) setSelectedAyahId(firstAyah.id);
+  }
+
+  async function startContextAudio() {
+    const range = getContextAudioRange();
+
+    if (!range) {
+      showSecondaryMessage("حدد آية أو كلمة أولاً");
+      return;
+    }
+
+    setContextMenuMessage(null);
+    await validateAndStartAudio(range);
+  }
+
+  function renderContextAudioControls() {
+    return (
+      <div
+        className="flex w-full flex-col gap-2 border-t border-[var(--border)] pt-3"
+        aria-label="أدوات الاستماع"
+      >
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
+          <button
+            type="button"
+            className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+            aria-label="التالي"
+            onClick={() => navigateAyah(1)}
+          >
+            ⏭
+          </button>
+
+          <button
+            type="button"
+            className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+            aria-label={isPlaying ? "إيقاف" : "تشغيل"}
+            aria-pressed={isPlaying}
+            onClick={() => {
+              if (isPlaying) pausePlayback();
+              else void startContextAudio();
+            }}
+          >
+            {isPlaying ? <MushafIcon name="pause" size={18} /> : <MushafIcon name="play" size={18} />}
+          </button>
+
+          <button
+            type="button"
+            className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+            aria-label="السابق"
+            onClick={() => navigateAyah(-1)}
+          >
+            ⏮
+          </button>
+
+          <div className="relative">
+            <button
+              type="button"
+              className="rounded-lg border px-2 py-1.5 text-xs"
+              aria-label="عدد تكرار الآية"
+              title="عدد تكرار الآية"
+              aria-expanded={ayahRepeatToolbarOpen}
+              onClick={() => {
+                setAyahRepeatToolbarOpen((open) => !open);
+                setSelectionRepeatToolbarOpen(false);
+                setReciterPickerOpen(false);
+                setModePickerOpen(false);
+              }}
+            >
+              <span aria-hidden="true">↻¹</span>{" "}
+              {ayahRepeatCount === "n" ? "∞" : ayahRepeatCount}
+            </button>
+
+            {ayahRepeatToolbarOpen && (
+              <div
+                role="group"
+                aria-label="خيارات عدد تكرار الآية"
+                className="absolute bottom-full left-1/2 z-50 mb-2 grid w-48 -translate-x-1/2 grid-cols-5 gap-1 rounded-lg border bg-[var(--background)] p-2 shadow-lg"
+              >
+                <div className="col-span-5 text-center text-xs font-semibold">
+                  تكرار الآية
+                </div>
+                {REPEAT_VALUES.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={ayahRepeatCount === value}
+                    onClick={() => {
+                      setAyahRepeatCount(value);
+                      setAyahRepeatToolbarOpen(false);
+                    }}
+                    className={
+                      ayahRepeatCount === value
+                        ? "rounded-md border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                        : "rounded-md border px-2 py-2 text-sm"
+                    }
+                  >
+                    {value === "n" ? "∞" : value}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="relative">
+            <button
+              type="button"
+              className="rounded-lg border px-2 py-1.5 text-xs"
+              aria-label="عدد تكرار التحديد"
+              title="عدد تكرار التحديد"
+              aria-expanded={selectionRepeatToolbarOpen}
+              onClick={() => {
+                setSelectionRepeatToolbarOpen((open) => !open);
+                setAyahRepeatToolbarOpen(false);
+                setReciterPickerOpen(false);
+                setModePickerOpen(false);
+              }}
+            >
+              <span aria-hidden="true">↻▤</span>{" "}
+              {selectionRepeatCount === "n" ? "∞" : selectionRepeatCount}
+            </button>
+
+            {selectionRepeatToolbarOpen && (
+              <div
+                role="group"
+                aria-label="خيارات عدد تكرار التحديد"
+                className="absolute bottom-full left-1/2 z-50 mb-2 grid w-48 -translate-x-1/2 grid-cols-5 gap-1 rounded-lg border bg-[var(--background)] p-2 shadow-lg"
+              >
+                <div className="col-span-5 text-center text-xs font-semibold">
+                  تكرار التحديد
+                </div>
+                {REPEAT_VALUES.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={selectionRepeatCount === value}
+                    onClick={() => {
+                      setSelectionRepeatCount(value);
+                      setSelectionRepeatToolbarOpen(false);
+                    }}
+                    className={
+                      selectionRepeatCount === value
+                        ? "rounded-md border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                        : "rounded-md border px-2 py-2 text-sm"
+                    }
+                  >
+                    {value === "n" ? "∞" : value}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="rounded-lg border px-2 py-1.5 text-xs"
+            aria-label="سرعة التشغيل"
+            onClick={cyclePlaybackRate}
+          >
+            ⏱ {playbackRate}×
+          </button>
+
+          <button
+            type="button"
+            className="rounded-lg border px-2 py-1.5 text-xs"
+            aria-label="اختيار القارئ"
+            aria-expanded={reciterPickerOpen}
+            onClick={() => {
+              setReciterPickerOpen((open) => !open);
+              setAyahRepeatToolbarOpen(false);
+              setSelectionRepeatToolbarOpen(false);
+              setModePickerOpen(false);
+            }}
+          >
+            🎙️ القارئ
+          </button>
+        </div>
+
+        {reciterPickerOpen && (
+          <div
+            className="flex flex-wrap justify-center gap-2"
+            role="menu"
+            aria-label="اختيار القارئ"
+          >
+            {[
+              ["hafs-afassi", "العفاسي"],
+              ["hafs-abdelbasset", "عبد الباسط"],
+              ["hafs-soudais", "السديس"],
+              ["hafs-houssari", "الحصري"],
+              ["hafs-chatir", "أبو شاطر"],
+              ["hafs-djebril", "جبريل"],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="menuitem"
+                aria-pressed={selectedReciter === id}
+                className={
+                  selectedReciter === id
+                    ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                    : "rounded-lg border px-3 py-2 text-sm"
+                }
+                onClick={() => {
+                  setSelectedReciter(id);
+                  setReciterPickerOpen(false);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  async function validateAndStartAudio(rangeOverride?: {
+    startSurah: number;
+    startAyah: number;
+    endSurah: number;
+    endAyah: number;
+  }) {
+    const startSurah = rangeOverride?.startSurah ?? Number(audioStartSurah);
+    const startAyah = rangeOverride?.startAyah ?? Number(audioStartAyah);
+    const endSurah = rangeOverride?.endSurah ?? Number(audioEndSurah);
+    const endAyah = rangeOverride?.endAyah ?? Number(audioEndAyah);
+
+    if (
+      !Number.isInteger(startSurah) ||
+      startSurah < 1 ||
+      startSurah > 114 ||
+      !Number.isInteger(startAyah) ||
+      startAyah < 1 ||
+      !Number.isInteger(endSurah) ||
+      endSurah < 1 ||
+      endSurah > 114 ||
+      !Number.isInteger(endAyah) ||
+      endAyah < 1
+    ) {
+      showSecondaryMessage("الرجاء التحقق من البداية والنهاية");
+      return;
+    }
+
+    if (
+      startSurah > endSurah ||
+      (startSurah === endSurah && startAyah > endAyah)
+    ) {
+      showSecondaryMessage("البداية يجب أن تسبق النهاية");
+      return;
+    }
+
+    const startSurahData = surahs.find((surah) => surah.number === startSurah);
+    const endSurahData = surahs.find((surah) => surah.number === endSurah);
+
+    if (!startSurahData || !endSurahData) {
+      showSecondaryMessage("تعذر العثور على السورة");
+      return;
+    }
+
+    if (
+      startAyah > startSurahData.numberOfAyahs ||
+      endAyah > endSurahData.numberOfAyahs
+    ) {
+      showSecondaryMessage("رقم الآية غير صحيح");
+      return;
+    }
+
+    try {
+      const startSurahAyahs = await getAyahsBySurah(startSurah);
+      const targetAyah = startSurahAyahs.find(
+        (ayah) => ayah.number === startAyah,
+      );
+
+      if (
+        !targetAyah ||
+        !Number.isInteger(targetAyah.pageNumber) ||
+        targetAyah.pageNumber < 1 ||
+        targetAyah.pageNumber > TOTAL_PAGES
+      ) {
+        showSecondaryMessage("تعذر العثور على الآية المحددة");
+        return;
+      }
+
+      const startPage = targetAyah.pageNumber;
+
+      let selectionDurationSeconds: number | undefined;
+
+      const selectionSilenceEnabled =
+        Number(audioSettingsRef.current.silenceBeforeSelection) > 0 ||
+        Number(audioSettingsRef.current.silenceAfterSelection) > 0;
+
+      if (selectionSilenceEnabled) {
+        try {
+          const durationResponse = await fetch("/api/audio/duration", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              reciterId: selectedReciter,
+              startSurah,
+              startAyah,
+              endSurah,
+              endAyah,
+            }),
+          });
+
+          if (!durationResponse.ok) {
+            throw new Error("Audio duration request failed");
+          }
+
+          const durationPayload = (await durationResponse.json()) as {
+            data?: {
+              totalDurationSeconds?: unknown;
+            };
+          };
+
+          const totalDuration = durationPayload.data?.totalDurationSeconds;
+
+          if (
+            typeof totalDuration !== "number" ||
+            !Number.isFinite(totalDuration) ||
+            totalDuration <= 0
+          ) {
+            throw new Error("Invalid selection duration");
+          }
+
+          selectionDurationSeconds = totalDuration;
+        } catch {
+          setIsPlaying(false);
+          showSecondaryMessage("تعذر حساب مدة التحديد");
+          return;
+        }
+      }
+
+      const continuation: AudioContinuation = {
+        reciterId: selectedReciter,
+        surahNumber: startSurah,
+        ayahNumber: startAyah,
+        endSurahNumber: endSurah,
+        endAyahNumber: endAyah,
+        playbackRate,
+        ...(selectionDurationSeconds !== undefined
+          ? { selectionDurationSeconds }
+          : {}),
+      };
+
+      writeAudioContinuation(continuation);
+      writeAudioLoop({
+        startSurah,
+        startAyah,
+        startPage,
+        pass: 1,
+      });
+
+      saveModeSelection(secondaryMode);
+      cancelSilence();
+      ayahPlayCountRef.current = 1;
+      audioShouldContinueRef.current = false;
+      setMoreMenuOpen(false);
+      setReciterPickerOpen(false);
+      setModePickerOpen(false);
+      setIsPlaying(true);
+
+      if (startPage === pageNumber) {
+        const visibleTargetAyah = ayahs.find(
+          (ayah) =>
+            ayah.surahNumber === startSurah && ayah.number === startAyah,
+        );
+
+        if (visibleTargetAyah) {
+          setSelectedAyahId(visibleTargetAyah.id);
+
+          const beforeSelectionCoefficient = Number(
+            audioSettingsRef.current.silenceBeforeSelection,
+          );
+
+          if (
+            Number.isFinite(beforeSelectionCoefficient) &&
+            beforeSelectionCoefficient > 0 &&
+            typeof selectionDurationSeconds === "number" &&
+            Number.isFinite(selectionDurationSeconds) &&
+            selectionDurationSeconds > 0
+          ) {
+            const currentAudio = audioRef.current;
+            currentAudio?.pause();
+            setIsPlaying(false);
+
+            const effectivePlaybackRate =
+              currentAudio &&
+              Number.isFinite(currentAudio.playbackRate) &&
+              currentAudio.playbackRate > 0
+                ? currentAudio.playbackRate
+                : playbackRate;
+
+            const delayMs = Math.ceil(
+              (selectionDurationSeconds / effectivePlaybackRate) *
+                beforeSelectionCoefficient *
+                1000,
+            );
+
+            const timer = window.setTimeout(() => {
+              silenceCancelRef.current = null;
+              void playCurrentAyah();
+            }, delayMs);
+
+            silenceCancelRef.current = () => window.clearTimeout(timer);
+          } else {
+            window.setTimeout(() => {
+              void playCurrentAyah();
+            }, 0);
+          }
+
+          return;
+        }
+      }
+
+      audioShouldContinueRef.current = true;
+      router.push(`/coran/${riwayaId}/page/${startPage}?ayah=${targetAyah.id}`);
+    } catch {
+      setIsPlaying(false);
+      showSecondaryMessage("تعذر الوصول إلى الآية المحددة");
+    }
+  }
+
+  async function startCurrentModeAtSelection() {
+    const startSurah = Number(audioStartSurah);
+    const startAyah = Number(audioStartAyah);
+
+    if (
+      !Number.isInteger(startSurah) ||
+      startSurah < 1 ||
+      startSurah > 114 ||
+      !Number.isInteger(startAyah) ||
+      startAyah < 1
+    ) {
+      showSecondaryMessage("الرجاء تحديد آية بداية صحيحة");
+      return;
+    }
+
+    const surahData = surahs.find((surah) => surah.number === startSurah);
+
+    if (!surahData || startAyah > surahData.numberOfAyahs) {
+      showSecondaryMessage("رقم الآية غير صحيح");
+      return;
+    }
+
+    try {
+      const surahAyahs = await getAyahsBySurah(startSurah);
+      const targetAyah = surahAyahs.find((ayah) => ayah.number === startAyah);
+
+      if (
+        !targetAyah ||
+        !Number.isInteger(targetAyah.pageNumber) ||
+        targetAyah.pageNumber < 1 ||
+        targetAyah.pageNumber > TOTAL_PAGES
+      ) {
+        showSecondaryMessage("تعذر العثور على الآية المحددة");
+        return;
+      }
+
+      setMoreMenuOpen(false);
+
+      if (targetAyah.pageNumber === pageNumber) {
+        setSelectedAyahId(targetAyah.id);
+
+        window.setTimeout(() => {
+          const element = document.querySelector<HTMLElement>(
+            `[data-ayah-id="${targetAyah.id}"]`,
+          );
+          element?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }, 0);
+      } else {
+        router.push(
+          `/coran/${riwayaId}/page/${targetAyah.pageNumber}?ayah=${targetAyah.id}`,
+        );
+      }
+    } catch {
+      showSecondaryMessage("تعذر الوصول إلى الآية المحددة");
+    }
+  }
+
+  useEffect(() => {
+    try {
+      const raw = getMushafStorageItem(AUDIO_SETTINGS_STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as Record<string, unknown>;
+        const pick = (
+          value: unknown,
+          allowed: readonly string[],
+          fallback: string,
+        ) =>
+          typeof value === "string" && allowed.includes(value)
+            ? value
+            : fallback;
+        const pickRepeat = (value: unknown): string => {
+          if (value === "n") return "n";
+          if (
+            typeof value === "string" &&
+            /^\d+$/.test(value) &&
+            Number.isSafeInteger(Number(value)) &&
+            Number(value) > 0
+          ) {
+            return value;
+          }
+          return "1";
+        };
+        setAyahRepeatCount(pickRepeat(saved.ayahRepeat));
+        setSelectionRepeatCount(pickRepeat(saved.selectionRepeat));
+        setSilenceBeforeAyah(
+          pick(saved.silenceBeforeAyah, SILENCE_VALUES, "0"),
+        );
+        setSilenceAfterAyah(pick(saved.silenceAfterAyah, SILENCE_VALUES, "0"));
+        setSilenceBeforeSelection(
+          pick(saved.silenceBeforeSelection, SILENCE_VALUES, "0"),
+        );
+        setSilenceAfterSelection(
+          pick(saved.silenceAfterSelection, SILENCE_VALUES, "0"),
+        );
+      }
+    } catch {
+      // réglages ignorés si illisibles
+    }
+    setAudioSettingsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    audioSettingsRef.current = {
+      ayahRepeat: ayahRepeatCount,
+      selectionRepeat: selectionRepeatCount,
+      silenceBeforeAyah,
+      silenceAfterAyah,
+      silenceBeforeSelection,
+      silenceAfterSelection,
+    };
+
+    if (!audioSettingsLoaded) {
+      return;
+    }
+
+    try {
+      setMushafStorageItem(
+        AUDIO_SETTINGS_STORAGE_KEY,
+        JSON.stringify(audioSettingsRef.current),
+      );
+    } catch {
+      // stockage indisponible
+    }
+  }, [
+    audioSettingsLoaded,
+    ayahRepeatCount,
+    selectionRepeatCount,
+    silenceBeforeAyah,
+    silenceAfterAyah,
+    silenceBeforeSelection,
+    silenceAfterSelection,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      silenceCancelRef.current?.();
+      silenceCancelRef.current = null;
+    };
+  }, []);
+
+  function getModePositionKey(mode: SecondaryMode) {
+    return `irtaki.mushaf.position.${mushafId}.${riwayaId}.${mode}`;
+  }
+
+  function getModeSelectionKey(mode: SecondaryMode) {
+    return `irtaki.mushaf.selection.${mushafId}.${riwayaId}.${mode}`;
+  }
+
+  function saveModeSelection(mode: SecondaryMode) {
+    try {
+      setMushafStorageItem(
+        getModeSelectionKey(mode),
+        JSON.stringify({
+          startSurah: audioStartSurah,
+          startAyah: audioStartAyah,
+          endSurah: audioEndSurah,
+          endAyah: audioEndAyah,
+          startSurahQuery: audioStartSurahQuery,
+          endSurahQuery: audioEndSurahQuery,
+          startPage: audioStartPage,
+          endPage: audioEndPage,
+          userModified: audioRangeUserModifiedRef.current,
+        }),
+      );
+    } catch {
+      // Le lecteur reste utilisable si le stockage est indisponible.
+    }
+  }
+
+  function restoreModeSelection(mode: SecondaryMode, fallbackPage: number) {
+    let saved: Record<string, unknown> = {};
+
+    try {
+      const raw = getMushafStorageItem(getModeSelectionKey(mode));
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          saved = parsed as Record<string, unknown>;
+        }
+      }
+    } catch {
+      // Utiliser les valeurs par défaut si le stockage est invalide.
+    }
+
+    const readSavedString = (key: string): string | undefined => {
+      const value = saved[key];
+      return typeof value === "string" && value.trim() ? value : undefined;
+    };
+
+    const safePage = Math.max(1, Math.min(TOTAL_PAGES, fallbackPage));
+    const firstVisibleAyah = ayahs[0];
+
+    const fallbackStartSurah =
+      audioStartSurah.trim() ||
+      (firstVisibleAyah ? String(firstVisibleAyah.surahNumber) : "");
+    const fallbackStartAyah =
+      audioStartAyah.trim() ||
+      (firstVisibleAyah ? String(firstVisibleAyah.number) : "");
+    const startSurahValue = readSavedString("startSurah") ?? fallbackStartSurah;
+    const startAyahValue = readSavedString("startAyah") ?? fallbackStartAyah;
+    const endSurahValue =
+      readSavedString("endSurah") ?? audioEndSurah.trim() ?? startSurahValue;
+    const endAyahValue =
+      readSavedString("endAyah") ?? audioEndAyah.trim() ?? startAyahValue;
+
+    const startSurahData = surahs.find(
+      (surah) => surah.number === Number(startSurahValue),
+    );
+    const endSurahData = surahs.find(
+      (surah) => surah.number === Number(endSurahValue),
+    );
+
+    setAudioStartSurah(startSurahValue);
+    setAudioStartAyah(startAyahValue);
+    setAudioEndSurah(endSurahValue);
+    setAudioEndAyah(endAyahValue);
+    setAudioStartSurahQuery(
+      readSavedString("startSurahQuery") ??
+        (startSurahData
+          ? getAudioSurahLabel(startSurahData)
+          : audioStartSurahQuery),
+    );
+    setAudioEndSurahQuery(
+      readSavedString("endSurahQuery") ??
+        (endSurahData ? getAudioSurahLabel(endSurahData) : audioEndSurahQuery),
+    );
+    setAudioStartPage(
+      readSavedString("startPage") ?? audioStartPage.trim() ?? String(safePage),
+    );
+    setAudioEndPage(
+      readSavedString("endPage") ?? audioEndPage.trim() ?? String(TOTAL_PAGES),
+    );
+
+    const hasSavedRange = Boolean(
+      readSavedString("startSurah") &&
+      readSavedString("startAyah") &&
+      readSavedString("endSurah") &&
+      readSavedString("endAyah"),
+    );
+
+    audioRangeUserModifiedRef.current =
+      Boolean(
+        startSurahValue && startAyahValue && endSurahValue && endAyahValue,
+      ) &&
+      (saved.userModified === true || hasSavedRange);
+
+    // Ne pas restaurer les états temporaires des menus déroulants.
+    setAudioStartSurahPickerOpen(false);
+    setAudioEndSurahPickerOpen(false);
+    setAudioStartSurahPickerQuery("");
+    setAudioEndSurahPickerQuery("");
+  }
+
+  // Sauvegarder la sélection du mode actif lorsque ses valeurs changent.
+  // Cet effet précède volontairement l'effet de chargement initial.
+  useEffect(() => {
+    const contextKey = `${mushafId}.${riwayaId}`;
+
+    if (modeSelectionContextRef.current !== contextKey) {
+      return;
+    }
+
+    saveModeSelection(secondaryMode);
+  }, [
+    secondaryMode,
+    mushafId,
+    riwayaId,
+    audioStartSurah,
+    audioStartAyah,
+    audioEndSurah,
+    audioEndAyah,
+    audioStartSurahQuery,
+    audioEndSurahQuery,
+    audioStartPage,
+    audioEndPage,
+  ]);
+
+  // Charger la sélection propre au contexte Mushaf/riwaya au montage.
+  useEffect(() => {
+    const contextKey = `${mushafId}.${riwayaId}`;
+
+    restoreModeSelection(secondaryModeRef.current, pageNumber);
+    modeSelectionContextRef.current = contextKey;
+  }, [mushafId, riwayaId]);
+
+  function selectSecondaryMode(mode: SecondaryMode) {
+    const previousMode = secondaryModeRef.current;
+
+    const currentPageIsValid =
+      Number.isInteger(pageNumber) &&
+      pageNumber >= 1 &&
+      pageNumber <= TOTAL_PAGES;
+
+    const fallbackPage = currentPageIsValid ? pageNumber : 1;
+
+    let targetPage = mode === "history" ? 605 : fallbackPage;
+
+    try {
+      setMushafStorageItem(
+        `irtaki.mushaf.mode.${mushafId}.${riwayaId}`,
+        mode,
+      );
+
+      // Conserver les paramètres du mode quitté.
+      saveModeSelection(previousMode);
+
+      // Enregistrer sa dernière page uniquement s'il fait partie
+      // des dix modes d'activité et que la page est valide.
+      if (
+        QURAN_ACTIVITY_MODES.has(previousMode) &&
+        currentPageIsValid
+      ) {
+        setMushafStorageItem(
+          getModePositionKey(previousMode),
+          String(pageNumber),
+        );
+      }
+
+      if (QURAN_ACTIVITY_MODES.has(mode)) {
+        const rawSavedPage = getMushafStorageItem(
+          getModePositionKey(mode),
+        );
+
+        const savedPage =
+          rawSavedPage === null ? Number.NaN : Number(rawSavedPage);
+
+        const hasSavedPage =
+          Number.isInteger(savedPage) &&
+          savedPage >= 1 &&
+          savedPage <= TOTAL_PAGES;
+
+        // Reprendre la dernière page du mode demandé.
+        // Pour un premier accès, conserver la page courante et
+        // l'enregistrer immédiatement pour ce mode.
+        targetPage = hasSavedPage ? savedPage : fallbackPage;
+
+        if (!hasSavedPage) {
+          setMushafStorageItem(
+            getModePositionKey(mode),
+            String(targetPage),
+          );
+        }
+      }
+
+      // Le journal, les objectifs et les autres outils ne font pas
+      // partie des dix modes qui possèdent une position indépendante.
+      if (mode === "history") {
+        targetPage = 605;
+      }
+
+      restoreModeSelection(mode, targetPage);
+
+      secondaryModeRef.current = mode;
+      setSecondaryMode(mode);
+      setModePickerOpen(false);
+      setReciterPickerOpen(false);
+    } catch {
+      // En cas d'indisponibilité du stockage, préserver la navigation.
+      secondaryModeRef.current = mode;
+      setSecondaryMode(mode);
+      setModePickerOpen(false);
+      setReciterPickerOpen(false);
+    }
+
+    if (targetPage !== pageNumber) {
+      router.push(`/coran/${riwayaId}/page/${targetPage}`);
+    }
+
+    showSecondaryMessage(
+      SECONDARY_MODES.find((item) => item.id === mode)?.label ?? "",
+    );
+  }
+
+  useEffect(() => {
+    if (audioRangeUserModifiedRef.current || ayahs.length === 0) {
+      return;
+    }
+
+    const firstAyah = ayahs[0];
+
+    const initialSurah = surahs.find(
+      (surah) => surah.number === firstAyah.surahNumber,
+    );
+
+    setAudioStartSurah(String(firstAyah.surahNumber));
+    setAudioStartAyah(String(firstAyah.number));
+    setAudioEndSurah(String(firstAyah.surahNumber));
+    setAudioEndAyah(String(firstAyah.number));
+    setAudioStartSurahQuery(
+      initialSurah ? `${initialSurah.number} - ${initialSurah.name}` : "",
+    );
+    setAudioEndSurahQuery(
+      initialSurah ? `${initialSurah.number} - ${initialSurah.name}` : "",
+    );
+    setAudioStartPage(String(pageNumber));
+    setAudioEndPage(String(pageNumber));
+  }, [ayahs, surahs, pageNumber]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    audio.defaultPlaybackRate = playbackRate;
+    audio.playbackRate = playbackRate;
+  }, [playbackRate]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    function replayCurrentAyah(selectionDurationSeconds?: number) {
+      const el = audioRef.current;
+      if (!el) return;
+
+      const startPlayback = () => {
+        silenceCancelRef.current = null;
+        el.currentTime = 0;
+        void el.play().catch(() => {
+          setIsPlaying(false);
+        });
+      };
+
+      const beforeSelection = Number(
+        audioSettingsRef.current.silenceBeforeSelection,
+      );
+
+      const effectivePlaybackRate =
+        Number.isFinite(el.playbackRate) && el.playbackRate > 0
+          ? el.playbackRate
+          : 1;
+
+      if (
+        typeof selectionDurationSeconds === "number" &&
+        Number.isFinite(selectionDurationSeconds) &&
+        selectionDurationSeconds > 0 &&
+        Number.isFinite(beforeSelection) &&
+        beforeSelection > 0
+      ) {
+        el.pause();
+        setIsPlaying(false);
+
+        const delayMs = Math.ceil(
+          (selectionDurationSeconds / effectivePlaybackRate) *
+            beforeSelection *
+            1000,
+        );
+
+        const timer = window.setTimeout(startPlayback, delayMs);
+        silenceCancelRef.current = () => window.clearTimeout(timer);
+        return;
+      }
+
+      startPlayback();
+    }
+
+    function handleEnded() {
+      const currentAyah = getEndedAudioAyah();
+      const endedPosition = getEndedAudioPosition() ?? currentAyah;
+      const rangeContinuation = readAudioContinuation();
+      // Reconnaître la fin de plage depuis la source audio ou l'ayah
+      // réellement résolue, pour éviter de basculer sur la répétition
+      // d'une ayah isolée lorsque la position de la source est décalée.
+      const atRangeEnd = Boolean(
+        rangeContinuation &&
+        ((endedPosition !== undefined &&
+          isAudioEndReached(endedPosition, rangeContinuation)) ||
+          (currentAyah !== undefined &&
+            isAudioEndReached(currentAyah, rangeContinuation))),
+      );
+
+      if (!currentAyah) {
+        if (rangeContinuation && atRangeEnd) {
+          audioShouldContinueRef.current = false;
+          audioRef.current?.pause();
+          clearAudioContinuation();
+          setIsPlaying(false);
+          showSecondaryMessage("انتهى الاستماع");
+        } else {
+          setIsPlaying(false);
+        }
+        return;
+      }
+
+      const settings = audioSettingsRef.current;
+      console.log("[AUDIO][SELECTION-REPEAT-DIAG]", {
+        atRangeEnd,
+        endedPosition,
+        endedAyah: currentAyah
+          ? {
+              surahNumber: currentAyah.surahNumber,
+              ayahNumber: currentAyah.number,
+            }
+          : null,
+        continuation: rangeContinuation
+          ? {
+              startSurah: rangeContinuation.surahNumber,
+              startAyah: rangeContinuation.ayahNumber,
+              endSurah: rangeContinuation.endSurahNumber,
+              endAyah: rangeContinuation.endAyahNumber,
+            }
+          : null,
+        selectionRepeat: settings.selectionRepeat,
+        loop: readAudioLoop() ?? null,
+      });
+
+      // Le coefficient multiplie la durée audio réelle, corrigée
+      // selon la vitesse effective du lecteur.
+      if (!silenceDoneRef.current) {
+        const endedAudio = audioRef.current;
+        const effectivePlaybackRate =
+          endedAudio &&
+          Number.isFinite(endedAudio.playbackRate) &&
+          endedAudio.playbackRate > 0
+            ? endedAudio.playbackRate
+            : 1;
+
+        const referenceDuration = atRangeEnd
+          ? rangeContinuation?.selectionDurationSeconds
+          : endedAudio?.duration;
+
+        const coefficient = Number(
+          atRangeEnd
+            ? settings.silenceAfterSelection
+            : settings.silenceAfterAyah,
+        );
+
+        const seconds =
+          typeof referenceDuration === "number" &&
+          Number.isFinite(referenceDuration) &&
+          referenceDuration > 0 &&
+          Number.isFinite(coefficient) &&
+          coefficient > 0
+            ? (referenceDuration / effectivePlaybackRate) * coefficient
+            : 0;
+
+        if (seconds > 0) {
+          const timer = window.setTimeout(() => {
+            silenceCancelRef.current = null;
+            silenceDoneRef.current = true;
+            handleEndedRef.current();
+          }, seconds * 1000);
+          silenceCancelRef.current = () => window.clearTimeout(timer);
+          return;
+        }
+      }
+      silenceDoneRef.current = false;
+
+      // Répétition de la plage début/fin.
+      if (rangeContinuation && atRangeEnd) {
+        const selectionTarget =
+          settings.selectionRepeat === "n"
+            ? Number.POSITIVE_INFINITY
+            : Number(settings.selectionRepeat);
+        const loop = readAudioLoop();
+
+        if (loop && loop.pass < selectionTarget) {
+          writeAudioLoop({ ...loop, pass: loop.pass + 1 });
+          writeAudioContinuation({
+            ...rangeContinuation,
+            surahNumber: loop.startSurah,
+            ayahNumber: loop.startAyah,
+          });
+
+          const startAyahOnPage = ayahs.find(
+            (ayah) =>
+              ayah.surahNumber === loop.startSurah &&
+              ayah.number === loop.startAyah,
+          );
+
+          if (startAyahOnPage) {
+            const rangeIsSingleAyah =
+              loop.startSurah === rangeContinuation.endSurahNumber &&
+              loop.startAyah === rangeContinuation.endAyahNumber;
+
+            if (rangeIsSingleAyah) {
+              replayCurrentAyah(
+                rangeContinuation.selectionDurationSeconds,
+              );
+            } else {
+              audioShouldContinueRef.current = true;
+              if (activatePreloadedAudio(startAyahOnPage)) return;
+              setSelectedAyahId(startAyahOnPage.id);
+            }
+            return;
+          }
+
+          audioShouldContinueRef.current = true;
+          router.push(`/coran/${riwayaId}/page/${loop.startPage}`);
+          return;
+        }
+      }
+
+      // La fin de la plage doit primer sur la répétition globale.
+      // Les répétitions d'ayah et de sélection ont déjà été traitées au-dessus.
+      if (rangeContinuation && atRangeEnd) {
+        audioShouldContinueRef.current = false;
+        audioRef.current?.pause();
+        clearAudioContinuation();
+        setIsPlaying(false);
+        showSecondaryMessage("انتهى الاستماع");
+        return;
+      }
+
+      // Répétition d'ayah.
+      const ayahTarget =
+        settings.ayahRepeat === "n"
+          ? Number.POSITIVE_INFINITY
+          : Number(settings.ayahRepeat);
+
+      if (ayahPlayCountRef.current < ayahTarget) {
+        ayahPlayCountRef.current += 1;
+        replayCurrentAyah();
+        return;
+      }
+      ayahPlayCountRef.current = 1;
+
+      if (repeatEnabled) {
+        const currentAudio = audioRef.current;
+
+        if (!currentAudio) {
+          return;
+        }
+
+        currentAudio.currentTime = 0;
+        void currentAudio.play().catch(() => {
+          setIsPlaying(false);
+        });
+        return;
+      }
+
+      const continuation = readAudioContinuation();
+
+      if (continuation) {
+        if (isAudioEndReached(currentAyah, continuation)) {
+          clearAudioContinuation();
+          setIsPlaying(false);
+          showSecondaryMessage("انتهى الاستماع");
+          return;
+        }
+
+        const currentIndex = ayahs.findIndex(
+          (ayah) => ayah.id === currentAyah.id,
+        );
+
+        const nextAyah = ayahs[currentIndex + 1];
+
+        if (nextAyah) {
+          writeAudioContinuation({
+            ...continuation,
+            surahNumber: nextAyah.surahNumber,
+            ayahNumber: nextAyah.number,
+          });
+
+          audioShouldContinueRef.current = true;
+          if (activatePreloadedAudio(nextAyah)) return;
+          setSelectedAyahId(nextAyah.id);
+          return;
+        }
+
+        if (pageNumber < TOTAL_PAGES) {
+          const nextPage = pageNumber + 1;
+          console.log("[AUDIO] fetch next page", nextPage); // DEBUG-AUDIO
+
+          void getAyahsByPage(nextPage)
+            .then((nextPageAyahs) => {
+              const firstAyah = nextPageAyahs[0];
+
+              if (!firstAyah) {
+                clearAudioContinuation();
+                setIsPlaying(false);
+                showSecondaryMessage("تعذر تحميل الآية التالية");
+                return;
+              }
+
+              writeAudioContinuation({
+                ...continuation,
+                surahNumber: firstAyah.surahNumber,
+                ayahNumber: firstAyah.number,
+              });
+
+              console.log(
+                "[AUDIO] router.push",
+                nextPage,
+                firstAyah.surahNumber,
+                firstAyah.number,
+              ); // DEBUG-AUDIO
+              audioShouldContinueRef.current = true;
+              router.push(`/coran/${riwayaId}/page/${nextPage}`);
+            })
+            .catch((e) => {
+              console.log("[AUDIO] fetch next FAILED", e); // DEBUG-AUDIO
+              setIsPlaying(false);
+              showSecondaryMessage("تعذر تحميل الصفحة التالية");
+            });
+
+          return;
+        }
+
+        clearAudioContinuation();
+        setIsPlaying(false);
+        showSecondaryMessage("انتهى الاستماع");
+        return;
+      }
+
+      const currentIndex = ayahs.findIndex(
+        (ayah) => ayah.id === currentAyah.id,
+      );
+      const nextAyah = ayahs[currentIndex + 1];
+
+      if (nextAyah) {
+        audioShouldContinueRef.current = true;
+        if (activatePreloadedAudio(nextAyah)) return;
+        setSelectedAyahId(nextAyah.id);
+        return;
+      }
+
+      if (pageNumber < TOTAL_PAGES) {
+        audioShouldContinueRef.current = true;
+        setMushafSessionStorageItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY, "1");
+        router.push(`/coran/${riwayaId}/page/${pageNumber + 1}`);
+        return;
+      }
+
+      setIsPlaying(false);
+      showSecondaryMessage("انتهى الاستماع");
+    }
+
+    function handlePlaying() {
+      if (!listeningAyahsHiddenRef.current) return;
+      const ayahId = audioCurrentAyahIdRef.current;
+      if (ayahId === null) return;
+
+      setListeningRevealedAyahIds((revealed) => {
+        if (revealed.has(ayahId)) return revealed;
+        const next = new Set(revealed);
+        next.add(ayahId);
+        return next;
+      });
+    }
+
+    function handleError() {
+      console.log(
+        "[AUDIO] error event",
+        audio?.error?.code,
+        audio?.error?.message,
+        audio?.src,
+      ); // DEBUG-AUDIO
+      setIsPlaying(false);
+      showSecondaryMessage("تعذر تحميل الصوت");
+    }
+
+    console.log(
+      "[AUDIO] listeners attached, page",
+      pageNumber,
+      "ayahs",
+      ayahs.length,
+    ); // DEBUG-AUDIO
+    handleEndedRef.current = handleEnded;
+    audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("playing", handlePlaying);
+    audio.addEventListener("error", handleError);
+
+    return () => {
+      audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("playing", handlePlaying);
+      audio.removeEventListener("error", handleError);
+    };
+  }, [repeatEnabled, ayahs, pageNumber, riwayaId, selectedAyahId]);
+
+  // Précharger le prochain fichier audio avant la fin de l'ayah courante.
+  // Le Blob évite de dépendre du cache HTTP lorsque la source change.
+  useEffect(() => {
+    audioPreloadUnmountedRef.current = false;
+
+    return () => {
+      audioPreloadUnmountedRef.current = true;
+      for (const url of audioPreloadedUrlsRef.current.values()) {
+        URL.revokeObjectURL(url);
+      }
+      audioPreloadedUrlsRef.current.clear();
+      audioPreloadInFlightRef.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    const continuation = readAudioContinuation();
+    if (!isPlaying && !continuation) return;
+
+    const continuationAyah =
+      continuation?.reciterId === selectedReciter
+        ? ayahs.find(
+            (ayah) =>
+              ayah.surahNumber === continuation.surahNumber &&
+              ayah.number === continuation.ayahNumber,
+          )
+        : undefined;
+
+    const currentAyah = continuationAyah ?? getCurrentAudioAyah();
+    if (!currentAyah) return;
+
+    const preloadAyahAudio = (targetAyah: (typeof ayahs)[number]) => {
+      const key = [
+        selectedReciter,
+        targetAyah.surahNumber,
+        targetAyah.number,
+      ].join(":");
+
+      const readyPlayer = audioPreloadedPlayersRef.current.get(key);
+      if (
+        readyPlayer &&
+        readyPlayer.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA
+      ) {
+        return;
+      }
+
+      if (audioPreloadInFlightRef.current.has(key)) return;
+      audioPreloadInFlightRef.current.add(key);
+
+      const preparePlayer = (url: string): Promise<void> =>
+        new Promise((resolve, reject) => {
+          const player = new Audio();
+          player.preload = "auto";
+
+          let settled = false;
+
+          const cleanupListeners = () => {
+            player.removeEventListener("canplay", handleReady);
+            player.removeEventListener("canplaythrough", handleReady);
+            player.removeEventListener("error", handleError);
+          };
+
+          const handleReady = () => {
+            if (
+              settled ||
+              player.readyState < HTMLMediaElement.HAVE_FUTURE_DATA
+            ) {
+              return;
+            }
+
+            settled = true;
+            cleanupListeners();
+
+            if (audioPreloadUnmountedRef.current) {
+              player.pause();
+              resolve();
+              return;
+            }
+
+            const previous = audioPreloadedPlayersRef.current.get(key);
+            if (previous && previous !== audioRef.current) {
+              previous.pause();
+            }
+
+            audioPreloadedPlayersRef.current.set(key, player);
+            console.log("[AUDIO][PRELOAD_READY]", key, {
+              readyState: player.readyState,
+              duration: player.duration,
+            });
+            resolve();
+          };
+
+          const handleError = () => {
+            if (settled) return;
+            settled = true;
+            cleanupListeners();
+            player.pause();
+            reject(
+              new Error("Le lecteur préchargé n'a pas pu charger l'audio"),
+            );
+          };
+
+          player.addEventListener("canplay", handleReady);
+          player.addEventListener("canplaythrough", handleReady);
+          player.addEventListener("error", handleError);
+          player.src = url;
+          player.load();
+
+          if (player.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+            handleReady();
+          }
+        });
+
+      const cachedUrl = audioPreloadedUrlsRef.current.get(key);
+
+      const sourcePromise: Promise<string | null> = cachedUrl
+        ? Promise.resolve(cachedUrl)
+        : fetch(
+            getAudioUrl(
+              selectedReciter,
+              targetAyah.surahNumber,
+              targetAyah.number,
+            ),
+          )
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`Préchargement HTTP ${response.status}`);
+              }
+              return response.blob();
+            })
+            .then((blob) => {
+              if (audioPreloadUnmountedRef.current) return null;
+
+              const url = URL.createObjectURL(blob);
+              audioPreloadedUrlsRef.current.set(key, url);
+              return url;
+            });
+
+      void sourcePromise
+        .then((url) => {
+          if (!url) return;
+          return preparePlayer(url);
+        })
+        .catch((error) => {
+          console.warn(
+            "[AUDIO] préchargement du lecteur impossible",
+            key,
+            error,
+          );
+        })
+        .finally(() => {
+          audioPreloadInFlightRef.current.delete(key);
+        });
+    };
+
+    // À la fin d'une plage répétée, préparer son début plutôt qu'une
+    // ayah extérieure à la sélection.
+    const loop = readAudioLoop();
+    if (continuation && isAudioEndReached(currentAyah, continuation)) {
+      const repeatTarget =
+        audioSettingsRef.current.selectionRepeat === "n"
+          ? Number.POSITIVE_INFINITY
+          : Number(audioSettingsRef.current.selectionRepeat);
+
+      if (loop && loop.pass < repeatTarget) {
+        const startOnPage = ayahs.find(
+          (ayah) =>
+            ayah.surahNumber === loop.startSurah &&
+            ayah.number === loop.startAyah,
+        );
+
+        if (startOnPage) {
+          preloadAyahAudio(startOnPage);
+        } else {
+          void getAyahsByPage(loop.startPage)
+            .then((startPageAyahs) => {
+              const startAyah = startPageAyahs.find(
+                (ayah) =>
+                  ayah.surahNumber === loop.startSurah &&
+                  ayah.number === loop.startAyah,
+              );
+              if (startAyah) preloadAyahAudio(startAyah);
+            })
+            .catch(() => {});
+        }
+      }
+      return;
+    }
+
+    const currentIndex = ayahs.findIndex((ayah) => ayah.id === currentAyah.id);
+    const nextAyah = ayahs[currentIndex + 1];
+
+    if (nextAyah) {
+      preloadAyahAudio(nextAyah);
+    } else if (pageNumber < TOTAL_PAGES) {
+      void getAyahsByPage(pageNumber + 1)
+        .then((nextPageAyahs) => {
+          if (nextPageAyahs[0]) preloadAyahAudio(nextPageAyahs[0]);
+        })
+        .catch(() => {});
+    }
+  }, [isPlaying, selectedAyahId, selectedReciter, pageNumber, ayahs]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    const continuation = readAudioContinuation();
+
+    const continuationAyah =
+      continuation?.reciterId === selectedReciter
+        ? ayahs.find(
+            (ayah) =>
+              ayah.surahNumber === continuation.surahNumber &&
+              ayah.number === continuation.ayahNumber,
+          )
+        : undefined;
+
+    // Priorité à l'ayah de continuation, même si la sélection React
+    // n'a pas encore été mise à jour après le changement de page.
+    const currentAyah = continuationAyah ?? getCurrentAudioAyah();
+
+    if (!audio || !currentAyah) {
+      return;
+    }
+
+    const sourceKey = [
+      selectedReciter,
+      currentAyah.surahNumber,
+      currentAyah.number,
+    ].join(":");
+    audioCurrentAyahIdRef.current = currentAyah.id;
+
+    const isContinuationTarget = continuationAyah !== undefined;
+
+    console.log("[AUDIO] source effect", {
+      sourceKey,
+      same: audioSourceKeyRef.current === sourceKey,
+      paused: audio.paused,
+      isContinuationTarget,
+      shouldContinue: audioShouldContinueRef.current,
+    }); // DEBUG-AUDIO
+    if (audioSourceKeyRef.current === sourceKey) {
+      if (isContinuationTarget && audio.paused && !silenceCancelRef.current) {
+        audio.playbackRate = playbackRate;
+        void audio.play().then(
+          () => setIsPlaying(true),
+          () => {
+            setIsPlaying(false);
+            showSecondaryMessage("تعذر تشغيل الصوت");
+          },
+        );
+      }
+      return;
+    }
+
+    const autoplayNext =
+      getMushafSessionStorageItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY) === "1";
+
+    removeMushafSessionStorageItem(AUDIO_AUTOPLAY_NEXT_STORAGE_KEY);
+
+    const shouldResume =
+      audioShouldContinueRef.current ||
+      autoplayNext ||
+      !audio.paused ||
+      isContinuationTarget;
+
+    audioShouldContinueRef.current = false;
+    cancelSilence();
+    ayahPlayCountRef.current = 1;
+    audio.pause();
+    const preloadedAudioUrl = audioPreloadedUrlsRef.current.get(sourceKey);
+    audio.src =
+      preloadedAudioUrl ??
+      getAudioUrl(selectedReciter, currentAyah.surahNumber, currentAyah.number);
+    audioSourceKeyRef.current = sourceKey;
+    audio.defaultPlaybackRate = playbackRate;
+    audio.playbackRate = playbackRate;
+    audio.load();
+
+    if (shouldResume) {
+      const startPlayback = () => {
+        void audio.play().then(
+          () => setIsPlaying(true),
+          (err) => {
+            console.log("[AUDIO] play() rejected", err?.name, err?.message); // DEBUG-AUDIO
+            setIsPlaying(false);
+            showSecondaryMessage("تعذر تشغيل الصوت");
+          },
+        );
+      };
+
+      const loop = readAudioLoop();
+      const isRangeStart = Boolean(
+        readAudioContinuation() &&
+        loop &&
+        loop.startSurah === currentAyah.surahNumber &&
+        loop.startAyah === currentAyah.number,
+      );
+      const beforeCoefficient = Number(
+        isRangeStart
+          ? audioSettingsRef.current.silenceBeforeSelection
+          : audioSettingsRef.current.silenceBeforeAyah,
+      );
+
+      if (beforeCoefficient > 0) {
+        const scheduleBeforePlayback = (referenceDuration: number) => {
+          const effectivePlaybackRate =
+            Number.isFinite(audio.playbackRate) && audio.playbackRate > 0
+              ? audio.playbackRate
+              : 1;
+
+          const seconds =
+            (referenceDuration / effectivePlaybackRate) * beforeCoefficient;
+
+          if (!Number.isFinite(seconds) || seconds <= 0) {
+            startPlayback();
+            return;
+          }
+
+          const timer = window.setTimeout(() => {
+            silenceCancelRef.current = null;
+            startPlayback();
+          }, Math.ceil(seconds * 1000));
+
+          silenceCancelRef.current = () => window.clearTimeout(timer);
+        };
+
+        if (isRangeStart) {
+          const duration = continuation?.selectionDurationSeconds;
+
+          if (
+            typeof duration !== "number" ||
+            !Number.isFinite(duration) ||
+            duration <= 0
+          ) {
+            showSecondaryMessage("تعذر حساب مدة التحديد");
+            startPlayback();
+          } else {
+            scheduleBeforePlayback(duration);
+          }
+        } else if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
+          scheduleBeforePlayback(audio.duration);
+        } else {
+          const cleanupMetadataListeners = () => {
+            audio.removeEventListener("loadedmetadata", onMetadata);
+            audio.removeEventListener("error", onMetadataError);
+          };
+
+          const onMetadata = () => {
+            cleanupMetadataListeners();
+            silenceCancelRef.current = null;
+
+            if (
+              Number.isFinite(audio.duration) &&
+              audio.duration > 0
+            ) {
+              scheduleBeforePlayback(audio.duration);
+            } else {
+              startPlayback();
+            }
+          };
+
+          const onMetadataError = () => {
+            cleanupMetadataListeners();
+            silenceCancelRef.current = null;
+            startPlayback();
+          };
+
+          audio.addEventListener("loadedmetadata", onMetadata, { once: true });
+          audio.addEventListener("error", onMetadataError, { once: true });
+
+          silenceCancelRef.current = cleanupMetadataListeners;
+        }
+      } else {
+        startPlayback();
+      }
+    }
+  }, [selectedAyahId, selectedReciter, pageNumber, ayahs, playbackRate]);
+
+  useEffect(() => {
+    if (ayahs.length === 0) {
+      return;
+    }
+
+    const continuation = readAudioContinuation();
+
+    if (!continuation) {
+      return;
+    }
+
+    const targetAyah = ayahs.find(
+      (ayah) =>
+        ayah.surahNumber === continuation.surahNumber &&
+        ayah.number === continuation.ayahNumber,
+    );
+
+    if (!targetAyah) {
+      return;
+    }
+
+    audioShouldContinueRef.current = true;
+    setSelectedAyahId(targetAyah.id);
+  }, [ayahs, pageNumber]);
+
+  // Écoute de secours pour la révélation progressive.
+  // Révèle l'ayah réellement en cours de lecture, sans cacher les précédentes.
+  useEffect(() => {
+    if (!listeningAyahsHidden || secondaryMode !== "listening") {
+      return;
+    }
+
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const revealCurrentAudioAyah = () => {
+      if (audio.paused || audio.ended) return;
+
+      const ayahId = audioCurrentAyahIdRef.current;
+      if (ayahId === null) return;
+
+      setListeningRevealedAyahIds((revealed) => {
+        if (revealed.has(ayahId)) return revealed;
+        const next = new Set(revealed);
+        next.add(ayahId);
+        return next;
+      });
+    };
+
+    audio.addEventListener("playing", revealCurrentAudioAyah);
+    audio.addEventListener("timeupdate", revealCurrentAudioAyah);
+
+    // Couvre le cas où le son jouait déjà au moment du clic sur l'œil.
+    revealCurrentAudioAyah();
+
+    return () => {
+      audio.removeEventListener("playing", revealCurrentAudioAyah);
+      audio.removeEventListener("timeupdate", revealCurrentAudioAyah);
+    };
+  }, [
+    listeningAyahsHidden,
+    secondaryMode,
+    pageNumber,
+    selectedAyahId,
+    selectedReciter,
+    ayahs,
+  ]);
+
+  useEffect(() => {
+    if (pageNumber !== 605) return;
+    secondaryModeRef.current = "history";
+    setSecondaryMode("history");
+    setModePickerOpen(false);
+    setReciterPickerOpen(false);
+  }, [pageNumber]);
+
+  if (pageNumber < 1 || (pageNumber > TOTAL_PAGES && pageNumber !== 605)) {
+    return (
+      <p className="rounded-lg border border-[var(--border)] p-6 text-center">
+        Page invalide.
+      </p>
+    );
+  }
+
+  if (pageNumber !== 605 && !layout && !error) {
+    return (
+      <div
+        className="mx-auto max-w-3xl rounded-xl border border-[var(--border)] p-8 text-center"
+        dir="rtl"
+      >
+        Chargement de la page {pageNumber}…
+      </div>
+    );
+  }
+
+  if (pageNumber !== 605 && error && !layout) {
+    return (
+      <p
+        role="alert"
+        className="mx-auto max-w-3xl rounded-xl border border-[var(--border)] p-6 text-center"
+      >
+        {error}
+      </p>
+    );
+  }
+
+  const surahNames = new Map(surahs.map((surah) => [surah.number, surah.name]));
+
+  return (
+    <>
+        <article
+      className={`mx-auto max-w-3xl ${"touch-none"} rounded-xl border border-[var(--border)] bg-[var(--background)] p-2 pb-[45dvh] select-none sm:p-8 sm:pb-[45dvh]`}
+      dir="rtl"
+      data-mushaf-page={pageNumber}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      onDoubleClick={handleDoubleClick}
+    >
+      {loading && layout && layout.page !== pageNumber && (
+        <p className="mb-3 rounded-lg border border-[var(--border)] p-3 text-center text-sm text-[var(--muted)]">
+          Chargement de la page {pageNumber}…
+        </p>
+      )}
+      {error && (
+        <p
+          role="alert"
+          className="mb-3 rounded-lg border border-[var(--border)] p-3 text-center text-sm"
+        >
+          {error}
+        </p>
+      )}
+      <audio ref={audioRef} preload="auto" className="hidden" />
+      <MushafTilawaRecorder />
+      <header className="mb-3 grid grid-cols-3 items-center gap-1 text-xs text-[var(--muted)] sm:mb-6 sm:gap-2 sm:text-sm">
+        <span className="text-right tabular-nums">
+          صفحة {pageNumber} / {pageNumber === 605 ? 605 : TOTAL_PAGES}
+        </span>
+        <span className="text-center font-medium">
+          {[...new Set(ayahs.map((ayah) => ayah.surahNumber))]
+            .sort((a, b) => a - b)
+            .map(
+              (number) => surahs.find((surah) => surah.number === number)?.name,
+            )
+            .filter((name): name is string => Boolean(name))
+            .join("، ") || "—"}
+        </span>
+        <span className="text-left tabular-nums">
+          {[
+            ...new Map(
+              ayahs.map((ayah) => {
+                const hizbNumber = Math.ceil(ayah.hizb / 4);
+                const quarterIndex = (ayah.hizb - 1) % 4;
+                const quarterNames = [
+                  "الربع الأول",
+                  "الربع الثاني",
+                  "الربع الثالث",
+                  "الربع الأخير",
+                ];
+
+                return [
+                  `${hizbNumber}:${quarterIndex}`,
+                  `الحزب ${hizbNumber} — ${quarterNames[quarterIndex]}`,
+                ] as const;
+              }),
+            ).values(),
+          ].join("، ") || "—"}
+        </span>
+      </header>
+
+      {pageNumber === 605 ? (
+        <MushafHistoryContent
+          view={historyView}
+          onViewChange={setHistoryView}
+        />
+      ) : (
+        <div
+          className="mushaf-hafs-text space-y-0 text-center sm:space-y-1"
+          data-mushaf-lines={
+            layout!.lines.filter((line) => line.type === "ayah").length
+          }
+        >
+          {layout!.lines.map((line) => (
+            <MushafLine
+              key={line.line}
+              line={line}
+              ayahs={ayahs}
+              surahNames={surahNames}
+              selectedAyahId={selectedAyahId}
+              selectedWords={selectedWords}
+              tarteelMatchedWords={
+                secondaryMode === "tarteel1"
+                  ? tarteelCorrectWordsByMode.tarteel1
+                  : secondaryMode === "tarteel2"
+                    ? tarteelCorrectWordsByMode.tarteel2
+                    : undefined
+              }
+              tarteelRecentWords={
+                secondaryMode === "tarteel1"
+                  ? tarteelRecentWordsByMode.tarteel1
+                  : secondaryMode === "tarteel2"
+                    ? tarteelRecentWordsByMode.tarteel2
+                    : undefined
+              }
+              mode={secondaryMode}
+              modificationModes={visibleModificationModes}
+              textModifications={textModifications}
+              colorAssignments={colorAssignments}
+              previewOriginalOptions={previewOriginalOptions}
+              showAllTextOverride={showAllTextByMode[secondaryMode] === true}
+              hideUnrevealedAyahs={listeningAyahsHidden}
+              revealedAyahIds={listeningRevealedAyahIds}
+            />
+          ))}
+        </div>
+      )}
+
+      {menu ? (
+        <div
+          className={[
+            "fixed inset-x-0 z-50 mx-auto w-fit rounded-xl border",
+            "border-[var(--border)] bg-[var(--background)] px-5 py-3",
+            "shadow-lg",
+            "top-[3.75rem] sm:top-20",
+          ].join(" ")}
+          dir="rtl"
+          role="dialog"
+          aria-label={
+            menu.type === "ayah"
+              ? "قائمة الآية"
+              : menu.type === "word"
+                ? "قائمة الكلمة"
+                : menu.type === "selection"
+                  ? "قائمة التحديد"
+                  : "القائمة الثانوية للتطبيق"
+          }
+        >
+          {menu.type === "ayah" && (
+            <div className="flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3">
+              <div className="flex items-center justify-between"><div className="font-semibold">قائمة الآية</div><button type="button" onClick={() => setMenu(null)} aria-label="إغلاق" title="إغلاق" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--foreground)] transition hover:bg-[var(--surface)]"><svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  aria-expanded={contextAudioTarget === "ayah"}
+                  aria-haspopup="true"
+                  onClick={() => toggleContextAudioControls("ayah")}
+                >
+                  <MushafIcon name="audio" size={16} /> استماع
+                </button>
+                {tilawaUiStatus === "idle" && renderTilawaMainButton("التلاوة")}
+                <button
+                  type="button"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  aria-expanded={taskMenuOpen}
+                  aria-haspopup="true"
+                  onClick={() => {
+                    setTaskError(null);
+                    setTaskMenuOpen((open) => !open);
+                  }}
+                >
+                  <MushafIcon name="activity" size={16} /> نشاط
+                </button>
+                <MushafColorPalette
+                  action="colors"
+                  mode={secondaryMode}
+                  selectionType="ayah"
+                  open={openColorPaletteAction === "colors"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "colors" ? null : "colors",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("colors", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
+                <MushafColorPalette
+                  action="highlight"
+                  mode={secondaryMode}
+                  selectionType="ayah"
+                  open={openColorPaletteAction === "highlight"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "highlight" ? null : "highlight",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("highlight", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
+                <div className="relative inline-flex">
+                  <button
+                    type="button"
+                    aria-expanded={openUnderlinePalette}
+                    aria-haspopup="true"
+                    aria-pressed={UNDERLINE_STYLE_OPTIONS.some((option) =>
+                      isContextTextActionEnabled(option.action),
+                    )}
+                    className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                    onClick={() => {
+                      setOpenColorPaletteAction(null);
+                      setOpenUnderlinePalette((current) => !current);
+                    }}
+                  >
+                    〰️ تسطير
+                  </button>
+                  {openUnderlinePalette && (
+                    <div
+                      className="absolute top-full right-0 z-50 mt-2 flex items-center gap-2 rounded-xl border bg-[var(--background)] p-2 shadow-lg"
+                      role="group"
+                      aria-label="أنواع التسطير"
+                    >
+                      {UNDERLINE_STYLE_OPTIONS.map((option) => (
+                        <button
+                          key={option.action}
+                          type="button"
+                          aria-label={option.label}
+                          aria-pressed={isContextTextActionEnabled(
+                            option.action,
+                          )}
+                          className="flex h-10 w-12 items-center justify-center rounded-lg border p-2"
+                          onClick={() => {
+                            toggleContextUnderlineStyle(option.style);
+                            setOpenUnderlinePalette(false);
+                          }}
+                        >
+                          <UnderlineStyleIcon style={option.style} />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("hidden")}
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  onClick={() => toggleContextTextAction("hidden")}
+                >
+                  {isContextTextActionEnabled("hidden") ? "إظهار" : "إخفاء"}
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  onClick={() => void openAnnotations(contextAyahId())}
+                >
+                  💬 تعليق
+                </button>
+
+                <button
+                  type="button"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  onClick={() => {
+                    const ayahId = contextAyahId();
+
+                    if (ayahId === undefined) {
+                      setContextMenuMessage("حدد آية أولاً");
+                      return;
+                    }
+
+                    setContextMenuMessage(null);
+                    setTafsirAyahId(ayahId);
+                  }}
+                >
+                  تفسير
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  onClick={() => {
+                    const ayahId = contextAyahId();
+                    const ayah = ayahs.find((item) => item.id === ayahId);
+
+                    if (!ayah) {
+                      setContextMenuMessage("حدد آية أولاً");
+                      return;
+                    }
+
+                    setContextMenuMessage(null);
+                    setSimilarAyah({
+                      surahNumber: ayah.surahNumber,
+                      ayahNumber: ayah.number,
+                    });
+                  }}
+                >
+                  متشابهات
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  onClick={() => {
+                    const ayahId = contextAyahId();
+                    const ayah = ayahs.find((item) => item.id === ayahId);
+
+                    if (!ayah) {
+                      setContextMenuMessage("حدد آية أولاً");
+                      return;
+                    }
+
+                    setContextMenuMessage(null);
+                    setQiraatAyah({
+                      surahNumber: ayah.surahNumber,
+                      ayahNumber: ayah.number,
+                    });
+                  }}
+                >
+                  قراءات
+                </button>
+              </div>
+              {contextAudioTarget === "ayah" && renderContextAudioControls()}
+              {taskMenuOpen && renderTaskControls()}
+            </div>
+          )}
+
+          {menu.type === "word" && (
+            <div className="flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3">
+              <div className="flex items-center justify-between"><div className="font-semibold">قائمة الكلمة</div><button type="button" onClick={() => setMenu(null)} aria-label="إغلاق" title="إغلاق" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--foreground)] transition hover:bg-[var(--surface)]"><svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  aria-expanded={contextAudioTarget === "word"}
+                  aria-haspopup="true"
+                  onClick={() => toggleContextAudioControls("word")}
+                >
+                  <MushafIcon name="audio" size={16} /> استماع
+                </button>
+                <MushafColorPalette
+                  action="colors"
+                  mode={secondaryMode}
+                  selectionType="word"
+                  open={openColorPaletteAction === "colors"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "colors" ? null : "colors",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("colors", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
+                <MushafColorPalette
+                  action="highlight"
+                  mode={secondaryMode}
+                  selectionType="word"
+                  open={openColorPaletteAction === "highlight"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "highlight" ? null : "highlight",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("highlight", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
+                <div className="relative inline-flex">
+                  <button
+                    type="button"
+                    aria-expanded={openUnderlinePalette}
+                    aria-haspopup="true"
+                    aria-pressed={UNDERLINE_STYLE_OPTIONS.some((option) =>
+                      isContextTextActionEnabled(option.action),
+                    )}
+                    className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                    onClick={() => {
+                      setOpenColorPaletteAction(null);
+                      setOpenUnderlinePalette((current) => !current);
+                    }}
+                  >
+                    〰️ تسطير
+                  </button>
+                  {openUnderlinePalette && (
+                    <div
+                      className="absolute top-full right-0 z-50 mt-2 flex items-center gap-2 rounded-xl border bg-[var(--background)] p-2 shadow-lg"
+                      role="group"
+                      aria-label="أنواع التسطير"
+                    >
+                      {UNDERLINE_STYLE_OPTIONS.map((option) => (
+                        <button
+                          key={option.action}
+                          type="button"
+                          aria-label={option.label}
+                          aria-pressed={isContextTextActionEnabled(
+                            option.action,
+                          )}
+                          className="flex h-10 w-12 items-center justify-center rounded-lg border p-2"
+                          onClick={() => {
+                            toggleContextUnderlineStyle(option.style);
+                            setOpenUnderlinePalette(false);
+                          }}
+                        >
+                          <UnderlineStyleIcon style={option.style} />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("hidden")}
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  onClick={() => toggleContextTextAction("hidden")}
+                >
+                  {isContextTextActionEnabled("hidden") ? "إظهار" : "إخفاء"}
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  onClick={() => void openAnnotations(contextAyahId())}
+                >
+                  💬 تعليق
+                </button>
+              </div>
+              {contextAudioTarget === "word" && renderContextAudioControls()}
+            </div>
+          )}
+
+
+
+          {menu.type === "selection" && (
+            <div className="flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3">
+              <div className="flex items-center justify-between"><div className="font-semibold">تحديد الكلمات</div><button type="button" onClick={() => setMenu(null)} aria-label="إغلاق" title="إغلاق" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--foreground)] transition hover:bg-[var(--surface)]"><svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>
+              <div className="text-sm text-[var(--muted)]">
+                {selectedWords.size}{" "}
+                {selectedWords.size === 1 ? "كلمة محددة" : "كلمات محددة"}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  aria-expanded={contextAudioTarget === "selection"}
+                  aria-haspopup="true"
+                  onClick={() => toggleContextAudioControls("selection")}
+                >
+                  <MushafIcon name="audio" size={16} /> استماع
+                </button>
+                {tilawaUiStatus === "idle" && renderTilawaMainButton("التلاوة")}
+                <button
+                  type="button"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  aria-expanded={taskMenuOpen}
+                  aria-haspopup="true"
+                  onClick={() => {
+                    setTaskError(null);
+                    setTaskMenuOpen((open) => !open);
+                  }}
+                >
+                  <MushafIcon name="activity" size={16} /> نشاط
+                </button>
+                <MushafColorPalette
+                  action="colors"
+                  mode={secondaryMode}
+                  selectionType="selection"
+                  open={openColorPaletteAction === "colors"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "colors" ? null : "colors",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("colors", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
+                <MushafColorPalette
+                  action="highlight"
+                  mode={secondaryMode}
+                  selectionType="selection"
+                  open={openColorPaletteAction === "highlight"}
+                  labels={colorPaletteLabels}
+                  onToggle={() =>
+                    setOpenColorPaletteAction((current) =>
+                      current === "highlight" ? null : "highlight",
+                    )
+                  }
+                  onSelect={(color) => applyContextColor("highlight", color)}
+                  onLabelChange={(id, label) =>
+                    setColorPaletteLabels((current) => ({
+                      ...current,
+                      [id]: label,
+                    }))
+                  }
+                />
+                <div className="relative inline-flex">
+                  <button
+                    type="button"
+                    aria-expanded={openUnderlinePalette}
+                    aria-haspopup="true"
+                    aria-pressed={UNDERLINE_STYLE_OPTIONS.some((option) =>
+                      isContextTextActionEnabled(option.action),
+                    )}
+                    className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                    onClick={() => {
+                      setOpenColorPaletteAction(null);
+                      setOpenUnderlinePalette((current) => !current);
+                    }}
+                  >
+                    〰️ تسطير
+                  </button>
+                  {openUnderlinePalette && (
+                    <div
+                      className="absolute top-full right-0 z-50 mt-2 flex items-center gap-2 rounded-xl border bg-[var(--background)] p-2 shadow-lg"
+                      role="group"
+                      aria-label="أنواع التسطير"
+                    >
+                      {UNDERLINE_STYLE_OPTIONS.map((option) => (
+                        <button
+                          key={option.action}
+                          type="button"
+                          aria-label={option.label}
+                          aria-pressed={isContextTextActionEnabled(
+                            option.action,
+                          )}
+                          className="flex h-10 w-12 items-center justify-center rounded-lg border p-2"
+                          onClick={() => {
+                            toggleContextUnderlineStyle(option.style);
+                            setOpenUnderlinePalette(false);
+                          }}
+                        >
+                          <UnderlineStyleIcon style={option.style} />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  aria-pressed={isContextTextActionEnabled("hidden")}
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  onClick={() => toggleContextTextAction("hidden")}
+                >
+                  {isContextTextActionEnabled("hidden") ? "إظهار" : "إخفاء"}
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                  onClick={() => void openAnnotations(contextAyahId())}
+                >
+                  💬 تعليق
+                </button>
+              </div>
+              {contextAudioTarget === "selection" &&
+                renderContextAudioControls()}
+              {taskMenuOpen && renderTaskControls()}
+            </div>
+          )}
+          {contextMenuMessage ? (
+            <div
+              className="text-center text-sm text-[var(--muted)]"
+              role="status"
+              aria-live="polite"
+            >
+              {contextMenuMessage}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <MushafTafsirPanel
+        ayahId={tafsirAyahId}
+        onClose={() => setTafsirAyahId(null)}
+      />
+
+      {similarAyah && (
+        <MushafSimilarPanel
+          surahNumber={similarAyah.surahNumber}
+          ayahNumber={similarAyah.ayahNumber}
+          onClose={() => setSimilarAyah(null)}
+        />
+      )}
+
+      {qiraatAyah && (
+        <MushafQiraatPanel
+          surahNumber={qiraatAyah.surahNumber}
+          ayahNumber={qiraatAyah.ayahNumber}
+          onClose={() => setQiraatAyah(null)}
+        />
+      )}
+
+      {annotationPanelOpen && (
+        <div
+          className="fixed inset-x-4 bottom-4 z-[60] mx-auto max-h-[70vh] max-w-xl overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 shadow-xl"
+          dir="rtl"
+          role="dialog"
+          aria-modal="true"
+          aria-label="التعليقات والملاحظات"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold">التعليقات والملاحظات</h2>
+            <button
+              type="button"
+              className="rounded-lg border px-3 py-1"
+              onClick={() => setAnnotationPanelOpen(false)}
+            >
+              إغلاق
+            </button>
+          </div>
+
+          {annotationAyahId !== null && (
+            <div className="mt-3 space-y-2">
+              {annotations
+                .filter((item) => item.ayahId === annotationAyahId)
+                .map((item) => (
+                  <div key={item.id} className="rounded-lg border p-3">
+                    <p className="whitespace-pre-wrap">{item.content}</p>
+                  </div>
+                ))}
+
+              {annotations.every((item) => item.ayahId !== annotationAyahId) &&
+                !annotationBusy && (
+                  <p className="text-sm text-[var(--muted)]">
+                    لا توجد ملاحظات لهذا الموضع.
+                  </p>
+                )}
+            </div>
+          )}
+
+          {annotationBusy && (
+            <p role="status" className="mt-3 text-sm">
+              جارٍ تحميل الملاحظات أو حفظها…
+            </p>
+          )}
+
+          <form
+            className="mt-3 flex flex-col gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveAnnotation();
+            }}
+          >
+            <label htmlFor="mushaf-annotation-content">ملاحظة جديدة</label>
+            <textarea
+              id="mushaf-annotation-content"
+              value={annotationContent}
+              onChange={(event) => setAnnotationContent(event.target.value)}
+              rows={3}
+              maxLength={5000}
+              className="w-full rounded-lg border bg-transparent p-3"
+              placeholder="اكتب ملاحظتك…"
+            />
+
+            <div className="flex items-center justify-between gap-3">
+              <p
+                role="status"
+                aria-live="polite"
+                className="text-sm text-[var(--muted)]"
+              >
+                {annotationStatus}
+              </p>
+              <button
+                type="submit"
+                disabled={
+                  annotationBusy ||
+                  !annotationContent.trim() ||
+                  annotationAyahId === null
+                }
+                className="rounded-lg border px-4 py-2 disabled:opacity-50"
+              >
+                حفظ الملاحظة
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </article>
+      <div
+        role="region"
+        aria-label="القائمة الثانوية للمصحف"
+        dir="rtl"
+        className="mushaf-bottom-menu fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--background)] px-1.5 pt-1.5 pb-[max(0.25rem,env(safe-area-inset-bottom))] shadow-lg"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+      >
+        <div className="mx-auto max-h-[22dvh] w-full max-w-3xl overflow-y-auto overscroll-contain">
+          <div className="flex max-w-[min(100vw-2rem,56rem)] flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                <button
+                  type="button"
+                  className="rounded-lg border border-[var(--jannah-green)] bg-[var(--jannah-green)] px-2 py-1.5 text-xs text-white"
+                  aria-expanded={modePickerOpen}
+                  aria-haspopup="menu"
+                  onClick={() => {
+                    setModePickerOpen((open) => !open);
+                    setReciterPickerOpen(false);
+                  }}
+                >
+                  {
+                    SECONDARY_MODES.find((mode) => mode.id === secondaryMode)
+                      ?.icon
+                  }{" "}
+                  {
+                    SECONDARY_MODES.find((mode) => mode.id === secondaryMode)
+                      ?.label
+                  }
+                </button>
+
+                {secondaryMode === "listening" && (
+                  <>
+                    <button
+                      type="button"
+                      className={`flex h-10 w-10 items-center justify-center rounded-lg border ${
+                        listeningAyahsHidden
+                          ? "bg-[var(--foreground)] text-[var(--background)]"
+                          : ""
+                      }`}
+                      aria-label={
+                        listeningAyahsHidden
+                          ? "إظهار آيات الصفحة"
+                          : "إخفاء آيات الصفحة"
+                      }
+                      title={
+                        listeningAyahsHidden
+                          ? "إظهار آيات الصفحة"
+                          : "إخفاء آيات الصفحة"
+                      }
+                      aria-pressed={listeningAyahsHidden}
+                      onClick={() =>
+                        setListeningAyahsHidden((hidden) => !hidden)
+                      }
+                    >
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z" />
+                        {!listeningAyahsHidden && (
+                          <circle cx="12" cy="12" r="3" />
+                        )}
+                        {listeningAyahsHidden && <path d="M3 3l18 18" />}
+                      </svg>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="التالي"
+                      onClick={() => navigateAyah(1)}
+                    >
+                      ⏭
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label={isPlaying ? "إيقاف" : "تشغيل"}
+                      aria-pressed={isPlaying}
+                      onClick={togglePlayback}
+                    >
+                      {isPlaying ? <MushafIcon name="pause" size={18} /> : <MushafIcon name="play" size={18} />}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="السابق"
+                      onClick={() => navigateAyah(-1)}
+                    >
+                      ⏮
+                    </button>
+
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className="rounded-lg border px-2 py-1.5 text-xs"
+                        aria-label="عدد تكرار الآية"
+                        title="عدد تكرار الآية"
+                        aria-expanded={ayahRepeatToolbarOpen}
+                        onClick={() => {
+                          setAyahRepeatToolbarOpen((open) => !open);
+                          setSelectionRepeatToolbarOpen(false);
+                          setReciterPickerOpen(false);
+                          setModePickerOpen(false);
+                        }}
+                      >
+                        <span aria-hidden="true">↻¹</span>{" "}
+                        {ayahRepeatCount === "n" ? "∞" : ayahRepeatCount}
+                      </button>
+
+                      {ayahRepeatToolbarOpen && (
+                        <div
+                          role="group"
+                          aria-label="خيارات عدد تكرار الآية"
+                          className="absolute bottom-full left-1/2 z-50 mb-2 grid w-48 -translate-x-1/2 grid-cols-5 gap-1 rounded-lg border bg-[var(--background)] p-2 shadow-lg"
+                        >
+                          <div className="col-span-5 text-center text-xs font-semibold">
+                            تكرار الآية
+                          </div>
+                          {REPEAT_VALUES.map((value) => (
+                            <button
+                              key={value}
+                              type="button"
+                              aria-pressed={ayahRepeatCount === value}
+                              onClick={() => {
+                                setAyahRepeatCount(value);
+                                setAyahRepeatToolbarOpen(false);
+                              }}
+                              className={
+                                ayahRepeatCount === value
+                                  ? "rounded-md border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                                  : "rounded-md border px-2 py-2 text-sm"
+                              }
+                            >
+                              {value === "n" ? "∞" : value}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className="rounded-lg border px-2 py-1.5 text-xs"
+                        aria-label="عدد تكرار التحديد"
+                        title="عدد تكرار التحديد"
+                        aria-expanded={selectionRepeatToolbarOpen}
+                        onClick={() => {
+                          setSelectionRepeatToolbarOpen((open) => !open);
+                          setAyahRepeatToolbarOpen(false);
+                          setReciterPickerOpen(false);
+                          setModePickerOpen(false);
+                        }}
+                      >
+                        <span aria-hidden="true">↻▤</span>{" "}
+                        {selectionRepeatCount === "n"
+                          ? "∞"
+                          : selectionRepeatCount}
+                      </button>
+
+                      {selectionRepeatToolbarOpen && (
+                        <div
+                          role="group"
+                          aria-label="خيارات عدد تكرار التحديد"
+                          className="absolute bottom-full left-1/2 z-50 mb-2 grid w-48 -translate-x-1/2 grid-cols-5 gap-1 rounded-lg border bg-[var(--background)] p-2 shadow-lg"
+                        >
+                          <div className="col-span-5 text-center text-xs font-semibold">
+                            تكرار التحديد
+                          </div>
+                          {REPEAT_VALUES.map((value) => (
+                            <button
+                              key={value}
+                              type="button"
+                              aria-pressed={selectionRepeatCount === value}
+                              onClick={() => {
+                                setSelectionRepeatCount(value);
+                                setSelectionRepeatToolbarOpen(false);
+                              }}
+                              className={
+                                selectionRepeatCount === value
+                                  ? "rounded-md border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                                  : "rounded-md border px-2 py-2 text-sm"
+                              }
+                            >
+                              {value === "n" ? "∞" : value}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
+                      aria-label="سرعة التشغيل"
+                      onClick={cyclePlaybackRate}
+                    >
+                      ⏱ {playbackRate}×
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
+                      aria-label="اختيار القارئ"
+                      aria-expanded={reciterPickerOpen}
+                      onClick={() => {
+                        setReciterPickerOpen((open) => !open);
+                        setModePickerOpen(false);
+                      }}
+                    >
+                      🎙️ القارئ
+                    </button>
+                  </>
+                )}
+
+                {secondaryMode === "recitation" &&
+                  renderTilawaMainButton("التسجيل")}
+
+                <div
+                  id="irtaki-tilawa-toolbar-slot"
+                  className={
+                    secondaryMode === "recitation" ? "contents" : "hidden"
+                  }
+                />
+
+                {secondaryMode === "recitation" && (
+                  <button
+                    type="button"
+                    className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                    aria-label="تشغيل المرجع"
+                    aria-pressed={isPlaying}
+                    title={isPlaying ? "إيقاف المرجع" : "تشغيل المرجع"}
+                    onClick={togglePlayback}
+                  >
+                    {isPlaying ? <MushafIcon name="pause" size={18} /> : <MushafIcon name="play" size={18} />}
+                  </button>
+                )}
+
+                {secondaryMode === "recitation" && (
+                  <button
+                    type="button"
+                    className="min-h-10 rounded-lg border px-3 py-2 text-sm"
+                    aria-label={
+                      listeningAyahsHidden
+                        ? "إظهار نص الآيات"
+                        : "إخفاء نص الآيات"
+                    }
+                    aria-pressed={listeningAyahsHidden}
+                    title={
+                      listeningAyahsHidden
+                        ? "إظهار نص الآيات"
+                        : "إخفاء نص الآيات"
+                    }
+                    onClick={toggleGlobalTextVisibility}
+                  >
+                    {listeningAyahsHidden
+                      ? "👁 إظهار النص"
+                      : "🙈 إخفاء النص"}
+                  </button>
+                )}
+
+                {secondaryMode === "memorization" && (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="إظهار وإخفاء"
+                      onClick={toggleGlobalTextVisibility}
+                    >
+                      👁
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="السابق"
+                      onClick={() => navigateAyah(-1)}
+                    >
+                      ⏮
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="التالي"
+                      onClick={() => navigateAyah(1)}
+                    >
+                      ⏭
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="استماع"
+                      onClick={togglePlayback}
+                    >
+                      {isPlaying ? <MushafIcon name="pause" size={18} /> : <MushafIcon name="play" size={18} />}
+                    </button>
+                  </>
+                )}
+
+                {secondaryMode === "review" && (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="مستوى المراجعة"
+                      onClick={() => showSecondaryMessage("مستوى المراجعة")}
+                    >
+                      <MushafIcon name="star" size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="تمييز"
+                      onClick={() => showSecondaryMessage("تمييز")}
+                    >
+                      🖍️
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="إظهار وإخفاء"
+                      onClick={toggleGlobalTextVisibility}
+                    >
+                      👁
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="استماع"
+                      onClick={togglePlayback}
+                    >
+                      {isPlaying ? <MushafIcon name="pause" size={18} /> : <MushafIcon name="play" size={18} />}
+                    </button>
+                  </>
+                )}
+
+                {secondaryMode === "tadabbur" && (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="تمييز"
+                      onClick={() => showSecondaryMessage("تمييز")}
+                    >
+                      🖍️
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="اللون"
+                      onClick={() => showSecondaryMessage("اختيار اللون")}
+                    >
+                      <MushafIcon name="palette" size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
+                      aria-label="ملاحظة"
+                      onClick={() => showSecondaryMessage("إضافة ملاحظة")}
+                    >
+                      📝
+                    </button>
+                  </>
+                )}
+
+                {secondaryMode === "progress" && <></>}
+
+                {secondaryMode !== "listening" &&
+                secondaryMode === "progress" ? (
+                  <div
+                    className="flex max-w-full flex-wrap items-center gap-2"
+                    role="group"
+                    aria-label="إظهار وإخفاء تعديلات الأوضاع"
+                  >
+                    {SECONDARY_MODES.filter(
+                      (item) =>
+                        ![
+                          "progress",
+                          "goals",
+                          "data",
+                          "history",
+                          "exercises",
+                        ].includes(item.id),
+                    ).map((item) => {
+                      const visible = hiddenModificationModes[item.id] !== true;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          role="menuitemcheckbox"
+                          aria-checked={visible}
+                          aria-pressed={visible}
+                          aria-label={`${item.label}: ${visible ? "إخفاء التعديلات" : "إظهار التعديلات"}`}
+                          title={`${item.label}: ${visible ? "إخفاء تعديلات الوضع" : "إظهار تعديلات الوضع"}`}
+                          className={
+                            visible
+                              ? "shrink-0 rounded-lg border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                              : "shrink-0 rounded-lg border px-2 py-2 text-sm"
+                          }
+                          onClick={() =>
+                            setHiddenModificationModes((current) => ({
+                              ...current,
+                              [item.id]: current[item.id] !== true,
+                            }))
+                          }
+                        >
+                          <MushafIcon name={emojiToIconName(item.icon)} size={14} /> </button>
+                      );
+                    })}
+                  </div>
+                ) : secondaryMode !== "recitation" &&
+                  secondaryMode !== "history" &&
+                  secondaryMode !== "tarteel1" &&
+                  secondaryMode !== "tarteel2" ? (
+                  <>
+                    {[
+                      { id: "colors", label: "تلوين", icon: "🎨" },
+                      { id: "underline", label: "تسطير", icon: "〰️" },
+                      { id: "highlight", label: "تظليل", icon: "🖍️" },
+                    ].map((option) => {
+                      const key = `${secondaryMode}:${option.id}`;
+                      const previewingOriginal =
+                        previewOriginalOptions[key] === true;
+                      const enabled = !previewingOriginal;
+
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          aria-label={`اختصار سريع: ${option.label}`}
+                          title={`${option.label}: ${previewingOriginal ? "الأصل معروض" : "عرض الأصل"}`}
+                          aria-pressed={previewingOriginal}
+                          className={
+                            enabled
+                              ? "rounded-lg border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                              : "rounded-lg border px-2 py-2 text-sm"
+                          }
+                          onClick={() => toggleOriginalPreview(option.id)}
+                        >
+                          <MushafIcon name={emojiToIconName(option.icon)} size={14} /> {option.label}
+                        </button>
+                      );
+                    })}
+                  </>
+                ) : null}
+
+                {secondaryMode === "history" && (
+                  <div
+                    className="flex flex-wrap items-center justify-center gap-1"
+                    role="group"
+                    aria-label="اختيار عرض السجل"
+                  >
+                    {[
+                      { id: "day", label: "اليوم", view: "day" },
+                      { id: "ayahs", label: "الآية", view: "ayahs" },
+                      { id: "pages", label: "الصفحة", view: "pages" },
+                      { id: "action", label: "الإجراء", view: "action" },
+                      { id: "activity", label: "النشاط", view: "activity" },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={
+                          historyView === item.view
+                            ? "rounded-lg border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                            : "rounded-lg border px-2 py-2 text-sm"
+                        }
+                        aria-pressed={historyView === item.view}
+                        aria-label={`history-view-${item.id}`}
+                        title={item.label}
+                        onClick={() => {
+                          setMoreMenuOpen(false);
+                          setModePickerOpen(false);
+                          setReciterPickerOpen(false);
+                          setHistoryView(item.view as MushafHistoryView);
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className={
+                    moreMenuOpen
+                      ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-[var(--background)]"
+                      : "rounded-lg border px-3 py-2"
+                  }
+                  aria-label="المزيد من الخيارات"
+                  aria-expanded={moreMenuOpen}
+                  aria-haspopup="menu"
+                  onClick={() => {
+                    setMoreMenuOpen((open) => !open);
+                    setModePickerOpen(false);
+                    setReciterPickerOpen(false);
+                  }}
+                >
+                  ⋮
+                </button>
+              </div>
+
+              {(secondaryMode === "tarteel1" ||
+                secondaryMode === "tarteel2") && (
+                <div
+                  key={secondaryMode}
+                  className="w-full min-w-0 border-t border-[var(--border)] pt-2"
+                >
+                  <MushafTarteelController
+                    key={secondaryMode}
+                    mode={secondaryMode}
+                    ayahsHidden={listeningAyahsHidden}
+                    onToggleAyahsHidden={toggleGlobalTextVisibility}
+                  />
+                </div>
+              )}
+
+              {moreMenuOpen && (
+                <>
+                  <div
+                    className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
+                    role="menu"
+                    aria-label="تحديد"
+                  >
+                    <div className="text-center text-sm font-semibold">
+                      تحديد
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="col-span-3 text-sm font-semibold">
+                          البداية
+                        </div>
+                        <label className="flex min-w-0 flex-col gap-1 text-xs">
+                          الصفحة
+                          <input
+                            type="number"
+                            min="1"
+                            max={TOTAL_PAGES}
+                            value={audioStartPage}
+                            onChange={(event) =>
+                              setAudioStartPage(event.target.value)
+                            }
+                            onBlur={() => {
+                              setAudioEndPage(audioStartPage);
+                              void applyAudioPages(
+                                audioStartPage,
+                                audioStartPage,
+                              );
+                            }}
+                            className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="relative flex min-w-0 flex-col gap-1 text-xs">
+                          السورة
+                          <input
+                            role="combobox"
+                            aria-label="سورة البداية"
+                            aria-expanded={audioStartSurahPickerOpen}
+                            aria-controls="audio-start-surah-options"
+                            autoComplete="off"
+                            value={audioStartSurahQuery}
+                            placeholder="اسم أو رقم"
+                            onFocus={() => {
+                              setAudioStartSurahPickerQuery("");
+                              setAudioStartSurahPickerOpen(true);
+                            }}
+                            onClick={() => {
+                              if (!audioStartSurahPickerOpen) {
+                                setAudioStartSurahPickerQuery("");
+                                setAudioStartSurahPickerOpen(true);
+                              }
+                            }}
+                            onBlur={() => setAudioStartSurahPickerOpen(false)}
+                            onChange={(event) => {
+                              setAudioStartSurahPickerQuery(event.target.value);
+                              setAudioStartSurahPickerOpen(true);
+                              changeAudioStartSurah(event.target.value);
+                            }}
+                            className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                          />
+                          {audioStartSurahPickerOpen && (
+                            <div
+                              id="audio-start-surah-options"
+                              role="listbox"
+                              aria-label="اختيار سورة البداية"
+                              className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-[var(--border)] bg-white text-gray-900 shadow-lg dark:bg-gray-900 dark:text-white"
+                            >
+                              {getFilteredAudioSurahs(
+                                audioStartSurahPickerQuery,
+                              ).map((surah) => (
+                                <button
+                                  key={surah.number}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={
+                                    Number(audioStartSurah) === surah.number
+                                  }
+                                  onMouseDown={(event) =>
+                                    event.preventDefault()
+                                  }
+                                  onClick={() => {
+                                    changeAudioStartSurah(
+                                      `${surah.number} - ${getAudioSurahLabel(surah)}`,
+                                    );
+                                    setAudioStartSurahPickerQuery("");
+                                    setAudioStartSurahPickerOpen(false);
+                                  }}
+                                  className="block w-full px-3 py-2 text-right text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                                >
+                                  {surah.number} - {getAudioSurahLabel(surah)}
+                                </button>
+                              ))}
+                              {getFilteredAudioSurahs(
+                                audioStartSurahPickerQuery,
+                              ).length === 0 && (
+                                <div className="px-3 py-2 text-sm">
+                                  لا توجد سورة مطابقة
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </label>
+                        <label className="flex min-w-0 flex-col gap-1 text-xs">
+                          الآية
+                          <input
+                            type="number"
+                            min="1"
+                            max={
+                              surahs.find(
+                                (surah) =>
+                                  surah.number === Number(audioStartSurah),
+                              )?.numberOfAyahs ?? 1
+                            }
+                            value={audioStartAyah}
+                            onChange={(event) => {
+                              audioRangeUserModifiedRef.current = true;
+                              setAudioStartAyah(event.target.value);
+                            }}
+                            className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="col-span-3 text-sm font-semibold">
+                          النهاية
+                        </div>
+                        <label className="flex min-w-0 flex-col gap-1 text-xs">
+                          الصفحة
+                          <input
+                            type="number"
+                            min="1"
+                            max={TOTAL_PAGES}
+                            value={audioEndPage}
+                            onChange={(event) =>
+                              setAudioEndPage(event.target.value)
+                            }
+                            onBlur={() => {
+                              void applyAudioPages(
+                                audioStartPage,
+                                audioEndPage,
+                              );
+                            }}
+                            className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="relative flex min-w-0 flex-col gap-1 text-xs">
+                          السورة
+                          <input
+                            role="combobox"
+                            aria-label="سورة النهاية"
+                            aria-expanded={audioEndSurahPickerOpen}
+                            aria-controls="audio-end-surah-options"
+                            autoComplete="off"
+                            value={
+                              audioEndSurahPickerOpen
+                                ? audioEndSurahPickerQuery
+                                : audioEndSurahQuery
+                            }
+                            placeholder="اسم أو رقم"
+                            onFocus={() => {
+                              setAudioEndSurahPickerQuery("");
+                              setAudioEndSurahPickerOpen(true);
+                            }}
+                            onClick={() => {
+                              if (!audioEndSurahPickerOpen) {
+                                setAudioEndSurahPickerQuery("");
+                                setAudioEndSurahPickerOpen(true);
+                              }
+                            }}
+                            onBlur={() => setAudioEndSurahPickerOpen(false)}
+                            onChange={(event) => {
+                              setAudioEndSurahPickerQuery(event.target.value);
+                              setAudioEndSurahPickerOpen(true);
+                            }}
+                            className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                          />
+                          {audioEndSurahPickerOpen && (
+                            <div
+                              id="audio-end-surah-options"
+                              role="listbox"
+                              aria-label="اختيار سورة النهاية"
+                              className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-[var(--border)] bg-white text-gray-900 shadow-lg dark:bg-gray-900 dark:text-white"
+                            >
+                              {getFilteredAudioSurahs(
+                                audioEndSurahPickerQuery,
+                              ).map((surah) => (
+                                <button
+                                  key={surah.number}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={
+                                    Number(audioEndSurah) === surah.number
+                                  }
+                                  onMouseDown={(event) =>
+                                    event.preventDefault()
+                                  }
+                                  onClick={() => {
+                                    changeAudioEndSurah(
+                                      `${surah.number} - ${getAudioSurahLabel(surah)}`,
+                                    );
+                                    setAudioEndSurahPickerQuery("");
+                                    setAudioEndSurahPickerOpen(false);
+                                  }}
+                                  className="block w-full px-3 py-2 text-right text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+                                >
+                                  {surah.number} - {getAudioSurahLabel(surah)}
+                                </button>
+                              ))}
+                              {getFilteredAudioSurahs(audioEndSurahPickerQuery)
+                                .length === 0 && (
+                                <div className="px-3 py-2 text-sm">
+                                  لا توجد سورة مطابقة
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </label>
+                        <label className="flex min-w-0 flex-col gap-1 text-xs">
+                          الآية
+                          <input
+                            type="number"
+                            min="1"
+                            max={
+                              surahs.find(
+                                (surah) =>
+                                  surah.number === Number(audioEndSurah),
+                              )?.numberOfAyahs ?? 1
+                            }
+                            value={audioEndAyah}
+                            onChange={(event) => {
+                              audioRangeUserModifiedRef.current = true;
+                              setAudioEndAyah(event.target.value);
+                            }}
+                            className="w-full min-w-0 rounded-lg border bg-transparent px-2 py-2 text-sm"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void applyAudioPages()}
+                          className="rounded-lg border px-3 py-2 text-sm font-semibold"
+                        >
+                          تطبيق نطاق الصفحات
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const startSurah = Number(audioStartSurah);
+                            const startAyah = Number(audioStartAyah);
+                            const endSurah = Number(audioEndSurah);
+                            const endAyah = Number(audioEndAyah);
+
+                            const startSurahData = surahs.find(
+                              (surah) => surah.number === startSurah,
+                            );
+                            const endSurahData = surahs.find(
+                              (surah) => surah.number === endSurah,
+                            );
+
+                            if (
+                              !startSurahData ||
+                              !endSurahData ||
+                              !Number.isInteger(startAyah) ||
+                              !Number.isInteger(endAyah) ||
+                              startAyah < 1 ||
+                              endAyah < 1 ||
+                              startAyah > startSurahData.numberOfAyahs ||
+                              endAyah > endSurahData.numberOfAyahs
+                            ) {
+                              showSecondaryMessage(
+                                "الرجاء التحقق من السورة ورقم الآية",
+                              );
+                              return;
+                            }
+
+                            if (
+                              startSurah > endSurah ||
+                              (startSurah === endSurah && startAyah > endAyah)
+                            ) {
+                              showSecondaryMessage(
+                                "البداية يجب أن تسبق النهاية",
+                              );
+                              return;
+                            }
+
+                            audioRangeUserModifiedRef.current = true;
+                            setAudioStartPage(String(startSurahData.firstPage));
+                            setAudioEndPage(String(endSurahData.firstPage));
+                            showSecondaryMessage("تم تطبيق نطاق الآيات");
+                          }}
+                          className="rounded-lg border px-3 py-2 text-sm font-semibold"
+                        >
+                          تطبيق نطاق الآيات
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="w-full rounded-lg border bg-[var(--foreground)] px-4 py-3 font-semibold text-[var(--background)]"
+                    onClick={() => {
+                      void startCurrentModeAtSelection();
+                    }}
+                  >
+                    اعتماد التحديد
+                  </button>
+                </>
+              )}
+
+              {moreMenuOpen &&
+                secondaryMode !== "listening" &&
+                secondaryMode !== "recitation" &&
+                secondaryMode !== "tarteel1" &&
+                secondaryMode !== "tarteel2" && (
+                  <div
+                    className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
+                    role="menu"
+                    aria-label="خيارات العرض والتعليقات"
+                  >
+                    <div className="text-center text-sm font-semibold">
+                      خيارات العرض والتعليقات
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {[
+                        { id: "notes", label: "ملاحظات", icon: "📝" },
+                        { id: "colors", label: "تلوين", icon: "🎨" },
+                        { id: "underline", label: "التسطير", icon: "〰️" },
+                        { id: "visibility", label: "إظهار وإخفاء", icon: "👁️" },
+                        {
+                          id: "ayahMarkers",
+                          label: "علامات الآيات",
+                          icon: "۞",
+                        },
+                        {
+                          id: "personalMarkers",
+                          label: "العلامات الشخصية",
+                          icon: "📌",
+                        },
+                        { id: "comments", label: "التعليقات", icon: "💬" },
+                        { id: "highlight", label: "التظليل", icon: "🖍️" },
+                        {
+                          id: "marginNotes",
+                          label: "ملاحظات الهامش",
+                          icon: "📒",
+                        },
+                      ].map((option) => {
+                        const key = `${secondaryMode}:${option.id}`;
+                        const previewingOriginal =
+                          option.id !== "visibility" &&
+                          previewOriginalOptions[key] === true;
+                        const enabled =
+                          option.id === "visibility"
+                            ? showAllTextByMode[secondaryMode] === true
+                            : annotationOptions[key] !== false;
+
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            role="menuitemcheckbox"
+                            aria-checked={enabled}
+                            aria-pressed={
+                              option.id === "visibility"
+                                ? enabled
+                                : previewingOriginal
+                            }
+                            className={
+                              enabled
+                                ? "flex items-center justify-between gap-2 rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                                : "flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
+                            }
+                            onClick={() => {
+                              if (option.id === "visibility") {
+                                toggleGlobalTextVisibility();
+                              } else {
+                                toggleOriginalPreview(option.id);
+                              }
+                            }}
+                          >
+                            <span>
+                              <MushafIcon name={emojiToIconName(option.icon)} size={14} /> {option.label}
+                            </span>
+                            <span className="text-xs">
+                              {option.id === "visibility"
+                                ? enabled
+                                  ? "استعادة الإخفاء السابق"
+                                  : "إظهار الكل مؤقتاً"
+                                : previewingOriginal
+                                  ? "الأصل معروض"
+                                  : "عرض الأصل"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
+                      onClick={() => void openAnnotations(selectedAyahId)}
+                    >
+                      📝 فتح وإضافة ملاحظة للآية المحددة
+                    </button>
+                  </div>
+                )}
+
+              {moreMenuOpen && secondaryMode === "recitation" && (
+                <div
+                  className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
+                  role="menu"
+                  aria-label="إعدادات التلاوة"
+                >
+                  <div className="text-center text-sm font-semibold">
+                    إعدادات التلاوة
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
+                      onClick={() => void openAnnotations(selectedAyahId)}
+                    >
+                      📝 ملاحظات الآية
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
+                      aria-label="الآية السابقة"
+                      onClick={() => navigateAyah(-1)}
+                    >
+                      ⏮ الآية السابقة
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
+                      aria-label="الآية التالية"
+                      onClick={() => navigateAyah(1)}
+                    >
+                      ⏭ الآية التالية
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
+                      aria-pressed={isPlaying}
+                      onClick={togglePlayback}
+                    >
+                      {isPlaying ? (<><MushafIcon name="pause" size={16} /> إيقاف المرجع</>) : (<><MushafIcon name="play" size={16} /> تشغيل المرجع</>)}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
+                      onClick={() =>
+                        showSecondaryMessage("التسجيل الصوتي غير متاح بعد")
+                      }
+                    >
+                      🎙️ التسجيل الصوتي
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    تُحفظ الملاحظات ضمن وضع التلاوة بشكل مستقل عن بقية الأوضاع.
+                    التسجيل الصوتي الفعلي لم يُنفذ بعد.
+                  </p>
+                </div>
+              )}
+
+              {moreMenuOpen && secondaryMode === "listening" && (
+                <div
+                  className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
+                  role="menu"
+                  aria-label="إعدادات الاستماع"
+                >
+                  <div className="text-center text-sm font-semibold">
+                    إعدادات الاستماع
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <fieldset className="rounded-lg border p-3">
+                      <legend className="px-1 text-sm font-semibold">
+                        تكرار الآية
+                      </legend>
+
+                      <div className="relative mt-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={
+                            ayahRepeatCount === "n" ? "∞" : ayahRepeatCount
+                          }
+                          aria-label="عدد تكرار الآية"
+                          aria-expanded={ayahRepeatOptionsOpen}
+                          onFocus={(event) => {
+                            setAyahRepeatOptionsOpen(true);
+                            event.currentTarget.select();
+                          }}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (/^\d*$/.test(value)) {
+                              setAyahRepeatCount(value);
+                            }
+                          }}
+                          onBlur={() => {
+                            if (
+                              !ayahRepeatCount ||
+                              !Number.isSafeInteger(Number(ayahRepeatCount)) ||
+                              Number(ayahRepeatCount) < 1
+                            ) {
+                              setAyahRepeatCount("1");
+                            }
+                            setAyahRepeatOptionsOpen(false);
+                          }}
+                          className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm"
+                        />
+
+                        {ayahRepeatOptionsOpen && (
+                          <div className="absolute inset-x-0 top-full z-20 mt-1 grid grid-cols-5 gap-1 rounded-lg border bg-[var(--background)] p-2 shadow-lg">
+                            {REPEAT_VALUES.map((value) => (
+                              <button
+                                key={value}
+                                type="button"
+                                aria-pressed={ayahRepeatCount === value}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  setAyahRepeatCount(value);
+                                  setAyahRepeatOptionsOpen(false);
+                                }}
+                                className={
+                                  ayahRepeatCount === value
+                                    ? "rounded-md border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                                    : "rounded-md border px-2 py-2 text-sm"
+                                }
+                              >
+                                {value === "n" ? "∞" : value}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </fieldset>
+
+                    <fieldset className="rounded-lg border p-3">
+                      <legend className="px-1 text-sm font-semibold">
+                        تكرار التحديد
+                      </legend>
+
+                      <div className="relative mt-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={
+                            selectionRepeatCount === "n"
+                              ? "∞"
+                              : selectionRepeatCount
+                          }
+                          aria-label="عدد تكرار التحديد"
+                          aria-expanded={selectionRepeatOptionsOpen}
+                          onFocus={(event) => {
+                            setSelectionRepeatOptionsOpen(true);
+                            event.currentTarget.select();
+                          }}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (/^\d*$/.test(value)) {
+                              setSelectionRepeatCount(value);
+                            }
+                          }}
+                          onBlur={() => {
+                            if (
+                              !selectionRepeatCount ||
+                              !Number.isSafeInteger(
+                                Number(selectionRepeatCount),
+                              ) ||
+                              Number(selectionRepeatCount) < 1
+                            ) {
+                              setSelectionRepeatCount("1");
+                            }
+                            setSelectionRepeatOptionsOpen(false);
+                          }}
+                          className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm"
+                        />
+
+                        {selectionRepeatOptionsOpen && (
+                          <div className="absolute inset-x-0 top-full z-20 mt-1 grid grid-cols-5 gap-1 rounded-lg border bg-[var(--background)] p-2 shadow-lg">
+                            {REPEAT_VALUES.map((value) => (
+                              <button
+                                key={value}
+                                type="button"
+                                aria-pressed={selectionRepeatCount === value}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  setSelectionRepeatCount(value);
+                                  setSelectionRepeatOptionsOpen(false);
+                                }}
+                                className={
+                                  selectionRepeatCount === value
+                                    ? "rounded-md border bg-[var(--foreground)] px-2 py-2 text-sm text-[var(--background)]"
+                                    : "rounded-md border px-2 py-2 text-sm"
+                                }
+                              >
+                                {value === "n" ? "∞" : value}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </fieldset>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      {
+                        title: "الصمت قبل الآية",
+                        value: silenceBeforeAyah,
+                        setValue: setSilenceBeforeAyah,
+                      },
+                      {
+                        title: "الصمت بعد الآية",
+                        value: silenceAfterAyah,
+                        setValue: setSilenceAfterAyah,
+                      },
+                      {
+                        title: "الصمت قبل التحديد",
+                        value: silenceBeforeSelection,
+                        setValue: setSilenceBeforeSelection,
+                      },
+                      {
+                        title: "الصمت بعد التحديد",
+                        value: silenceAfterSelection,
+                        setValue: setSilenceAfterSelection,
+                      },
+                    ].map((item) => (
+                      <details
+                        key={item.title}
+                        className="group min-w-0 rounded-lg border"
+                      >
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-1 px-2 py-3 text-xs">
+                          <span className="min-w-0 truncate">{item.title}</span>
+                          <span className="shrink-0 font-semibold">
+                            {item.value}×⌄
+                          </span>
+                        </summary>
+                        <div className="flex flex-wrap gap-1 border-t p-2">
+                          {SILENCE_VALUES.map((value) => (
+                            <button
+                              key={value}
+                              type="button"
+                              className={
+                                item.value === value
+                                  ? "rounded-md border bg-[var(--foreground)] px-2 py-1 text-xs text-[var(--background)]"
+                                  : "rounded-md border px-2 py-1 text-xs"
+                              }
+                              aria-pressed={item.value === value}
+                              onClick={() => item.setValue(value)}
+                            >
+                              {value}×
+                            </button>
+                          ))}
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col gap-2 rounded-lg border p-3">
+                    <div className="text-sm font-semibold">القارئ</div>
+
+                    <select
+                      value={selectedReciter}
+                      onChange={(event) =>
+                        setSelectedReciter(event.target.value)
+                      }
+                      className="rounded-lg border bg-transparent px-3 py-2 text-sm"
+                      aria-label="اختيار القارئ"
+                    >
+                      <option value="hafs-afassi">العفاسي</option>
+                      <option value="hafs-abdelbasset">عبد الباسط</option>
+                      <option value="hafs-soudais">السديس</option>
+                      <option value="hafs-houssari">الحصري</option>
+                      <option value="hafs-chatir">أبو شاطر</option>
+                      <option value="hafs-djebril">جبريل</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {modePickerOpen && (
+                <div className="space-y-3 border-t border-[var(--border)] pt-3">
+                  <div
+                    className="grid grid-cols-2 justify-center gap-2 sm:grid-cols-5"
+                    role="menu"
+                    aria-label="أنشطة القرآن"
+                  >
+                    {SECONDARY_MODES.slice(0, 12).map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={secondaryMode === mode.id}
+                        className={
+                          secondaryMode === mode.id
+                            ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                            : "rounded-lg border px-3 py-2 text-sm"
+                        }
+                        onClick={() => selectSecondaryMode(mode.id)}
+                      >
+                        <MushafIcon name={emojiToIconName(mode.icon)} size={14} /> {mode.label}
+                      </button>
+                    ))}
+                  </div>
+
+                </div>
+              )}
+
+              {reciterPickerOpen && secondaryMode === "listening" && (
+                <div
+                  className="flex flex-wrap justify-center gap-2 border-t border-[var(--border)] pt-3"
+                  role="menu"
+                  aria-label="اختيار القارئ"
+                >
+                  {[
+                    ["hafs-afassi", "العفاسي"],
+                    ["hafs-abdelbasset", "عبد الباسط"],
+                    ["hafs-soudais", "السديس"],
+                    ["hafs-houssari", "الحصري"],
+                    ["hafs-chatir", "أبو شاطر"],
+                    ["hafs-djebril", "جبريل"],
+                  ].map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={selectedReciter === id}
+                      className={
+                        selectedReciter === id
+                          ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                          : "rounded-lg border px-3 py-2 text-sm"
+                      }
+                      onClick={() => {
+                        setSelectedReciter(id);
+                        setReciterPickerOpen(false);
+                        showSecondaryMessage(`القارئ: ${label}`);
+                      }}
+                    >
+                      🎙️ {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {secondaryMessage && (
+                <div
+                  className="text-center text-xs font-medium"
+                  role="status"
+                  aria-live="polite"
+                >
+                  ✓ {secondaryMessage}
+                </div>
+              )}
+
+              <div className="text-center text-xs text-[var(--muted)]">
+                تغيير الوضع يحافظ على الصفحة والتحديد والسياق الحالي.
+              </div>
+            </div>
+        </div>
+      </div>
+      </>
+  );
+}

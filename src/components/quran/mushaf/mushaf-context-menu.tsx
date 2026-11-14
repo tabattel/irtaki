@@ -21,7 +21,7 @@ export function MushafContextMenu({
     <div
       role="menu"
       dir="rtl"
-      className="fixed z-50 min-w-56 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background)] p-1 shadow-xl"
+      className="fixed z-50 min-w-56 max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background)] p-1 shadow-xl"
       style={{
         left: Math.min(x, window.innerWidth - 240),
         top: Math.min(y, window.innerHeight - 260),
@@ -51,7 +51,7 @@ export function MushafContextMenu({
             type="button"
             role="menuitem"
             disabled
-            className="block w-full rounded-lg px-3 py-2 text-right text-sm opacity-50"
+            className="block w-full rounded-lg px-3 py-2.5 min-h-[44px] text-right text-sm opacity-50"
           >
             بحث عن الكلمة
           </button>
@@ -60,7 +60,7 @@ export function MushafContextMenu({
             type="button"
             role="menuitem"
             disabled
-            className="block w-full rounded-lg px-3 py-2 text-right text-sm opacity-50"
+            className="block w-full rounded-lg px-3 py-2.5 min-h-[44px] text-right text-sm opacity-50"
           >
             إضافة تعليق
           </button>
@@ -69,7 +69,7 @@ export function MushafContextMenu({
             type="button"
             role="menuitem"
             disabled
-            className="block w-full rounded-lg px-3 py-2 text-right text-sm opacity-50"
+            className="block w-full rounded-lg px-3 py-2.5 min-h-[44px] text-right text-sm opacity-50"
           >
             تمييز الكلمة
           </button>
@@ -78,7 +78,7 @@ export function MushafContextMenu({
             type="button"
             role="menuitem"
             disabled
-            className="block w-full rounded-lg px-3 py-2 text-right text-sm opacity-50"
+            className="block w-full rounded-lg px-3 py-2.5 min-h-[44px] text-right text-sm opacity-50"
           >
             تخصيص المظهر
           </button>
@@ -89,7 +89,7 @@ export function MushafContextMenu({
             type="button"
             role="menuitem"
             disabled
-            className="block w-full rounded-lg px-3 py-2 text-right text-sm opacity-50"
+            className="block w-full rounded-lg px-3 py-2.5 min-h-[44px] text-right text-sm opacity-50"
           >
             نسخ الآية
           </button>
@@ -98,7 +98,7 @@ export function MushafContextMenu({
             type="button"
             role="menuitem"
             disabled
-            className="block w-full rounded-lg px-3 py-2 text-right text-sm opacity-50"
+            className="block w-full rounded-lg px-3 py-2.5 min-h-[44px] text-right text-sm opacity-50"
           >
             إضافة تعليق
           </button>
@@ -107,7 +107,7 @@ export function MushafContextMenu({
             type="button"
             role="menuitem"
             disabled
-            className="block w-full rounded-lg px-3 py-2 text-right text-sm opacity-50"
+            className="block w-full rounded-lg px-3 py-2.5 min-h-[44px] text-right text-sm opacity-50"
           >
             موارد الآية
           </button>
@@ -119,7 +119,7 @@ export function MushafContextMenu({
           type="button"
           role="menuitem"
           onClick={onClose}
-          className="block w-full rounded-lg px-3 py-2 text-right text-sm hover:bg-[var(--surface)]"
+          className="block w-full rounded-lg px-3 py-2.5 min-h-[44px] text-right text-sm hover:bg-[var(--surface)]"
         >
           إغلاق
         </button>

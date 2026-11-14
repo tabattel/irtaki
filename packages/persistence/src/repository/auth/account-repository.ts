@@ -62,4 +62,24 @@ export class AccountRepository {
       },
     });
   }
+
+  async findByUserId(userId: string): Promise<AccountRecord[]> {
+    return prisma.account.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  async updateCredentialsPassword(email: string, passwordHash: string): Promise<void> {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw new Error("USER_NOT_FOUND");
+    const account = await prisma.account.findFirst({
+      where: { userId: user.id, provider: "credentials" },
+    });
+    if (!account) throw new Error("CREDENTIALS_ACCOUNT_NOT_FOUND");
+    await prisma.account.update({
+      where: { id: account.id },
+      data: { passwordHash },
+    });
+  }
 }

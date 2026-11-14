@@ -146,3 +146,8 @@ export type ProgressRecord = Prisma.ProgressRecordModel
  * 
  */
 export type ActivityAyahTrace = Prisma.ActivityAyahTraceModel
+/**
+ * Model PasswordResetToken
+ * 
+ */
+export type PasswordResetToken = Prisma.PasswordResetTokenModel

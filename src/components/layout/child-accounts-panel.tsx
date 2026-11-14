@@ -307,11 +307,11 @@ export function ChildAccountsPanel() {
   }
 
   const fieldClass =
-    "w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2";
+    "w-full rounded-lg border border-[var(--jannah-gold)]/40 bg-[var(--background)] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--jannah-green)]/20";
 
   return (
     <section className="min-w-0 space-y-2 border-t border-[var(--border)] pt-2 sm:pt-4">
-      <h4 className="font-semibold">حسابات الأطفال</h4>
+      <h4 className="font-bold text-[var(--jannah-green)]">حسابات الأطفال</h4>
 
       {loading ? (
         <p className="text-[var(--muted)]">جارٍ تحميل حسابات الأطفال...</p>
@@ -324,7 +324,7 @@ export function ChildAccountsPanel() {
               {profiles.map((profile) => (
                 <li
                   key={profile.id}
-                  className="min-w-0 space-y-2 rounded-lg border border-[var(--border)] p-2 sm:p-3"
+                  className="min-w-0 space-y-2 rounded-lg border border-[var(--jannah-gold)]/30 bg-[var(--jannah-cream)]/30 p-2 sm:p-3"
                 >
                   {editingId === profile.id ? (
                     <div className="space-y-2">
@@ -344,7 +344,7 @@ export function ChildAccountsPanel() {
                           type="button"
                           disabled={busy}
                           onClick={() => void saveProfile(profile.id)}
-                          className="rounded-lg border border-[var(--border)] px-3 py-2 disabled:opacity-50"
+                          className="rounded-lg border border-[var(--jannah-gold)]/40 px-3 py-2 hover:bg-[var(--jannah-cream)] disabled:opacity-50"
                         >
                           حفظ
                         </button>
@@ -355,7 +355,7 @@ export function ChildAccountsPanel() {
                             setEditingId(null);
                             setEditingName("");
                           }}
-                          className="rounded-lg border border-[var(--border)] px-3 py-2 disabled:opacity-50"
+                          className="rounded-lg border border-[var(--jannah-gold)]/40 px-3 py-2 hover:bg-[var(--jannah-cream)] disabled:opacity-50"
                         >
                           إلغاء
                         </button>
@@ -373,7 +373,7 @@ export function ChildAccountsPanel() {
                             setEditingName(profile.name);
                             setMessage("");
                           }}
-                          className="rounded-lg border border-[var(--border)] px-3 py-2 disabled:opacity-50"
+                          className="rounded-lg border border-[var(--jannah-gold)]/40 px-3 py-2 hover:bg-[var(--jannah-cream)] disabled:opacity-50"
                         >
                           تعديل
                         </button>
@@ -381,7 +381,7 @@ export function ChildAccountsPanel() {
                           type="button"
                           disabled={busy}
                           onClick={() => void deleteProfile(profile)}
-                          className="rounded-lg border border-[var(--border)] px-3 py-2 disabled:opacity-50"
+                          className="rounded-lg border border-[var(--jannah-gold)]/40 px-3 py-2 hover:bg-[var(--jannah-cream)] disabled:opacity-50"
                         >
                           حذف
                         </button>
@@ -411,7 +411,7 @@ export function ChildAccountsPanel() {
             <button
               type="submit"
               disabled={busy}
-              className="rounded-lg border border-[var(--border)] px-4 py-2 font-semibold disabled:opacity-50"
+              className="rounded-lg border border-[var(--jannah-gold)]/50 px-4 py-2 font-semibold text-[var(--jannah-green)] hover:bg-[var(--jannah-cream)] disabled:opacity-50"
             >
               {busy ? "جارٍ التنفيذ..." : "إضافة حساب طفل"}
             </button>

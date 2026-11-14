@@ -1,0 +1,35 @@
+import { randomBytes } from "node:crypto";
+
+import { NextResponse } from "next/server";
+
+import { GoogleAuthService } from "@/auth/google/google-auth-service";
+
+export async function GET() {
+  try {
+    const state = randomBytes(32).toString("hex");
+
+    const service = new GoogleAuthService();
+    const authorizationUrl = service.getAuthorizationUrl(state);
+
+    const response = NextResponse.redirect(authorizationUrl);
+
+    // Cloudflare Tunnel : on force secure=true et sameSite=none
+    // pour que le cookie survive au retour depuis accounts.google.com
+    response.cookies.set("irtaki_google_state", state, {
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+      path: "/",
+      maxAge: 10 * 60,
+    });
+
+    return response;
+  } catch (error) {
+    console.error("Google OAuth error:", error);
+
+    return NextResponse.json(
+      { error: "GOOGLE_OAUTH_NOT_CONFIGURED" },
+      { status: 500 },
+    );
+  }
+}

@@ -9,6 +9,8 @@ type MushafLineProps = {
   surahNames: Map<number, string>;
   selectedAyahId?: number;
   selectedWords?: Set<string>;
+  tarteelMatchedWords?: Set<string>;
+  tarteelRecentWords?: Set<string>;
   mode: string;
   modificationModes: string[];
   textModifications: Record<string, boolean>;
@@ -27,6 +29,8 @@ export function MushafLine({
   surahNames,
   selectedAyahId,
   selectedWords,
+  tarteelMatchedWords,
+  tarteelRecentWords,
   mode,
   modificationModes,
   textModifications,
@@ -104,6 +108,8 @@ export function MushafLine({
             layoutWords={words}
             selected={ayah.id === selectedAyahId}
             selectedWords={selectedWords}
+            tarteelMatchedWords={tarteelMatchedWords}
+            tarteelRecentWords={tarteelRecentWords}
             mode={mode}
             modificationModes={modificationModes}
             textModifications={textModifications}

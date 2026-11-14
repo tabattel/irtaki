@@ -1,0 +1,212 @@
+==============================================
+ AUDIT IRTAKI - ven. 13 nov. 2026 11:13:41 CET
+==============================================
+
+### 1. LOCALISATION & OS
+PWD : /home/zaki/Projets/irtaki
+User: zaki
+OS  : Linux zaki-X870-GAMING-X-WIFI7 7.0.0-43-generic #43~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Sat Oct 31 06:52:47 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+Node: v24.22.0
+NPM : 11.19.1
+
+### 2. ARBORESCENCE (profondeur 2, hors node_modules/.git)
+.
+./,
+./=
+./ai
+./ai/quran-recognition
+./ai/tarteel-live
+./audit-irtaki-20261113-111341.txt
+./docs
+./docs/README.md
+./.env
+./eslint.config.mjs
+./fix-irtaki-20261113-022452.log
+./fix-irtaki-v2-20261113-022852.log
+./.git
+./.gitignore
+./.gitignore.before-tartil-ignore-fix-20261102-235627.bak
+./.gitignore.before-tartil-setup-20261102-235436.bak
+./item.numberOfAyahs
+./lastSequenceRef.current
+./.next
+./next.config.ts
+./next.config.ts.before-allowed-dev-origins-20261112-000239.bak
+./.next/dev
+./next-env.d.ts
+./.next/_events_83951.json
+./node_modules
+./package.json
+./package.json.before-tartil-auto-dev-20261103-123700.bak
+./packages
+./packages/audio
+./packages/domain
+./packages/persistence
+./packages/resource
+./pnpm-lock.yaml
+./pnpm-workspace.yaml
+./postcss.config.mjs
+./.prettierignore
+./.prettierrc
+./public
+./public/file.svg
+./public/fonts
+./public/globe.svg
+./public/next.svg
+./public/vercel.svg
+./public/window.svg
+./public/worklets
+./.pytest_cache
+./.pytest_cache/CACHEDIR.TAG
+./.pytest_cache/.gitignore
+./.pytest_cache/README.md
+./.pytest_cache/v
+./README.md
+./scripts
+./scripts/audit-mushaf-layout.mjs
+./scripts/build-mushaf-layout.py
+./scripts/dev-with-recognition.mjs
+./src
+./src/annotation
+./src/api
+./src/app
+./src/application
+./src/auth
+./src/components
+./src/lib
+./storage
+./storage/audio
+./storage/backups
+./storage/mushaf
+./storage/quran-recitations
+./tests
+./tests/smoke.test.ts
+./tsconfig.json
+./tsconfig.tsbuildinfo
+./vitest.config.mts
+./vitest.config.ts
+
+### 3. FICHIERS DE CONFIGURATION DÉTECTÉS
+  ✓ package.json
+  ✓ .env
+
+### 4. CONTENU package.json (si présent)
+{
+  "name": "irtaki",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev-with-recognition.mjs",
+    "dev:next": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "dependencies": {
+    "@irtaki/persistence": "workspace:*",
+    "next": "16.3.5",
+    "nodemailer": "^10.5.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^24.13.4",
+    "@types/nodemailer": "^8.0.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.1.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "jsdom": "^30.0.1",
+    "prettier": "^3.9.6",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^5.0.0"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
+
+### 5. FICHIERS HTML TROUVÉS
+
+### 6. DÉJÀ UNE PWA ? (manifest / service worker)
+
+### 7. DOSSIER PUBLIC / STATIC
+  ✓ public/ existe
+  ✓ src/ existe
+
+### 8. FICHIERS D'ICÔNES EXISTANTS
+./src/app/favicon.ico
+
+### 9. CONFIGURATION CLOUDFLARE (si présente)
+total 20
+drwx------  2 zaki zaki 4096 mars  13  2026 .
+drwxr-xr-x 59 zaki zaki 4096 nov.  13 09:53 ..
+-r--------  1 zaki zaki  175 mars  13  2026 5437a3c6-a9d2-46f1-83af-4edebd5fa710.json
+-rw-------  1 zaki zaki  266 mars  13  2026 cert.pem
+-rw-rw-r--  1 zaki zaki  463 avril  1  2026 config.yml
+--- config.yml ---
+tunnel: 5437a3c6-a9d2-46f1-83af-4edebd5fa710
+credentials-file: /home/zaki/.cloudflared/5437a3c6-a9d2-46f1-83af-4edebd5fa710.json
+
+ingress:
+  # Domaine principal et www → Nginx (gère frontend + backend + audio)
+  - hostname: irtaki.com
+    service: http://localhost:80
+  - hostname: www.irtaki.com
+    service: http://localhost:80
+  
+  # ASR Service
+  - hostname: asr.irtaki.com
+    service: http://localhost:8000
+    
+  # Fallback
+  - service: http_status:404
+
+### 10. SERVICES EN COURS (ports locaux)
+LISTEN 0      4096                       0.0.0.0:9000       0.0.0.0:*                                               
+LISTEN 0      511                              *:3000             *:*    users:(("next-server (v1",pid=83926,fd=25))
+LISTEN 0      4096                          [::]:9000          [::]:*                                               
+
+### 11. PROCESSUS SERVEUR (node/php/python/nginx)
+root        2603  0.0  0.0 117944 25220 ?        Ssl  09:53   0:00 /usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal
+root        2997  0.0  0.0   2716  2156 ?        Ss   09:53   0:00 fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1000/doc
+zaki        3571  0.0  0.0  64568 37172 ?        S    09:53   0:00 /usr/bin/python3 /usr/share/system-config-printer/applet.py
+zaki        7707  0.1  0.2 1784252 142304 ?      Sl   09:54   0:04 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/node /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/out/server-main.js --connection-token=remotessh --accept-server-license-terms --agent-host-bridge-port=43791 --agent-host-bridge-host=127.0.0.1 --start-server --enable-remote-auto-shutdown --socket-path=/tmp/code-10021777-7a9d-4f41-a2ca-2bbc8ae85e06
+zaki        7744  0.3  1.0 21434788 683428 ?     Sl   09:54   0:16 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/node --dns-result-order=ipv4first /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/out/bootstrap-fork --type=extensionHost --transformURIs --useHostProxy=false
+zaki        7760  0.0  0.1 1865576 126728 ?      Sl   09:54   0:01 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/node /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/out/bootstrap-fork --type=fileWatcher
+zaki        7761  0.0  0.1 1742364 96476 ?       Sl   09:54   0:00 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/node /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/out/server-main.js --socket-path /tmp/code-e6b180d9-552b-4798-9525-463ddb2ed3c8 --agent-host-path /tmp/code-d0d42094-b28a-493b-b889-596fa61fa78f --start-server --accept-server-license-terms --enable-remote-auto-shutdown --without-connection-token
+zaki        7806  0.0  0.2 18559272 156084 ?     Sl   09:54   0:02 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/node /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/out/bootstrap-fork --type=agentHost --logsPath /home/zaki/.vscode-server/data/logs/20261113T095421 --user-data-dir /home/zaki/.vscode-server/data --telemetry-level all
+zaki        7822  0.0  0.0 2478944 60620 ?       Sl   09:54   0:00 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/node_modules/@github/copilot-sdk-linux-x64/prebuilds/linux-x64/copilot-runtime --headless --no-auto-update --log-level info --stdio --no-auto-login
+zaki        7865  0.1  0.1 1653188 87420 ?       Sl   09:54   0:05 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/node /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/out/bootstrap-fork --type=ptyHost --logsPath /home/zaki/.vscode-server/data/logs/20261113T095420
+zaki        7994  0.0  0.2 1491908 159496 ?      Sl   09:54   0:00 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/node --max-old-space-size=3072 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/extensions/node_modules/typescript/lib/tsserver.js --serverMode partialSemantic --useInferredProjectPerProjectRoot --disableAutomaticTypingAcquisition --cancellationPipeName /tmp/vscode-typescript1000/8ca98afd88a3cad22362/tscancellation-659c1224a39ab81256ae.tmp* --globalPlugins @vscode/copilot-typescript-server-plugin --pluginProbeLocations /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/extensions/copilot --locale en --noGetErrOnBackgroundUpdate --canUseWatchEvents --validateDefaultNpmLocation --useNodeIpc
+zaki        7995  0.1  0.9 1972456 632096 ?      Sl   09:54   0:06 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/node --max-old-space-size=3072 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/extensions/node_modules/typescript/lib/tsserver.js --useInferredProjectPerProjectRoot --enableTelemetry --cancellationPipeName /tmp/vscode-typescript1000/8ca98afd88a3cad22362/tscancellation-2c5b3a1dd652b502d248.tmp* --globalPlugins @vscode/copilot-typescript-server-plugin --pluginProbeLocations /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/extensions/copilot --locale en --noGetErrOnBackgroundUpdate --canUseWatchEvents --validateDefaultNpmLocation --useNodeIpc
+zaki        8008  0.0  0.1 1452804 97620 ?       Sl   09:54   0:00 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/node /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/extensions/node_modules/typescript/lib/typingsInstaller.js --globalTypingsCacheLocation /home/zaki/.cache/typescript/6.0 --enableTelemetry --typesMapLocation /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/extensions/node_modules/typescript/lib/typesMap.json --validateDefaultNpmLocation
+zaki        8341  0.0  0.1 1495892 65084 ?       Sl   09:54   0:00 /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/node /home/zaki/.vscode-server/cli/servers/Stable-69047191fc427f2f92828279aae1d90d8eeda7ab/server/extensions/json-language-features/server/dist/node/jsonServerMain --node-ipc --clientProcessId=7744
+zaki       11350  0.0  0.1 1461341220 115048 ?   Sl   09:56   0:01 /proc/self/exe --type=utility --utility-sub-type=node.mojom.NodeService --lang=en-US --service-sandbox-type=none --crashpad-handler-pid=11196 --enable-crash-reporter=a541b73d-0ac2-4cd3-9e99-ec6f4af08239,no_channel --user-data-dir=/home/zaki/.config/Code --standard-schemes=vscode-webview,vscode-file --enable-sandbox --secure-schemes=vscode-webview,vscode-file --cors-schemes=vscode-webview,vscode-file --fetch-schemes=vscode-webview,vscode-file --service-worker-schemes=vscode-webview --code-cache-schemes=vscode-webview,vscode-file --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,17953138608022852219,16549183451463466626,262144 --enable-features=DocumentPolicyIncludeJSCallStacksInCrashReports,EarlyEstablishGpuChannel,EstablishGpuChannelAsync --disable-features=CalculateNativeWinOcclusion,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TraceSiteInstanceGetProcessCreation --variations-seed-version --trace-process-track-uuid=3190708990997080739
+
+### 12. GIT - DERNIERS COMMITS
+098a6db feat(dev): start Quran recognition service with pnpm dev
+b3009f8 feat(mushaf): improve tilawa visibility and audio silence
+d27922f feat(statistics): add mushaf statistics and tilawa recording
+a4081fb feat(qiraat): integrate Quranpedia readings in Mushaf
+152c9e7 feat(similar): integrate Quranpedia similarities offline
+
+origin	https://github.com/tabattel/irtaki.git (fetch)
+origin	https://github.com/tabattel/irtaki.git (push)
+
+### 13. TAILLE DU PROJET (hors node_modules/.git)
+12G	.
+
+==============================================
+ FIN AUDIT
+==============================================

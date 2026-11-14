@@ -387,7 +387,7 @@ function ActionJournalContent({ surahs }: { surahs: HistorySurah[] }) {
       aria-label="سجل الإجراءات"
       className="overflow-x-auto rounded-xl border border-[var(--border)]"
     >
-      <table className="w-full min-w-[700px] border-collapse text-right text-sm">
+      <table className="w-full min-w-[520px] border-collapse text-right text-xs md:min-w-[700px] md:text-sm">
         <thead>
           <tr className="border-b border-[var(--border)] bg-[var(--surface)]">
             <th scope="col" className="p-3">
@@ -964,7 +964,7 @@ export function MushafHistoryContent({ view, onViewChange }: Props) {
         !recordsLoading &&
         !error && (
           <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
-            <table className="w-full min-w-[540px] border-collapse text-right text-sm">
+            <table className="w-full min-w-[420px] border-collapse text-right text-xs md:min-w-[540px] md:text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] bg-[var(--surface)]">
                   {view === "pages" && (

@@ -45,6 +45,14 @@ export function createLearningEngine() {
   );
 
   return {
+    assertLearnerAccess: async (userId: string, learnerId: string) => {
+      const learner = await learnerRepository.findById(learnerId, userId);
+
+      if (!learner) {
+        throw new Error("Learner not found");
+      }
+    },
+
     listGoals: async (userId: string, learnerId: string) => {
       const learner = await learnerRepository.findById(learnerId, userId);
 

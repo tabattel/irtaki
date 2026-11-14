@@ -624,7 +624,7 @@ export default function StatisticsPage() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:grid-cols-4">
                   <StatCard
                     label="إجمالي الجلسات"
                     value={formatNumber(stats.summary.activityCount)}
@@ -736,7 +736,7 @@ export default function StatisticsPage() {
                   </p>
 
                   {stats.timeline.length > 0 ? (
-                    <div className="mt-4 flex min-w-0 items-end gap-2 overflow-x-auto pb-2">
+                    <div className="mt-4 flex min-w-0 items-end gap-1.5 overflow-x-auto pb-2 sm:gap-2">
                       {stats.timeline.map((item) => {
                         const height =
                           item.activityCount === 0
@@ -794,7 +794,7 @@ export default function StatisticsPage() {
                   )}
 
                   {selectedTimeline ? (
-                    <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[var(--surface)] p-3 text-center">
+                    <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-[var(--surface)] p-3 text-center sm:grid-cols-3">
                       <div>
                         <p className="text-xs text-[var(--muted)]">الجلسات</p>
                         <p className="mt-1 font-bold tabular-nums">
@@ -827,7 +827,7 @@ export default function StatisticsPage() {
                     كل مربع يمثل يوماً؛ يزداد اللون مع عدد الجلسات المسجلة.
                   </p>
 
-                  <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2">
+                  <div className="mt-4 grid grid-cols-7 gap-1 sm:gap-2">
                     {stats.timeline.map((item) => {
                       const intensity =
                         item.activityCount === 0

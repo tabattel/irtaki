@@ -1,0 +1,9 @@
+=== Log : ./fix-irtaki-v2-20261113-022852.log ===
+
+=== [1/5] Service WebSocket local ===
+[32mOK : port 8767 en écoute[0m
+
+=== [2/5] Test du chemin WebSocket local ===
+Chemin /ws → HTTP 403
+
+=== [3/5] Test HTTP/1.1 via Cloudflare (contournement du problème HTTP/2) ===

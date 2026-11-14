@@ -52,3 +52,19 @@ next-env.d.ts
 **/.claude/
 **/.windsurf/
 **/skills-lock.json
+
+# IRTAKI - environnements et modèles IA locaux
+ai/**/.venv/
+ai/**/models/
+ai/**/__pycache__/
+*.py[cod]
+
+# Sauvegardes temporaires locales
+*.bak
+/storage/backups/
+
+# Fichiers temporaires accidentels à la racine
+/,
+/=
+/item.numberOfAyahs
+/lastSequenceRef.current

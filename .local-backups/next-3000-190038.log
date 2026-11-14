@@ -1,0 +1,23 @@
+nohup: les entrées sont ignorées
+▲ Next.js 16.3.5
+- Local:         http://127.0.0.1:3000
+- Network:       http://127.0.0.1:3000
+✓ Ready in 64ms
+✓ Running next.config.ts took 15ms
+Error [InvariantError]: Invariant: The client reference manifest for route "/" does not exist. This is a bug in Next.js.
+    at Object.get (.next/server/chunks/[root-of-the-server]__0o8_dwv._.js:2:970)
+⨯ Error [InvariantError]: Invariant: The client reference manifest for route "/" does not exist. This is a bug in Next.js.
+    at Object.get (.next/server/chunks/[root-of-the-server]__0o8_dwv._.js:2:970)
+⨯ Error [InvariantError]: Invariant: The client reference manifest for route "/" does not exist. This is a bug in Next.js.
+    at Object.get (.next/server/chunks/[root-of-the-server]__0o8_dwv._.js:2:970)
+⨯ Error: Failed to load static file for page: /500 ENOENT: no such file or directory, open '/home/zaki/Projets/irtaki/.next/server/pages/500.html'
+    at ignore-listed frames
+Error [InvariantError]: Invariant: The client reference manifest for route "/" does not exist. This is a bug in Next.js.
+    at Object.get (.next/server/chunks/[root-of-the-server]__0o8_dwv._.js:2:970)
+⨯ Error [InvariantError]: Invariant: The client reference manifest for route "/" does not exist. This is a bug in Next.js.
+    at Object.get (.next/server/chunks/[root-of-the-server]__0o8_dwv._.js:2:970)
+⨯ Error [InvariantError]: Invariant: The client reference manifest for route "/" does not exist. This is a bug in Next.js.
+    at Object.get (.next/server/chunks/[root-of-the-server]__0o8_dwv._.js:2:970)
+⨯ Error: Failed to load static file for page: /500 ENOENT: no such file or directory, open '/home/zaki/Projets/irtaki/.next/server/pages/500.html'
+    at ignore-listed frames
+Hangup

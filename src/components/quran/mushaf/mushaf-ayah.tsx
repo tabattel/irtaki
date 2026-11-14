@@ -39,6 +39,8 @@ type MushafAyahProps = {
   layoutWords?: MushafLayoutWord[];
   selected?: boolean;
   selectedWords?: Set<string>;
+  tarteelMatchedWords?: Set<string>;
+  tarteelRecentWords?: Set<string>;
   onAyahClick?: (ayah: AyahDto) => void;
   mode: string;
   modificationModes: string[];
@@ -70,6 +72,8 @@ export function MushafAyah({
   layoutWords,
   selected = false,
   selectedWords,
+  tarteelMatchedWords,
+  tarteelRecentWords,
   onAyahClick,
   mode,
   modificationModes,
@@ -131,10 +135,9 @@ export function MushafAyah({
   const ayahHighlightColor = ayahHighlightMode
     ? colorAssignments[`${ayahHighlightMode}:ayah:${ayah.id}:highlight`]
     : undefined;
-  const ayahHidden =
-    hideText ||
-    (!showAllTextOverride &&
-      textModifications[`${mode}:ayah:${ayah.id}:hidden`] === true);
+  const ayahCustomHidden =
+    !showAllTextOverride &&
+    textModifications[`${mode}:ayah:${ayah.id}:hidden`] === true;
 
   return (
     <span
@@ -160,6 +163,8 @@ export function MushafAyah({
         {renderedWords.map((word, index) => {
           const wordKey = `${word.surah}:${word.ayah}:${word.word}`;
           const selectedWord = selectedWords?.has(wordKey) ?? false;
+          const tarteelMatched = tarteelMatchedWords?.has(wordKey) ?? false;
+          const tarteelRecent = tarteelRecentWords?.has(wordKey) ?? false;
           const wordColors = modificationModes.some(
             (candidate) =>
               previewOriginalOptions[`${candidate}:colors`] !== true &&
@@ -202,6 +207,13 @@ export function MushafAyah({
           const wordHidden =
             !showAllTextOverride &&
             textModifications[`${mode}:word:${wordKey}:hidden`] === true;
+
+          // Une reconnaissance confirmée révèle le mot masqué globalement,
+          // mais ne contourne jamais un masquage personnalisé.
+          const customHidden = wordHidden || ayahCustomHidden;
+          const effectivelyHidden =
+            customHidden || (hideText && !tarteelMatched);
+
           const underlineStyle = wordUnderlineStyle ?? ayahUnderlineStyle;
 
           return (
@@ -225,13 +237,17 @@ export function MushafAyah({
                   : "",
                 underlineStyle ? `mushaf-underline-${underlineStyle}` : "",
                 underlineStyle === "double-wavy" ? "relative" : "",
-                wordHidden || ayahHidden ? "opacity-0" : "",
+                effectivelyHidden ? "opacity-0" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
               style={{
-                opacity: wordHidden || ayahHidden ? 0 : 1,
-                color: wordColor ?? ayahColor,
+                opacity: effectivelyHidden ? 0 : 1,
+                color: tarteelMatched
+                  ? hideText && !tarteelRecent
+                    ? "#171717"
+                    : "#16a34a"
+                  : wordColor ?? ayahColor,
                 backgroundColor:
                   wordHighlightColor || ayahHighlightColor
                     ? `${wordHighlightColor ?? ayahHighlightColor}55`

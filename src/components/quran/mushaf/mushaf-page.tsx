@@ -1,9 +1,39 @@
 "use client";
 
-import { MushafColorPalette } from "./mushaf-color-palette";
-import { MushafTafsirPanel } from "./mushaf-tafsir-panel";
-import { MushafSimilarPanel } from "./mushaf-similar-panel";
-import { MushafQiraatPanel } from "./mushaf-qiraat-panel";
+import { MushafIcon, type MushafIconName } from "./mushaf-icon";
+
+function emojiToIconName(emoji: string): MushafIconName {
+  const map: Record<string, MushafIconName> = {
+    "🎧": "audio", "📖": "book", "🎙️": "recitation", "🎙": "mic",
+    "🗣️": "dictation", "🧠": "memory", "📌": "fixation", "🔄": "revision",
+    "👓": "meditation", "📿": "completion", "🌙": "night", "📊": "stats",
+    "🎯": "goals", "📅": "calendar", "💾": "data", "🎨": "palette",
+    "⏱": "timer", "📁": "folder", "〰️": "underline", "🖍️": "highlight",
+    "⏭": "next", "⏮": "prev", "↻": "repeat", "🔊": "audio",
+    "👁": "eye", "⋮": "more",
+  };
+  return map[emoji] ?? "book";
+}
+
+
+import dynamic from "next/dynamic";
+
+const MushafColorPalette = dynamic(
+  () => import("./mushaf-color-palette").then((m) => ({ default: m.MushafColorPalette })),
+  { ssr: false, loading: () => null }
+);
+const MushafTafsirPanel = dynamic(
+  () => import("./mushaf-tafsir-panel").then((m) => ({ default: m.MushafTafsirPanel })),
+  { ssr: false, loading: () => null }
+);
+const MushafSimilarPanel = dynamic(
+  () => import("./mushaf-similar-panel").then((m) => ({ default: m.MushafSimilarPanel })),
+  { ssr: false, loading: () => null }
+);
+const MushafQiraatPanel = dynamic(
+  () => import("./mushaf-qiraat-panel").then((m) => ({ default: m.MushafQiraatPanel })),
+  { ssr: false, loading: () => null }
+);
 
 import {
   type PointerEvent as ReactPointerEvent,
@@ -14,6 +44,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import {
+  getAllAyahs,
   getAyahsByPage,
   getAyahsBySurah,
   getSurahs,
@@ -28,6 +59,10 @@ import {
 } from "./mushaf-history-content";
 import { recordMushafActionJournalEvent } from "./mushaf-action-journal";
 import { MushafTilawaRecorder } from "./mushaf-tilawa-recorder";
+import { MushafTarteelController } from "./mushaf-tarteel-controller";
+import {
+  findTarteelLongestSuffixCandidates,
+} from "./mushaf-tarteel-matching";
 
 type MushafPageProps = {
   mushafId: number;
@@ -125,6 +160,8 @@ type SecondaryMode =
   | "tadabbur"
   | "khatma"
   | "tahajjud"
+  | "tarteel1"
+  | "tarteel2"
   | "progress"
   | "goals"
   | "history"
@@ -146,6 +183,8 @@ const SECONDARY_MODES: Array<{
   { id: "tadabbur", label: "التدبر", icon: "👓" },
   { id: "khatma", label: "الختمة", icon: "📿" },
   { id: "tahajjud", label: "التهجد", icon: "🌙" },
+  { id: "tarteel1", label: "Tarteel 1", icon: "🎙️" },
+  { id: "tarteel2", label: "Tarteel 2", icon: "🗣️" },
   { id: "progress", label: "المتابعة", icon: "📊" },
   { id: "goals", label: "الأهداف", icon: "🎯" },
   { id: "history", label: "السجل", icon: "📅" },
@@ -164,6 +203,8 @@ const QURAN_ACTIVITY_MODES = new Set<SecondaryMode>([
   "tadabbur",
   "khatma",
   "tahajjud",
+  "tarteel1",
+  "tarteel2",
 ]);
 
 
@@ -791,6 +832,324 @@ export function MushafPage({
   const [selectedWords, setSelectedWords] = useState<Set<string>>(
     () => new Set(),
   );
+  const [tarteelCorrectWordsByMode, setTarteelCorrectWordsByMode] =
+    useState<Record<"tarteel1" | "tarteel2", Set<string>>>(() => ({
+      tarteel1: new Set(),
+      tarteel2: new Set(),
+    }));
+
+  const [tarteelRecentWordsByMode, setTarteelRecentWordsByMode] =
+    useState<Record<"tarteel1" | "tarteel2", Set<string>>>(() => ({
+      tarteel1: new Set(),
+      tarteel2: new Set(),
+    }));
+  const tarteelCursorRef = useRef(0);
+  const tarteelGlobalAyahsRef = useRef<AyahDto[]>([]);
+  const tarteelGlobalTargetsRef = useRef<
+    Array<{ key: string; text: string }>
+  >([]);
+  const tarteelLiveSessionRef = useRef<string | null>(null);
+  const tarteelLastProcessedSequenceRef = useRef(-1);
+  const tarteelPendingNavigationKeyRef = useRef<string | null>(null);
+  const tarteelHighlightTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTarteelCatalog() {
+      try {
+        const catalog = await getAllAyahs();
+
+        const layouts: MushafPageLayout[] = [];
+        const pageCount = 604;
+        const batchSize = 20;
+
+        for (let firstPage = 1; firstPage <= pageCount; firstPage += batchSize) {
+          const lastPage = Math.min(
+            firstPage + batchSize - 1,
+            pageCount,
+          );
+
+          const batch = await Promise.all(
+            Array.from(
+              { length: lastPage - firstPage + 1 },
+              (_, index) =>
+                getMushafPageLayout(mushafId, firstPage + index),
+            ),
+          );
+
+          if (cancelled) return;
+
+          layouts.push(...batch);
+        }
+
+        if (cancelled) return;
+
+        tarteelGlobalAyahsRef.current = catalog;
+
+        tarteelGlobalTargetsRef.current = layouts.flatMap((pageLayout) =>
+          pageLayout.lines
+            .filter((line) => line.type === "ayah")
+            .flatMap((line) => line.words)
+            .filter((word) =>
+              /[\u0621-\u064A]/.test(word.text),
+            )
+            .map((word) => ({
+              key: word.key,
+              text: word.text,
+            })),
+        );
+
+        console.info(
+          "[TARTEEL] Catalogue global chargé :",
+          catalog.length,
+          "ayahs,",
+          layouts.length,
+          "pages,",
+          tarteelGlobalTargetsRef.current.length,
+          "mots.",
+        );
+      } catch (error) {
+        console.error(
+          "[TARTEEL] Impossible de charger le catalogue global.",
+          error,
+        );
+      }
+    }
+
+    void loadTarteelCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mushafId]);
+
+  useEffect(() => {
+    function handleLiveTarteelResult(event: Event) {
+      const detail = (
+        event as CustomEvent<{
+          sessionId: string;
+          mode: "tarteel1" | "tarteel2";
+          sequence: number;
+          text: string;
+          final: boolean;
+        }>
+      ).detail;
+
+      if (
+        !detail ||
+        !detail.sessionId ||
+        (detail.mode !== "tarteel1" && detail.mode !== "tarteel2") ||
+        detail.mode !== secondaryModeRef.current ||
+        !Number.isInteger(detail.sequence) ||
+        detail.sequence < 0 ||
+        !detail.text
+      ) {
+        return;
+      }
+
+      const globalTargets = tarteelGlobalTargetsRef.current;
+      const globalAyahs = tarteelGlobalAyahsRef.current;
+
+      if (globalTargets.length === 0 || globalAyahs.length === 0) {
+        return;
+      }
+
+      // Une nouvelle session repart du début du catalogue global.
+      if (tarteelLiveSessionRef.current !== detail.sessionId) {
+        tarteelLiveSessionRef.current = detail.sessionId;
+        tarteelLastProcessedSequenceRef.current = -1;
+        tarteelCursorRef.current = 0;
+        tarteelPendingNavigationKeyRef.current = null;
+      }
+
+      // Protection supplémentaire contre les résultats répétés ou désordonnés.
+      if (
+        detail.sequence <= tarteelLastProcessedSequenceRef.current
+      ) {
+        return;
+      }
+
+      tarteelLastProcessedSequenceRef.current = detail.sequence;
+
+      // Recherche du plus long suffixe reconnu dans les 604 pages.
+      const search = findTarteelLongestSuffixCandidates(
+        globalTargets,
+        detail.text,
+      );
+
+      if (search.candidates.length === 0) {
+        return;
+      }
+
+      // Ne conserver que les occurrences qui peuvent encore faire
+      // progresser le curseur global.
+      const forwardCandidates = search.candidates.filter(
+        (candidate) => candidate.endIndex >= tarteelCursorRef.current,
+      );
+
+      // Plusieurs positions restent possibles : ne pas naviguer.
+      if (forwardCandidates.length !== 1) {
+        return;
+      }
+
+      const candidate = forwardCandidates[0];
+      const matchedTarget = globalTargets[candidate.endIndex];
+
+      if (!matchedTarget) {
+        return;
+      }
+
+      const [targetSurah, targetAyahNumber] = matchedTarget.key
+        .split(":")
+        .map(Number);
+
+      const targetAyah = globalAyahs.find(
+        (ayah) =>
+          ayah.surahNumber === targetSurah &&
+          ayah.number === targetAyahNumber,
+      );
+
+      if (!targetAyah) {
+        return;
+      }
+
+      // Avancer seulement après une correspondance globale unique.
+      tarteelCursorRef.current = candidate.endIndex + 1;
+
+      if (targetAyah.pageNumber !== pageNumber) {
+        tarteelPendingNavigationKeyRef.current = matchedTarget.key;
+
+        setTarteelCorrectWordsByMode((previous) => {
+          const next = new Set(previous[detail.mode]);
+          next.add(matchedTarget.key);
+          return { ...previous, [detail.mode]: next };
+        });
+
+        router.push(
+          `/coran/${riwayaId}/page/${targetAyah.pageNumber}?ayah=${targetAyah.id}`,
+        );
+
+        return;
+      }
+
+      // Conserver tous les mots correctement reconnus pour ce mode.
+      setSelectedAyahId(targetAyah.id);
+
+      setTarteelCorrectWordsByMode((previous) => {
+        const next = new Set(previous[detail.mode]);
+        next.add(matchedTarget.key);
+        return { ...previous, [detail.mode]: next };
+      });
+
+      // Le mot nouvellement reconnu est vert pendant 900 ms.
+      setTarteelRecentWordsByMode((previous) => ({
+        ...previous,
+        [detail.mode]: new Set([matchedTarget.key]),
+      }));
+
+      const targetElement = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-word-key]"),
+      ).find(
+        (element) => element.dataset.wordKey === matchedTarget.key,
+      );
+
+      targetElement?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest",
+      });
+
+      if (tarteelHighlightTimerRef.current !== null) {
+        window.clearTimeout(tarteelHighlightTimerRef.current);
+      }
+
+      tarteelHighlightTimerRef.current = window.setTimeout(() => {
+        setTarteelRecentWordsByMode((previous) => ({
+          ...previous,
+          [detail.mode]: new Set(),
+        }));
+        tarteelHighlightTimerRef.current = null;
+      }, 900);
+    }
+
+    window.addEventListener(
+      "irtaki:tarteel-live-result",
+      handleLiveTarteelResult,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "irtaki:tarteel-live-result",
+        handleLiveTarteelResult,
+      );
+    };
+  }, [pageNumber, riwayaId, router]);
+
+  // Après une navigation, attendre que le nouveau layout soit affiché
+  // avant de sélectionner et de faire défiler jusqu'au mot reconnu.
+  useEffect(() => {
+    const pendingKey = tarteelPendingNavigationKeyRef.current;
+
+    if (
+      !pendingKey ||
+      !layout ||
+      loading ||
+      layout.page !== pageNumber
+    ) {
+      return;
+    }
+
+    const targetAyah = tarteelGlobalAyahsRef.current.find((ayah) => {
+      const prefix = `${ayah.surahNumber}:${ayah.number}:`;
+      return pendingKey.startsWith(prefix);
+    });
+
+    const targetElement = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-word-key]"),
+    ).find((element) => element.dataset.wordKey === pendingKey);
+
+    if (!targetAyah || !targetElement) {
+      return;
+    }
+
+    tarteelPendingNavigationKeyRef.current = null;
+    setSelectedAyahId(targetAyah.id);
+
+    const pendingMode = secondaryModeRef.current;
+    if (pendingMode !== "tarteel1" && pendingMode !== "tarteel2") {
+      return;
+    }
+
+    setTarteelCorrectWordsByMode((previous) => {
+      const next = new Set(previous[pendingMode]);
+      next.add(pendingKey);
+      return { ...previous, [pendingMode]: next };
+    });
+
+    setTarteelRecentWordsByMode((previous) => ({
+      ...previous,
+      [pendingMode]: new Set([pendingKey]),
+    }));
+
+    targetElement.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
+
+    if (tarteelHighlightTimerRef.current !== null) {
+      window.clearTimeout(tarteelHighlightTimerRef.current);
+    }
+
+    tarteelHighlightTimerRef.current = window.setTimeout(() => {
+      setTarteelRecentWordsByMode((previous) => ({
+        ...previous,
+        [pendingMode]: new Set(),
+      }));
+      tarteelHighlightTimerRef.current = null;
+    }, 900);
+  }, [layout, loading, pageNumber]);
 
   const [menu, setMenu] = useState<MenuState>(null);
   const [openColorPaletteAction, setOpenColorPaletteAction] = useState<
@@ -1640,8 +1999,6 @@ export function MushafPage({
         }
       } catch {
         if (!cancelled) {
-          setAyahs([]);
-          setLayout(null);
           setError("تعذر تحميل الصفحة.");
         }
       } finally {
@@ -1657,6 +2014,44 @@ export function MushafPage({
       cancelled = true;
     };
   }, [mushafId, pageNumber]);
+
+  // Synchroniser la sélection lorsque l'ayah externe change,
+  // même si la page du Mushaf reste identique.
+  useEffect(() => {
+    if (!externalSelectedAyahId) {
+      setSelectedAyahId(undefined);
+      return;
+    }
+
+    if (loading || ayahs.length === 0) {
+      return;
+    }
+
+    const targetAyah = ayahs.find(
+      (ayah) => ayah.id === externalSelectedAyahId,
+    );
+
+    if (!targetAyah) {
+      return;
+    }
+
+    setSelectedAyahId(targetAyah.id);
+
+    const scrollTimer = window.setTimeout(() => {
+      const element = document.querySelector<HTMLElement>(
+        `[data-ayah-id="${targetAyah.id}"]`,
+      );
+
+      element?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 0);
+
+    return () => {
+      window.clearTimeout(scrollTimer);
+    };
+  }, [externalSelectedAyahId, ayahs, loading]);
 
   // Restaurer le mode et la page uniquement après l'hydratation
   // des préférences du current-learner.
@@ -3421,10 +3816,10 @@ export function MushafPage({
         className="flex w-full flex-col gap-2 border-t border-[var(--border)] pt-3"
         aria-label="أدوات الاستماع"
       >
-        <div className="flex flex-wrap items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
           <button
             type="button"
-            className="rounded-lg border px-3 py-2"
+            className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
             aria-label="التالي"
             onClick={() => navigateAyah(1)}
           >
@@ -3433,7 +3828,7 @@ export function MushafPage({
 
           <button
             type="button"
-            className="rounded-lg border px-3 py-2"
+            className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
             aria-label={isPlaying ? "إيقاف" : "تشغيل"}
             aria-pressed={isPlaying}
             onClick={() => {
@@ -3441,12 +3836,12 @@ export function MushafPage({
               else void startContextAudio();
             }}
           >
-            {isPlaying ? "⏸" : "▶"}
+            {isPlaying ? <MushafIcon name="pause" size={18} /> : <MushafIcon name="play" size={18} />}
           </button>
 
           <button
             type="button"
-            className="rounded-lg border px-3 py-2"
+            className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
             aria-label="السابق"
             onClick={() => navigateAyah(-1)}
           >
@@ -3456,7 +3851,7 @@ export function MushafPage({
           <div className="relative">
             <button
               type="button"
-              className="rounded-lg border px-3 py-2 text-sm"
+              className="rounded-lg border px-2 py-1.5 text-xs"
               aria-label="عدد تكرار الآية"
               title="عدد تكرار الآية"
               aria-expanded={ayahRepeatToolbarOpen}
@@ -3505,7 +3900,7 @@ export function MushafPage({
           <div className="relative">
             <button
               type="button"
-              className="rounded-lg border px-3 py-2 text-sm"
+              className="rounded-lg border px-2 py-1.5 text-xs"
               aria-label="عدد تكرار التحديد"
               title="عدد تكرار التحديد"
               aria-expanded={selectionRepeatToolbarOpen}
@@ -3553,7 +3948,7 @@ export function MushafPage({
 
           <button
             type="button"
-            className="rounded-lg border px-3 py-2 text-sm"
+            className="rounded-lg border px-2 py-1.5 text-xs"
             aria-label="سرعة التشغيل"
             onClick={cyclePlaybackRate}
           >
@@ -3562,7 +3957,7 @@ export function MushafPage({
 
           <button
             type="button"
-            className="rounded-lg border px-3 py-2 text-sm"
+            className="rounded-lg border px-2 py-1.5 text-xs"
             aria-label="اختيار القارئ"
             aria-expanded={reciterPickerOpen}
             onClick={() => {
@@ -5061,7 +5456,7 @@ export function MushafPage({
     );
   }
 
-  if (pageNumber !== 605 && (loading || !layout)) {
+  if (pageNumber !== 605 && !layout && !error) {
     return (
       <div
         className="mx-auto max-w-3xl rounded-xl border border-[var(--border)] p-8 text-center"
@@ -5072,7 +5467,7 @@ export function MushafPage({
     );
   }
 
-  if (pageNumber !== 605 && error) {
+  if (pageNumber !== 605 && error && !layout) {
     return (
       <p
         role="alert"
@@ -5097,6 +5492,19 @@ export function MushafPage({
       onPointerCancel={handlePointerCancel}
       onDoubleClick={handleDoubleClick}
     >
+      {loading && layout && layout.page !== pageNumber && (
+        <p className="mb-3 rounded-lg border border-[var(--border)] p-3 text-center text-sm text-[var(--muted)]">
+          Chargement de la page {pageNumber}…
+        </p>
+      )}
+      {error && (
+        <p
+          role="alert"
+          className="mb-3 rounded-lg border border-[var(--border)] p-3 text-center text-sm"
+        >
+          {error}
+        </p>
+      )}
       <audio ref={audioRef} preload="auto" className="hidden" />
       <MushafTilawaRecorder />
       <header className="mb-3 grid grid-cols-3 items-center gap-1 text-xs text-[var(--muted)] sm:mb-6 sm:gap-2 sm:text-sm">
@@ -5155,6 +5563,20 @@ export function MushafPage({
               surahNames={surahNames}
               selectedAyahId={selectedAyahId}
               selectedWords={selectedWords}
+              tarteelMatchedWords={
+                secondaryMode === "tarteel1"
+                  ? tarteelCorrectWordsByMode.tarteel1
+                  : secondaryMode === "tarteel2"
+                    ? tarteelCorrectWordsByMode.tarteel2
+                    : undefined
+              }
+              tarteelRecentWords={
+                secondaryMode === "tarteel1"
+                  ? tarteelRecentWordsByMode.tarteel1
+                  : secondaryMode === "tarteel2"
+                    ? tarteelRecentWordsByMode.tarteel2
+                    : undefined
+              }
               mode={secondaryMode}
               modificationModes={visibleModificationModes}
               textModifications={textModifications}
@@ -5190,21 +5612,21 @@ export function MushafPage({
         >
           {menu.type === "ayah" && (
             <div className="flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3">
-              <div className="font-semibold">قائمة الآية</div>
+              <div className="flex items-center justify-between"><div className="font-semibold">قائمة الآية</div><button type="button" onClick={() => setMenu(null)} aria-label="إغلاق" title="إغلاق" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--foreground)] transition hover:bg-[var(--surface)]"><svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   aria-expanded={contextAudioTarget === "ayah"}
                   aria-haspopup="true"
                   onClick={() => toggleContextAudioControls("ayah")}
                 >
-                  🎧 استماع
+                  <MushafIcon name="audio" size={16} /> استماع
                 </button>
                 {tilawaUiStatus === "idle" && renderTilawaMainButton("التلاوة")}
                 <button
                   type="button"
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   aria-expanded={taskMenuOpen}
                   aria-haspopup="true"
                   onClick={() => {
@@ -5212,7 +5634,7 @@ export function MushafPage({
                     setTaskMenuOpen((open) => !open);
                   }}
                 >
-                  📋 نشاط
+                  <MushafIcon name="activity" size={16} /> نشاط
                 </button>
                 <MushafColorPalette
                   action="colors"
@@ -5260,7 +5682,7 @@ export function MushafPage({
                     aria-pressed={UNDERLINE_STYLE_OPTIONS.some((option) =>
                       isContextTextActionEnabled(option.action),
                     )}
-                    className="rounded-lg border px-3 py-2"
+                    className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                     onClick={() => {
                       setOpenColorPaletteAction(null);
                       setOpenUnderlinePalette((current) => !current);
@@ -5297,14 +5719,14 @@ export function MushafPage({
                 <button
                   type="button"
                   aria-pressed={isContextTextActionEnabled("hidden")}
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   onClick={() => toggleContextTextAction("hidden")}
                 >
                   {isContextTextActionEnabled("hidden") ? "إظهار" : "إخفاء"}
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   onClick={() => void openAnnotations(contextAyahId())}
                 >
                   💬 تعليق
@@ -5312,7 +5734,7 @@ export function MushafPage({
 
                 <button
                   type="button"
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   onClick={() => {
                     const ayahId = contextAyahId();
 
@@ -5329,7 +5751,7 @@ export function MushafPage({
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   onClick={() => {
                     const ayahId = contextAyahId();
                     const ayah = ayahs.find((item) => item.id === ayahId);
@@ -5350,7 +5772,7 @@ export function MushafPage({
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   onClick={() => {
                     const ayahId = contextAyahId();
                     const ayah = ayahs.find((item) => item.id === ayahId);
@@ -5377,16 +5799,16 @@ export function MushafPage({
 
           {menu.type === "word" && (
             <div className="flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3">
-              <div className="font-semibold">قائمة الكلمة</div>
+              <div className="flex items-center justify-between"><div className="font-semibold">قائمة الكلمة</div><button type="button" onClick={() => setMenu(null)} aria-label="إغلاق" title="إغلاق" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--foreground)] transition hover:bg-[var(--surface)]"><svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   aria-expanded={contextAudioTarget === "word"}
                   aria-haspopup="true"
                   onClick={() => toggleContextAudioControls("word")}
                 >
-                  🎧 استماع
+                  <MushafIcon name="audio" size={16} /> استماع
                 </button>
                 <MushafColorPalette
                   action="colors"
@@ -5434,7 +5856,7 @@ export function MushafPage({
                     aria-pressed={UNDERLINE_STYLE_OPTIONS.some((option) =>
                       isContextTextActionEnabled(option.action),
                     )}
-                    className="rounded-lg border px-3 py-2"
+                    className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                     onClick={() => {
                       setOpenColorPaletteAction(null);
                       setOpenUnderlinePalette((current) => !current);
@@ -5471,14 +5893,14 @@ export function MushafPage({
                 <button
                   type="button"
                   aria-pressed={isContextTextActionEnabled("hidden")}
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   onClick={() => toggleContextTextAction("hidden")}
                 >
                   {isContextTextActionEnabled("hidden") ? "إظهار" : "إخفاء"}
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   onClick={() => void openAnnotations(contextAyahId())}
                 >
                   💬 تعليق
@@ -5492,7 +5914,7 @@ export function MushafPage({
 
           {menu.type === "selection" && (
             <div className="flex max-w-[min(100vw-2rem,48rem)] flex-col gap-3">
-              <div className="font-semibold">تحديد الكلمات</div>
+              <div className="flex items-center justify-between"><div className="font-semibold">تحديد الكلمات</div><button type="button" onClick={() => setMenu(null)} aria-label="إغلاق" title="إغلاق" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--foreground)] transition hover:bg-[var(--surface)]"><svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>
               <div className="text-sm text-[var(--muted)]">
                 {selectedWords.size}{" "}
                 {selectedWords.size === 1 ? "كلمة محددة" : "كلمات محددة"}
@@ -5500,17 +5922,17 @@ export function MushafPage({
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   aria-expanded={contextAudioTarget === "selection"}
                   aria-haspopup="true"
                   onClick={() => toggleContextAudioControls("selection")}
                 >
-                  🎧 استماع
+                  <MushafIcon name="audio" size={16} /> استماع
                 </button>
                 {tilawaUiStatus === "idle" && renderTilawaMainButton("التلاوة")}
                 <button
                   type="button"
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   aria-expanded={taskMenuOpen}
                   aria-haspopup="true"
                   onClick={() => {
@@ -5518,7 +5940,7 @@ export function MushafPage({
                     setTaskMenuOpen((open) => !open);
                   }}
                 >
-                  📋 نشاط
+                  <MushafIcon name="activity" size={16} /> نشاط
                 </button>
                 <MushafColorPalette
                   action="colors"
@@ -5566,7 +5988,7 @@ export function MushafPage({
                     aria-pressed={UNDERLINE_STYLE_OPTIONS.some((option) =>
                       isContextTextActionEnabled(option.action),
                     )}
-                    className="rounded-lg border px-3 py-2"
+                    className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                     onClick={() => {
                       setOpenColorPaletteAction(null);
                       setOpenUnderlinePalette((current) => !current);
@@ -5603,14 +6025,14 @@ export function MushafPage({
                 <button
                   type="button"
                   aria-pressed={isContextTextActionEnabled("hidden")}
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   onClick={() => toggleContextTextAction("hidden")}
                 >
                   {isContextTextActionEnabled("hidden") ? "إظهار" : "إخفاء"}
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                   onClick={() => void openAnnotations(contextAyahId())}
                 >
                   💬 تعليق
@@ -5744,15 +6166,15 @@ export function MushafPage({
         role="region"
         aria-label="القائمة الثانوية للمصحف"
         dir="rtl"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--background)] px-2 pt-2 shadow-lg"
+        className="mushaf-bottom-menu fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--background)] px-1.5 pt-1.5 pb-[max(0.25rem,env(safe-area-inset-bottom))] shadow-lg"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
       >
-        <div className="mx-auto max-h-[40dvh] w-full max-w-3xl overflow-y-auto overscroll-contain">
+        <div className="mx-auto max-h-[22dvh] w-full max-w-3xl overflow-y-auto overscroll-contain">
           <div className="flex max-w-[min(100vw-2rem,56rem)] flex-col gap-3">
-              <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
                 <button
                   type="button"
-                  className="rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
+                  className="rounded-lg border border-[var(--jannah-green)] bg-[var(--jannah-green)] px-2 py-1.5 text-xs text-white"
                   aria-expanded={modePickerOpen}
                   aria-haspopup="menu"
                   onClick={() => {
@@ -5814,7 +6236,7 @@ export function MushafPage({
 
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="التالي"
                       onClick={() => navigateAyah(1)}
                     >
@@ -5823,17 +6245,17 @@ export function MushafPage({
 
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label={isPlaying ? "إيقاف" : "تشغيل"}
                       aria-pressed={isPlaying}
                       onClick={togglePlayback}
                     >
-                      {isPlaying ? "⏸" : "▶"}
+                      {isPlaying ? <MushafIcon name="pause" size={18} /> : <MushafIcon name="play" size={18} />}
                     </button>
 
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="السابق"
                       onClick={() => navigateAyah(-1)}
                     >
@@ -5843,7 +6265,7 @@ export function MushafPage({
                     <div className="relative">
                       <button
                         type="button"
-                        className="rounded-lg border px-3 py-2 text-sm"
+                        className="rounded-lg border px-2 py-1.5 text-xs"
                         aria-label="عدد تكرار الآية"
                         title="عدد تكرار الآية"
                         aria-expanded={ayahRepeatToolbarOpen}
@@ -5892,7 +6314,7 @@ export function MushafPage({
                     <div className="relative">
                       <button
                         type="button"
-                        className="rounded-lg border px-3 py-2 text-sm"
+                        className="rounded-lg border px-2 py-1.5 text-xs"
                         aria-label="عدد تكرار التحديد"
                         title="عدد تكرار التحديد"
                         aria-expanded={selectionRepeatToolbarOpen}
@@ -5942,7 +6364,7 @@ export function MushafPage({
 
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2 text-sm"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
                       aria-label="سرعة التشغيل"
                       onClick={cyclePlaybackRate}
                     >
@@ -5951,7 +6373,7 @@ export function MushafPage({
 
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2 text-sm"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
                       aria-label="اختيار القارئ"
                       aria-expanded={reciterPickerOpen}
                       onClick={() => {
@@ -5977,13 +6399,13 @@ export function MushafPage({
                 {secondaryMode === "recitation" && (
                   <button
                     type="button"
-                    className="rounded-lg border px-3 py-2"
+                    className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                     aria-label="تشغيل المرجع"
                     aria-pressed={isPlaying}
                     title={isPlaying ? "إيقاف المرجع" : "تشغيل المرجع"}
                     onClick={togglePlayback}
                   >
-                    {isPlaying ? "⏸" : "▶"}
+                    {isPlaying ? <MushafIcon name="pause" size={18} /> : <MushafIcon name="play" size={18} />}
                   </button>
                 )}
 
@@ -6014,7 +6436,7 @@ export function MushafPage({
                   <>
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="إظهار وإخفاء"
                       onClick={toggleGlobalTextVisibility}
                     >
@@ -6022,7 +6444,7 @@ export function MushafPage({
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="السابق"
                       onClick={() => navigateAyah(-1)}
                     >
@@ -6030,7 +6452,7 @@ export function MushafPage({
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="التالي"
                       onClick={() => navigateAyah(1)}
                     >
@@ -6038,11 +6460,11 @@ export function MushafPage({
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="استماع"
                       onClick={togglePlayback}
                     >
-                      {isPlaying ? "⏸" : "▶"}
+                      {isPlaying ? <MushafIcon name="pause" size={18} /> : <MushafIcon name="play" size={18} />}
                     </button>
                   </>
                 )}
@@ -6051,15 +6473,15 @@ export function MushafPage({
                   <>
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="مستوى المراجعة"
                       onClick={() => showSecondaryMessage("مستوى المراجعة")}
                     >
-                      ⭐
+                      <MushafIcon name="star" size={16} />
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="تمييز"
                       onClick={() => showSecondaryMessage("تمييز")}
                     >
@@ -6067,7 +6489,7 @@ export function MushafPage({
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="إظهار وإخفاء"
                       onClick={toggleGlobalTextVisibility}
                     >
@@ -6075,11 +6497,11 @@ export function MushafPage({
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="استماع"
                       onClick={togglePlayback}
                     >
-                      {isPlaying ? "⏸" : "▶"}
+                      {isPlaying ? <MushafIcon name="pause" size={18} /> : <MushafIcon name="play" size={18} />}
                     </button>
                   </>
                 )}
@@ -6088,7 +6510,7 @@ export function MushafPage({
                   <>
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="تمييز"
                       onClick={() => showSecondaryMessage("تمييز")}
                     >
@@ -6096,15 +6518,15 @@ export function MushafPage({
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="اللون"
                       onClick={() => showSecondaryMessage("اختيار اللون")}
                     >
-                      🎨
+                      <MushafIcon name="palette" size={16} />
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2"
+                      className="rounded-lg border px-2 py-1.5 text-xs min-h-[40px]"
                       aria-label="ملاحظة"
                       onClick={() => showSecondaryMessage("إضافة ملاحظة")}
                     >
@@ -6154,13 +6576,14 @@ export function MushafPage({
                             }))
                           }
                         >
-                          {item.icon}
-                        </button>
+                          <MushafIcon name={emojiToIconName(item.icon)} size={14} /> </button>
                       );
                     })}
                   </div>
                 ) : secondaryMode !== "recitation" &&
-                  secondaryMode !== "history" ? (
+                  secondaryMode !== "history" &&
+                  secondaryMode !== "tarteel1" &&
+                  secondaryMode !== "tarteel2" ? (
                   <>
                     {[
                       { id: "colors", label: "تلوين", icon: "🎨" },
@@ -6186,7 +6609,7 @@ export function MushafPage({
                           }
                           onClick={() => toggleOriginalPreview(option.id)}
                         >
-                          {option.icon} {option.label}
+                          <MushafIcon name={emojiToIconName(option.icon)} size={14} /> {option.label}
                         </button>
                       );
                     })}
@@ -6249,6 +6672,21 @@ export function MushafPage({
                   ⋮
                 </button>
               </div>
+
+              {(secondaryMode === "tarteel1" ||
+                secondaryMode === "tarteel2") && (
+                <div
+                  key={secondaryMode}
+                  className="w-full min-w-0 border-t border-[var(--border)] pt-2"
+                >
+                  <MushafTarteelController
+                    key={secondaryMode}
+                    mode={secondaryMode}
+                    ayahsHidden={listeningAyahsHidden}
+                    onToggleAyahsHidden={toggleGlobalTextVisibility}
+                  />
+                </div>
+              )}
 
               {moreMenuOpen && (
                 <>
@@ -6569,7 +7007,9 @@ export function MushafPage({
 
               {moreMenuOpen &&
                 secondaryMode !== "listening" &&
-                secondaryMode !== "recitation" && (
+                secondaryMode !== "recitation" &&
+                secondaryMode !== "tarteel1" &&
+                secondaryMode !== "tarteel2" && (
                   <div
                     className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
                     role="menu"
@@ -6637,7 +7077,7 @@ export function MushafPage({
                             }}
                           >
                             <span>
-                              {option.icon} {option.label}
+                              <MushafIcon name={emojiToIconName(option.icon)} size={14} /> {option.label}
                             </span>
                             <span className="text-xs">
                               {option.id === "visibility"
@@ -6655,7 +7095,7 @@ export function MushafPage({
 
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2 text-sm"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
                       onClick={() => void openAnnotations(selectedAyahId)}
                     >
                       📝 فتح وإضافة ملاحظة للآية المحددة
@@ -6676,7 +7116,7 @@ export function MushafPage({
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2 text-sm"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
                       onClick={() => void openAnnotations(selectedAyahId)}
                     >
                       📝 ملاحظات الآية
@@ -6684,7 +7124,7 @@ export function MushafPage({
 
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2 text-sm"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
                       aria-label="الآية السابقة"
                       onClick={() => navigateAyah(-1)}
                     >
@@ -6693,7 +7133,7 @@ export function MushafPage({
 
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2 text-sm"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
                       aria-label="الآية التالية"
                       onClick={() => navigateAyah(1)}
                     >
@@ -6702,16 +7142,16 @@ export function MushafPage({
 
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2 text-sm"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
                       aria-pressed={isPlaying}
                       onClick={togglePlayback}
                     >
-                      {isPlaying ? "⏸ إيقاف المرجع" : "▶ تشغيل المرجع"}
+                      {isPlaying ? (<><MushafIcon name="pause" size={16} /> إيقاف المرجع</>) : (<><MushafIcon name="play" size={16} /> تشغيل المرجع</>)}
                     </button>
 
                     <button
                       type="button"
-                      className="rounded-lg border px-3 py-2 text-sm"
+                      className="rounded-lg border px-2 py-1.5 text-xs"
                       onClick={() =>
                         showSecondaryMessage("التسجيل الصوتي غير متاح بعد")
                       }
@@ -6952,7 +7392,7 @@ export function MushafPage({
                     role="menu"
                     aria-label="أنشطة القرآن"
                   >
-                    {SECONDARY_MODES.slice(0, 10).map((mode) => (
+                    {SECONDARY_MODES.slice(0, 12).map((mode) => (
                       <button
                         key={mode.id}
                         type="button"
@@ -6965,45 +7405,11 @@ export function MushafPage({
                         }
                         onClick={() => selectSecondaryMode(mode.id)}
                       >
-                        {mode.icon} {mode.label}
+                        <MushafIcon name={emojiToIconName(mode.icon)} size={14} /> {mode.label}
                       </button>
                     ))}
                   </div>
 
-                  <div className="border-t border-[var(--border)] pt-3">
-                    <div
-                      className="grid grid-cols-2 justify-center gap-2 sm:grid-cols-5"
-                      role="menu"
-                      aria-label="أدوات المتابعة"
-                    >
-                      {SECONDARY_MODES.slice(10).map((mode) => (
-                        <button
-                          key={mode.id}
-                          type="button"
-                          role="menuitemradio"
-                          aria-checked={secondaryMode === mode.id}
-                          className={
-                            secondaryMode === mode.id
-                              ? "rounded-lg border bg-[var(--foreground)] px-3 py-2 text-sm text-[var(--background)]"
-                              : "rounded-lg border px-3 py-2 text-sm"
-                          }
-                          onClick={() => {
-                            if (mode.id === "goals") {
-                              const currentMushafUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-                              router.push(
-                                `/objectifs?returnTo=${encodeURIComponent(currentMushafUrl)}`,
-                              );
-                              return;
-                            }
-
-                            selectSecondaryMode(mode.id);
-                          }}
-                        >
-                          {mode.icon} {mode.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               )}
 

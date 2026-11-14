@@ -43,6 +43,29 @@ describe("learning engine integration", () => {
     learnerId = learner.id;
   });
 
+  it("autorise le propriétaire de l'apprenant", async () => {
+    await expect(
+      engine.assertLearnerAccess(userId, learnerId),
+    ).resolves.toBeUndefined();
+  });
+
+  it("refuse l'accès à l'apprenant d'un autre utilisateur", async () => {
+    const otherUser = await userRepository.create({
+      email: `learning-engine-other-${Date.now()}@irtaki.test`,
+      name: "Other Learning Engine User",
+    });
+
+    await expect(
+      engine.assertLearnerAccess(otherUser.id, learnerId),
+    ).rejects.toThrow("Learner not found");
+  });
+
+  it("refuse un identifiant d'apprenant inexistant", async () => {
+    await expect(
+      engine.assertLearnerAccess(userId, "learner-id-inexistant"),
+    ).rejects.toThrow("Learner not found");
+  });
+
   it("creates a goal through the learning engine", async () => {
     const goal = await engine.createGoal(userId, {
       learnerId,

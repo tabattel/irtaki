@@ -1,27 +1,30 @@
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
 import { GoogleAuthService } from "@/auth/google/google-auth-service";
 
+function signState(rawState: string): string {
+  const secret =
+    process.env.GOOGLE_STATE_SECRET ??
+    process.env.GOOGLE_CLIENT_SECRET ??
+    "dev-secret";
+  const signature = createHmac("sha256", secret)
+    .update(rawState)
+    .digest("hex")
+    .slice(0, 16);
+  return `${rawState}.${signature}`;
+}
+
 export async function GET() {
   try {
-    const state = randomBytes(32).toString("hex");
+    const rawState = randomBytes(32).toString("hex");
+    const signedState = signState(rawState);
 
     const service = new GoogleAuthService();
-    const authorizationUrl = service.getAuthorizationUrl(state);
+    const authorizationUrl = service.getAuthorizationUrl(signedState);
 
-    const response = NextResponse.redirect(authorizationUrl);
-
-    response.cookies.set("irtaki_google_state", state, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 10 * 60,
-    });
-
-    return response;
+    return NextResponse.redirect(authorizationUrl);
   } catch (error) {
     console.error("Google OAuth error:", error);
 

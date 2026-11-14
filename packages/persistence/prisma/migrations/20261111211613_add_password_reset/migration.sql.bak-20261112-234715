@@ -1,0 +1,2 @@
+-- DropIndex
+DROP INDEX "Annotation_userId_mode_idx";

@@ -1,0 +1,67 @@
+### AUDIT MOBILE irtaki.com — 20261113-204640
+
+## VIEWPORT
+src/app/layout.tsx:30:export const viewport: Viewport = {
+src/app/layout.tsx:34:  viewportFit: "cover",
+
+## BREAKPOINTS sm
+80
+## BREAKPOINTS md
+1
+## BREAKPOINTS lg
+6
+
+## WIDTH FIXES
+src/components/quran/mushaf/mushaf-history-content.tsx:390:      <table className="w-full min-w-[700px] border-collapse text-right text-sm">
+src/components/quran/mushaf/mushaf-history-content.tsx:967:            <table className="w-full min-w-[540px] border-collapse text-right text-sm">
+src/components/quran/mushaf/mushaf-tarteel-controller.tsx:610:                className="w-[3px] rounded-full bg-current opacity-75"
+src/components/quran/mushaf/mushaf-tilawa-recorder.tsx:1251:                  "w-[2px] shrink-0 rounded-full transition-[height] duration-75",
+src/app/historique/page.tsx:669:          <table className="w-full min-w-[600px] border-collapse text-right">
+
+## NAV FILES
+src/components/quran/mushaf/mushaf-page.tsx.before-tartil-menu-20261103-015527.bak
+src/components/quran/mushaf/mushaf-context-menu.tsx
+src/components/quran/mushaf/mushaf-page.tsx.before-global-navigation-correction-20261108.bak
+src/components/quran/mushaf/mushaf-page.tsx.before-save-target-before-navigation-20261101-221308.bak
+src/components/quran/mushaf/mushaf-page.tsx.corrupted-navigation-patch-20261108.bak
+src/components/quran/mushaf/mushaf-page.tsx.before-global-navigation-ref-fix-20261108.bak
+src/components/quran/mushaf/mushaf-page.tsx.before-navigation-cloud-sync-fix-20261101-213350.bak
+src/components/quran/mushaf/mushaf-page.tsx.before-tarteel-global-navigation-20261108-173345.bak
+src/components/quran/mushaf/mushaf-page.tsx.before-top-bottom-menus-20261101-211746.bak
+src/components/quran/mushaf/mushaf-page.tsx.before-top-bottom-menus-20261101-211655.bak
+src/components/quran/mushaf/mushaf-page.tsx.before-top-bottom-menus-20261101-212418.bak
+src/components/quran/mushaf/mushaf-page.tsx.before-global-navigation-fix-20261108.bak
+src/components/quran/mushaf/mushaf-page.tsx.before-explicit-page-navigation-20261101-223153.bak
+src/components/quran/mushaf/mushaf-page.tsx.before-tarteel-live-navigation-20261108-184015.bak
+src/components/quran/mushaf/mushaf-page.tsx.before-global-tarteel-navigation-20261108.bak
+src/components/layout/app-shell.tsx.before-top-bottom-menus-20261101-212418.bak
+src/components/layout/app-main-menu.tsx.before-fix-20261113-140335.bak
+src/components/layout/app-shell.tsx.before-top-bottom-menus-20261101-211655.bak
+src/components/layout/main-menu-context.tsx
+src/components/layout/app-main-menu.tsx.before-top-bottom-menus-20261101-211746.bak
+src/components/layout/app-main-menu.tsx.before-top-bottom-menus-20261101-212418.bak
+src/components/layout/app-main-menu.tsx.before-install-button-20261113-121335.bak
+src/components/layout/app-shell.tsx.before-top-bottom-menus-20261101-211746.bak
+src/components/layout/app-main-menu.tsx.before-top-bottom-menus-20261101-211655.bak
+src/components/layout/app-main-menu.tsx
+src/app/coran/[riwayaId]/page.tsx.before-explicit-page-navigation-20261101-223153.bak
+src/app/coran/page.tsx.before-explicit-page-navigation-20261101-223153.bak
+src/app/api/annotations/route.ts.before-tartil-menu-20261103-015527.bak
+
+## PAGES
+src/app/recherche/page.tsx
+src/app/reinitialiser-mot-de-passe/page.tsx
+src/app/statistiques/page.tsx
+src/app/coran/[riwayaId]/surah/[number]/page.tsx
+src/app/coran/[riwayaId]/page/[page]/page.tsx
+src/app/coran/[riwayaId]/page.tsx
+src/app/coran/page/[page]/page.tsx
+src/app/coran/page.tsx
+src/app/historique/page.tsx
+src/app/~offline/page.tsx
+src/app/mot-de-passe-oublie/page.tsx
+src/app/objectifs/page.tsx
+src/app/page.tsx
+
+## CSS MEDIA QUERIES
+src/app/globals.css:186:@media (max-width: 360px) {

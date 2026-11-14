@@ -853,7 +853,7 @@ export default function ObjectivesPage() {
                           </span>
                         </div>
                         <div
-                          className="h-3 w-full overflow-hidden rounded-full bg-[var(--surface)]"
+                          className="h-2.5 w-full min-w-0 overflow-hidden rounded-full bg-[var(--surface)] sm:h-3"
                           role="progressbar"
                           aria-label={`نسبة التقدم: ${goal.title}`}
                           aria-valuemin={0}

@@ -149,6 +149,7 @@ model User {
   sessions        Session[]
   annotations     Annotation[]
   learners        Learner[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Account {
@@ -436,4 +437,18 @@ enum ActivityResultStatus {
   partial
   failed
   skipped
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }

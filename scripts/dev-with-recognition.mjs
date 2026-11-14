@@ -8,37 +8,42 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-const SERVICE_SCRIPT = join(
-  ROOT,
-  "ai/quran-recognition/run-service.sh",
-);
+const SERVICE_SCRIPT = join(ROOT, "ai/quran-recognition/run-service.sh");
 
-const UVICORN = join(
-  ROOT,
-  "ai/quran-recognition/.venv/bin/uvicorn",
-);
+const TARTEEL_SCRIPT = join(ROOT, "ai/tarteel-live/run.sh");
 
-const NEXT_CLI = join(
-  ROOT,
-  "node_modules/next/dist/bin/next",
-);
+const TARTEEL_PORT = 8767;
+const TARTEEL_HEALTH_URL = new URL(`http://127.0.0.1:${TARTEEL_PORT}/health`);
+
+const UVICORN = join(ROOT, "ai/quran-recognition/.venv/bin/uvicorn");
+
+const NEXT_CLI = join(ROOT, "node_modules/next/dist/bin/next");
 
 const EXPECTED_MODEL = "openai/whisper-large-v3-turbo";
 
 const DEFAULT_STARTUP_TIMEOUT = 180_000;
 const startupTimeout = Number(
-  process.env.TILAWA_RECOGNITION_STARTUP_TIMEOUT_MS ??
-    DEFAULT_STARTUP_TIMEOUT,
+  process.env.TILAWA_RECOGNITION_STARTUP_TIMEOUT_MS ?? DEFAULT_STARTUP_TIMEOUT,
 );
 
 let serviceChild = null;
+let tarteelChild = null;
 let nextChild = null;
+
 let serviceOwned = false;
+let tarteelOwned = false;
+
 let serviceReady = false;
+let tarteelReady = false;
+
 let serviceFailure = false;
+let tarteelFailure = false;
+
 let shuttingDown = false;
 let receivedSignal = null;
+
 let serviceSpawnError = null;
+let tarteelSpawnError = null;
 
 function expandPath(value) {
   if (value === "~") return homedir();
@@ -65,15 +70,9 @@ function getRecognitionConfig() {
     }
   }
 
-  const urlPort = parsedUrl
-    ? Number(parsedUrl.port || 80)
-    : undefined;
+  const urlPort = parsedUrl ? Number(parsedUrl.port || 80) : undefined;
 
-  const port = Number(
-    process.env.TILAWA_RECOGNITION_PORT ??
-      urlPort ??
-      8765,
-  );
+  const port = Number(process.env.TILAWA_RECOGNITION_PORT ?? urlPort ?? 8765);
 
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error("Port de reconnaissance invalide.");
@@ -85,9 +84,7 @@ function getRecognitionConfig() {
     );
   }
 
-  const baseUrl = parsedUrl
-    ? parsedUrl.origin
-    : `http://127.0.0.1:${port}`;
+  const baseUrl = parsedUrl ? parsedUrl.origin : `http://127.0.0.1:${port}`;
 
   return {
     port,
@@ -117,13 +114,13 @@ function handleSignal(signal) {
 
   receivedSignal = signal;
 
-  console.log(
-    `\n[IRTAKI DEV] Signal ${signal} reçu. Arrêt propre en cours...`,
-  );
+  console.log(`\n[IRTAKI DEV] Signal ${signal} reçu. Arrêt propre en cours...`);
 
-  if (nextChild) {
+  if (nextChild && !hasExited(nextChild)) {
     signalChildGroup(nextChild, signal);
-  } else if (serviceOwned && serviceChild) {
+  } else if (tarteelOwned && tarteelChild && !hasExited(tarteelChild)) {
+    signalChildGroup(tarteelChild, signal);
+  } else if (serviceOwned && serviceChild && !hasExited(serviceChild)) {
     signalChildGroup(serviceChild, signal);
   }
 }
@@ -132,11 +129,7 @@ process.on("SIGINT", () => handleSignal("SIGINT"));
 process.on("SIGTERM", () => handleSignal("SIGTERM"));
 
 function hasExited(child) {
-  return (
-    !child ||
-    child.exitCode !== null ||
-    child.signalCode !== null
-  );
+  return !child || child.exitCode !== null || child.signalCode !== null;
 }
 
 function waitForExit(child, timeoutMs) {
@@ -155,10 +148,7 @@ function waitForExit(child, timeoutMs) {
 
     const onExit = () => finish(true);
 
-    const timer = setTimeout(
-      () => finish(hasExited(child)),
-      timeoutMs,
-    );
+    const timer = setTimeout(() => finish(hasExited(child)), timeoutMs);
 
     child.once("exit", onExit);
 
@@ -176,9 +166,7 @@ async function stopChild(child, label) {
   const exited = await waitForExit(child, 7000);
 
   if (!exited && !hasExited(child)) {
-    console.warn(
-      `[IRTAKI DEV] ${label} ne répond pas à SIGTERM : SIGKILL.`,
-    );
+    console.warn(`[IRTAKI DEV] ${label} ne répond pas à SIGTERM : SIGKILL.`);
 
     signalChildGroup(child, "SIGKILL");
     await waitForExit(child, 3000);
@@ -191,6 +179,7 @@ async function checkLocalSetup() {
   }
 
   await access(SERVICE_SCRIPT, fsConstants.X_OK);
+  await access(TARTEEL_SCRIPT, fsConstants.X_OK);
   await access(UVICORN, fsConstants.X_OK);
   await access(NEXT_CLI, fsConstants.R_OK);
 
@@ -330,6 +319,94 @@ async function waitForRecognition(healthUrl, timeoutMs) {
   );
 }
 
+async function waitForTarteel(timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+
+  console.log("[IRTAKI DEV] Attente de Tarteel Live sur le port 8767...");
+
+  while (Date.now() < deadline) {
+    if (receivedSignal) {
+      throw new Error("Démarrage de Tarteel interrompu.");
+    }
+
+    if (tarteelSpawnError) {
+      throw new Error(
+        `Impossible de démarrer Tarteel Live : ${tarteelSpawnError.message}`,
+      );
+    }
+
+    if (tarteelOwned && hasExited(tarteelChild)) {
+      throw new Error(
+        `Tarteel Live s'est arrêté pendant son démarrage ` +
+          `(code ${tarteelChild?.exitCode}, signal ${tarteelChild?.signalCode}).`,
+      );
+    }
+
+    let response;
+
+    try {
+      response = await fetch(TARTEEL_HEALTH_URL, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(1800),
+      });
+    } catch {
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
+      continue;
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        `Tarteel Live répond HTTP ${response.status} sur /health.`,
+      );
+    }
+
+    let data;
+
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error(
+        "La réponse de santé de Tarteel n'est pas un JSON valide.",
+      );
+    }
+
+    if (data.status !== "ok" || data.service !== "irtaki-tarteel-live") {
+      throw new Error(
+        "Le port 8767 ne correspond pas au service IRTAKI Tarteel Live.",
+      );
+    }
+
+    const models = data.models ?? {};
+    const model1Available = models.tarteel1?.available === true;
+    const model2Available = models.tarteel2?.available === true;
+
+    if (!model1Available || !model2Available) {
+      throw new Error(
+        "Tarteel Live répond, mais un ou plusieurs modèles sont indisponibles. " +
+          `tarteel1=${model1Available}, tarteel2=${model2Available}.`,
+      );
+    }
+
+    tarteelReady = true;
+
+    console.log(
+      `[IRTAKI DEV] Tarteel Live prêt. ` +
+        `GPU : ${data.gpu ?? (data.cuda_available ? "CUDA disponible" : "CPU")}.`,
+    );
+
+    console.log(
+      "[IRTAKI DEV] Les modèles Tarteel restent chargés à la demande.",
+    );
+
+    return;
+  }
+
+  throw new Error(
+    `Tarteel Live ne répond pas après ${Math.round(timeoutMs / 1000)} secondes.`,
+  );
+}
+
 async function main() {
   let resultCode = 0;
 
@@ -368,11 +445,7 @@ async function main() {
       });
 
       serviceChild.once("exit", (code, signal) => {
-        if (
-          serviceReady &&
-          !shuttingDown &&
-          !receivedSignal
-        ) {
+        if (serviceReady && !shuttingDown && !receivedSignal) {
           serviceFailure = true;
 
           console.error(
@@ -386,31 +459,76 @@ async function main() {
       });
     }
 
-    await waitForRecognition(
-      config.healthUrl,
-      startupTimeout,
-    );
+    await waitForRecognition(config.healthUrl, startupTimeout);
 
     if (receivedSignal || serviceFailure) {
-      throw new Error("Le démarrage de Next.js a été interrompu.");
+      throw new Error("Le démarrage de Tarteel et Next.js a été interrompu.");
     }
 
     if (serviceOwned && hasExited(serviceChild)) {
       throw new Error("Le moteur s'est arrêté avant le démarrage de Next.js.");
     }
 
-    console.log("[IRTAKI DEV] Démarrage de Next.js...");
+    const tarteelPortAlreadyOpen = await isPortOpen(TARTEEL_PORT);
 
-    nextChild = spawn(
-      process.execPath,
-      [NEXT_CLI, "dev"],
-      {
+    if (tarteelPortAlreadyOpen) {
+      console.log(
+        `[IRTAKI DEV] Port ${TARTEEL_PORT} déjà occupé. ` +
+          "Vérification du service existant.",
+      );
+    } else {
+      console.log("[IRTAKI DEV] Démarrage de Tarteel Live...");
+
+      tarteelChild = spawn("bash", [TARTEEL_SCRIPT], {
         cwd: ROOT,
         env: childEnv,
         stdio: "inherit",
         detached: process.platform !== "win32",
-      },
-    );
+      });
+
+      tarteelOwned = true;
+
+      tarteelChild.once("error", (error) => {
+        tarteelSpawnError = error;
+      });
+
+      tarteelChild.once("exit", (code, signal) => {
+        if (tarteelReady && !shuttingDown && !receivedSignal) {
+          tarteelFailure = true;
+
+          console.error(
+            `[IRTAKI DEV] Tarteel Live s'est arrêté ` +
+              `(code ${code}, signal ${signal}).`,
+          );
+
+          if (nextChild && !hasExited(nextChild)) {
+            signalChildGroup(nextChild, "SIGTERM");
+          }
+        }
+      });
+    }
+
+    await waitForTarteel(startupTimeout);
+
+    if (receivedSignal || serviceFailure || tarteelFailure) {
+      throw new Error("Un moteur de reconnaissance a interrompu le démarrage.");
+    }
+
+    if (
+      (serviceOwned && hasExited(serviceChild)) ||
+      (tarteelOwned && hasExited(tarteelChild))
+    ) {
+      throw new Error("Un moteur s'est arrêté avant le démarrage de Next.js.");
+    }
+
+    console.log("[IRTAKI DEV] Démarrage de Next.js...");
+
+    nextChild = spawn(process.execPath, [NEXT_CLI, "dev"], {
+      cwd: ROOT,
+      env: childEnv,
+      stdio: "inherit",
+      detached: process.platform !== "win32",
+    });
 
     const nextResult = await new Promise((resolvePromise, rejectPromise) => {
       nextChild.once("error", rejectPromise);
@@ -424,10 +542,7 @@ async function main() {
       resultCode = 130;
     } else if (receivedSignal === "SIGTERM") {
       resultCode = 143;
-    } else if (
-      serviceFailure ||
-      nextResult.signal !== null
-    ) {
+    } else if (serviceFailure || tarteelFailure || nextResult.signal !== null) {
       resultCode = 1;
     } else {
       resultCode = nextResult.code ?? 1;
@@ -453,14 +568,23 @@ async function main() {
       await stopChild(nextChild, "Next.js");
     }
 
+    if (tarteelOwned && tarteelChild) {
+      await stopChild(tarteelChild, "Tarteel Live");
+      console.log("[IRTAKI DEV] Tarteel Live lancé par ce superviseur arrêté.");
+    } else if (tarteelReady) {
+      console.log("[IRTAKI DEV] Tarteel Live préexistant conservé.");
+    }
+
     if (serviceOwned && serviceChild) {
-      await stopChild(serviceChild, "moteur de reconnaissance");
+      await stopChild(serviceChild, "moteur Quran Recognition");
     }
 
     if (serviceOwned) {
-      console.log("[IRTAKI DEV] Moteur lancé par ce superviseur arrêté.");
+      console.log("[IRTAKI DEV] Moteur Quran Recognition arrêté.");
     } else if (serviceReady) {
-      console.log("[IRTAKI DEV] Moteur préexistant conservé.");
+      console.log(
+        "[IRTAKI DEV] Moteur Quran Recognition préexistant conservé.",
+      );
     }
   }
 

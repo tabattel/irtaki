@@ -53,3 +53,11 @@ export async function getAyahsByPage(pageNumber: number): Promise<AyahDto[]> {
 
   return response.data;
 }
+
+export async function getAllAyahs(): Promise<AyahDto[]> {
+  const response = await apiGet<CollectionResponse<AyahDto>>(
+    "/api/ayahs/catalog",
+  );
+
+  return response.data;
+}

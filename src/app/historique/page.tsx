@@ -666,7 +666,7 @@ export default function HistoryPage() {
 
       {learnerId && !recordsLoading && !error && (
         <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
-          <table className="w-full min-w-[600px] border-collapse text-right">
+          <table className="w-full min-w-[480px] border-collapse text-right text-xs md:min-w-[600px] md:text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--surface)]">
                 {view === "ayahs" && (
