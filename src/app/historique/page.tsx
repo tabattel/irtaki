@@ -4,12 +4,14 @@ import { reconstructMissingPageLineMetadata } from "@/lib/mushaf/reconstruct-pag
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BackCloseNav } from "@/components/layout/back-close-nav";
 
 type HistoryView = "ayahs" | "pages" | "activity" | "day";
 
 type LearnerOption = {
   id: string;
   name: string;
+  childProfileId?: string | null;
 };
 
 type SurahOption = {
@@ -31,6 +33,11 @@ type HistoryRecord = {
   startedAt: string;
   lineNumbers?: number[];
   pageLineCount?: number | null;
+  riwayaId?: number | null;
+  tariqId?: number | null;
+  riwayaShortName?: string | null;
+  riwayaFullName?: string | null;
+  tariqName?: string | null;
 };
 
 type TableRow = {
@@ -43,6 +50,8 @@ type TableRow = {
   date: string;
   count: number;
   percentage?: number | null;
+  riwaya?: string | null;
+  tariq?: string | null;
 };
 
 const VIEWS: { id: HistoryView; label: string }[] = [
@@ -65,8 +74,6 @@ const MODES = [
   { value: "khatma", label: "ختمة" },
   { value: "tadabbur", label: "تدبر" },
   { value: "talkin", label: "تلقين" },
-  { value: "tajwid", label: "تجويد" },
-  { value: "qiraa", label: "قراءات" },
   { value: "tarteel1", label: "ترتيل ١" },
   { value: "tarteel2", label: "ترتيل ٢" },
 ] as const;
@@ -170,6 +177,20 @@ function groupRecords(
   }));
 }
 
+function riwayaOf(records: HistoryRecord[]): string | null {
+  for (const record of records) {
+    if (record.riwayaShortName) return record.riwayaShortName;
+  }
+  return null;
+}
+
+function tariqOf(records: HistoryRecord[]): string | null {
+  for (const record of records) {
+    if (record.tariqName) return record.tariqName;
+  }
+  return null;
+}
+
 function latestDate(records: HistoryRecord[]): string {
   return records.reduce(
     (latest, record) =>
@@ -194,7 +215,9 @@ export default function HistoryPage() {
   const [learnerId, setLearnerId] = useState("");
   const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [view, setView] = useState<HistoryView>("activity");
-  const [actionFilter, setActionFilter] = useState("all");
+  const [selectedActions, setSelectedActions] = useState<Set<string>>(
+    () => new Set(MODES.map((mode) => mode.value)),
+  );
   const [surahFilter, setSurahFilter] = useState("all");
   const [pageFilter, setPageFilter] = useState("all");
   const [dayFilter, setDayFilter] = useState("");
@@ -302,9 +325,18 @@ export default function HistoryPage() {
             ) {
               return current;
             }
-            return availableLearners.length === 1
-              ? availableLearners[0].id
-              : "";
+            // Priorité : localStorage > main learner > premier de la liste
+            let stored: string | null = null;
+            try {
+              stored = window.localStorage.getItem("irtaki.activeLearnerId");
+            } catch {
+              stored = null;
+            }
+            if (stored && availableLearners.some((l) => l.id === stored)) {
+              return stored;
+            }
+            const main = availableLearners.find((l) => !l.childProfileId);
+            return main?.id ?? availableLearners[0]?.id ?? "";
           });
         }
       } catch (loadError) {
@@ -406,11 +438,7 @@ export default function HistoryPage() {
           return false;
         }
 
-        if (
-          view === "activity" &&
-          actionFilter !== "all" &&
-          record.action !== actionFilter
-        ) {
+        if (view === "activity" && !selectedActions.has(record.action)) {
           return false;
         }
 
@@ -424,7 +452,7 @@ export default function HistoryPage() {
 
         return true;
       }),
-    [records, view, surahFilter, pageFilter, actionFilter, dayFilter],
+    [records, view, surahFilter, pageFilter, selectedActions, dayFilter],
   );
 
   const rows = useMemo<TableRow[]>(() => {
@@ -441,6 +469,8 @@ export default function HistoryPage() {
           action: grouped[0].action,
           date: latestDate(grouped),
           count: sessionCount(grouped),
+          riwaya: riwayaOf(grouped),
+          tariq: tariqOf(grouped),
         }))
         .sort(
           (a, b) =>
@@ -461,6 +491,8 @@ export default function HistoryPage() {
           date: latestDate(grouped),
           count: sessionCount(grouped),
           percentage: calculateRecordedPagePercentage(grouped),
+          riwaya: riwayaOf(grouped),
+          tariq: tariqOf(grouped),
         }))
         .sort((a, b) => b.date.localeCompare(a.date));
     }
@@ -479,6 +511,8 @@ export default function HistoryPage() {
           action: grouped[0].action,
           date: latestDate(grouped),
           count: new Set(grouped.map((record) => record.ayahId)).size,
+          riwaya: riwayaOf(grouped),
+          tariq: tariqOf(grouped),
         }))
         .sort((a, b) => b.date.localeCompare(a.date));
     }
@@ -496,9 +530,15 @@ export default function HistoryPage() {
         action: grouped[0].action,
         date: localDayKey(latestDate(grouped)),
         count: new Set(grouped.map((record) => record.ayahId)).size,
+        riwaya: riwayaOf(grouped),
+        tariq: tariqOf(grouped),
       }))
       .sort((a, b) => b.date.localeCompare(a.date));
   }, [filteredRecords, view]);
+
+  const allChecked =
+    MODES.length > 0 && selectedActions.size === MODES.length;
+  const someChecked = selectedActions.size > 0 && !allChecked;
 
   const emptyMessage =
     view === "ayahs"
@@ -511,6 +551,7 @@ export default function HistoryPage() {
 
   return (
     <section dir="rtl" className="space-y-5">
+      <BackCloseNav />
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold">📅 السجل</h1>
@@ -529,17 +570,19 @@ export default function HistoryPage() {
       </header>
 
       <label className="block max-w-xl space-y-2">
-        <span className="text-sm font-medium">المتعلم — Apprenant</span>
+        <span className="text-sm font-medium">المتعلم</span>
         <select
           className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] p-3"
           value={learnerId}
           onChange={(event) => setLearnerId(event.target.value)}
           disabled={optionsLoading}
         >
-          <option value="">Choisir un apprenant</option>
           {learners.map((learner) => (
             <option key={learner.id} value={learner.id}>
-              {learner.name}
+              {learner.name?.trim() ||
+                (learner.childProfileId
+                  ? "حساب طفل"
+                  : "الحساب الرئيسي")}
             </option>
           ))}
         </select>
@@ -609,21 +652,59 @@ export default function HistoryPage() {
       )}
 
       {view === "activity" && (
-        <label className="block max-w-xl space-y-2">
-          <span className="text-sm font-medium">النشاط — Mode</span>
-          <select
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] p-3"
-            value={actionFilter}
-            onChange={(event) => setActionFilter(event.target.value)}
-          >
-            <option value="all">كل الأنشطة — Toutes les activités</option>
-            {MODES.map((mode) => (
-              <option key={mode.value} value={mode.value}>
-                {mode.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="max-w-3xl space-y-3">
+          <span className="text-sm font-semibold">الأنشطة</span>
+
+          <label className="flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-semibold">
+            <input
+              type="checkbox"
+              checked={allChecked}
+              ref={(el) => {
+                if (el) el.indeterminate = someChecked;
+              }}
+              onChange={() => {
+                setSelectedActions(
+                  allChecked
+                    ? new Set()
+                    : new Set(MODES.map((m) => m.value)),
+                );
+              }}
+              className="h-4 w-4 accent-emerald-600"
+            />
+            <span>الكل</span>
+          </label>
+
+          <div className="grid grid-cols-6 gap-2">
+            {MODES.map((mode) => {
+              const checked = selectedActions.has(mode.value);
+              return (
+                <label
+                  key={mode.value}
+                  className={`flex min-w-0 cursor-pointer items-center gap-1.5 rounded-lg border p-2 text-xs transition ${
+                    checked
+                      ? "border-emerald-600 bg-emerald-600/10 font-semibold"
+                      : "border-[var(--border)] hover:bg-[var(--surface)]"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      setSelectedActions((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(mode.value)) next.delete(mode.value);
+                        else next.add(mode.value);
+                        return next;
+                      });
+                    }}
+                    className="h-3.5 w-3.5 shrink-0 accent-emerald-600"
+                  />
+                  <span className="truncate">{mode.label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {view === "day" && (
@@ -688,6 +769,12 @@ export default function HistoryPage() {
                       النشاط
                     </th>
                     <th scope="col" className="p-3">
+                      الرواية
+                    </th>
+                    <th scope="col" className="p-3">
+                      الطريق
+                    </th>
+                    <th scope="col" className="p-3">
                       آخر تاريخ
                     </th>
                     <th scope="col" className="p-3">
@@ -705,6 +792,12 @@ export default function HistoryPage() {
                     </th>
                     <th scope="col" className="p-3">
                       المهمة
+                    </th>
+                    <th scope="col" className="p-3">
+                      الرواية
+                    </th>
+                    <th scope="col" className="p-3">
+                      الطريق
                     </th>
                     <th scope="col" className="p-3">
                       آخر تاريخ
@@ -727,6 +820,12 @@ export default function HistoryPage() {
                     </th>
                     <th scope="col" className="p-3">
                       أرقام الصفحات
+                    </th>
+                    <th scope="col" className="p-3">
+                      الرواية
+                    </th>
+                    <th scope="col" className="p-3">
+                      الطريق
                     </th>
                     <th scope="col" className="p-3">
                       التاريخ
@@ -754,6 +853,12 @@ export default function HistoryPage() {
                       النشاط
                     </th>
                     <th scope="col" className="p-3">
+                      الرواية
+                    </th>
+                    <th scope="col" className="p-3">
+                      الطريق
+                    </th>
+                    <th scope="col" className="p-3">
                       عدد الآيات
                     </th>
                   </>
@@ -774,6 +879,8 @@ export default function HistoryPage() {
                       <td className="p-3 tabular-nums">{row.reference}</td>
                       <td className="p-3 tabular-nums">{row.pages}</td>
                       <td className="p-3">{actionLabel(row.action)}</td>
+                      <td className="p-3">{row.riwaya ?? "—"}</td>
+                      <td className="p-3">{row.tariq ?? "—"}</td>
                       <td className="p-3">{formatDate(row.date)}</td>
                       <td className="p-3 tabular-nums">{row.count}</td>
                     </>
@@ -785,6 +892,8 @@ export default function HistoryPage() {
                         {row.percentage == null ? "—" : `${row.percentage}%`}
                       </td>
                       <td className="p-3">{actionLabel(row.action)}</td>
+                      <td className="p-3">{row.riwaya ?? "—"}</td>
+                      <td className="p-3">{row.tariq ?? "—"}</td>
                       <td className="p-3">{formatDate(row.date)}</td>
                       <td className="p-3 tabular-nums">{row.count}</td>
                     </>
@@ -797,6 +906,8 @@ export default function HistoryPage() {
                       </td>
                       <td className="p-3 tabular-nums">{row.reference}</td>
                       <td className="p-3 tabular-nums">{row.pages}</td>
+                      <td className="p-3">{row.riwaya ?? "—"}</td>
+                      <td className="p-3">{row.tariq ?? "—"}</td>
                       <td className="p-3">{formatDate(row.date)}</td>
                       <td className="p-3 tabular-nums">{row.count}</td>
                     </>
@@ -810,6 +921,8 @@ export default function HistoryPage() {
                       <td className="p-3 tabular-nums">{row.reference}</td>
                       <td className="p-3 tabular-nums">{row.pages}</td>
                       <td className="p-3">{actionLabel(row.action)}</td>
+                      <td className="p-3">{row.riwaya ?? "—"}</td>
+                      <td className="p-3">{row.tariq ?? "—"}</td>
                       <td className="p-3 tabular-nums">{row.count}</td>
                     </>
                   )}
@@ -818,7 +931,7 @@ export default function HistoryPage() {
               {rows.length === 0 && (
                 <tr>
                   <td
-                    colSpan={view === "pages" ? 5 : 6}
+                    colSpan={view === "pages" ? 7 : 8}
                     className="p-6 text-center text-sm"
                   >
                     {emptyMessage}
@@ -830,11 +943,6 @@ export default function HistoryPage() {
         </div>
       )}
 
-      <p className="text-xs text-[var(--muted-foreground)]">
-        Les résultats reflètent les traces présentes en base de données. Les
-        modes « تهجد » et « ختمة » apparaissent dans le filtre, mais ne seront
-        comptés que lorsqu’ils auront une source réelle d’enregistrement.
-      </p>
     </section>
   );
 }
