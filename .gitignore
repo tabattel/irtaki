@@ -68,3 +68,7 @@ ai/**/__pycache__/
 /=
 /item.numberOfAyahs
 /lastSequenceRef.current
+
+# Fichiers de backup locaux (avec extensions variées)
+*.backup-*
+.backup-*

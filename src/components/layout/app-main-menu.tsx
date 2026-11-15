@@ -3,41 +3,114 @@
 import { MushafContextHeader } from "./mushaf-context-header";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { getActiveLearnerId, isOwner } from "@/lib/roles";
 import { useEffect, useState } from "react";
 import { AccountPanel } from "./account-panel";
 import { DownloadMushafButton } from "@/components/pwa/download-mushaf-button";
 
-function GotoMenuLink(props: { onClick?: () => void; children?: React.ReactNode; active?: boolean }) {
-  const pathname = usePathname();
-  const m = pathname?.match(/^\/coran\/([^/]+)/);
-  const riwayaId = m?.[1] ?? "10";
-  return (
-    <MainMenuLink href={`/coran/${riwayaId}/goto`} label="انتقل إلى" onClick={props.onClick}>
-      {props.children}
-    </MainMenuLink>
-  );
+
+
+
+
+
+
+
+
+
+
+
+
+function extractRiwayaId(pathname: string | null): string | null {
+  if (!pathname) return null;
+  const m = pathname.match(/^\/coran\/([^/]+)/);
+  if (!m) return null;
+  const id = m[1];
+  if (id === "page" || id === "search" || id === "goto" || id === "compte") {
+    return null;
+  }
+  return id;
 }
 
-function MobileGotoMenuLink(props: { onClick?: () => void; active?: boolean }) {
-  const pathname = usePathname();
-  const m = pathname?.match(/^\/coran\/([^/]+)/);
-  const riwayaId = m?.[1] ?? "10";
-  return <MobileMenuLink href={`/coran/${riwayaId}/goto`} label="انتقل إلى" onClick={props.onClick} />;
+function getStoredRiwayaId(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return (
+      window.localStorage.getItem("irtaki-riwaya") ??
+      window.localStorage.getItem("riwayaId") ??
+      window.localStorage.getItem("irtaki.lastRiwayaId") ??
+      null
+    );
+  } catch {
+    return null;
+  }
 }
 
-function getSearchHref(pathname: string | null): string {
-  const m = pathname?.match(/^\/coran\/([^/]+)/);
-  return `/coran/${m?.[1] ?? "10"}/search`;
+async function fetchAuthStatus(): Promise<boolean> {
+  // 1. localStorage fallback : contexte apprenant = utilisateur enregistré
+  if (typeof window !== "undefined") {
+    try {
+      const keys = [
+        "irtaki.mainLearnerId",
+        "irtaki.activeLearnerId",
+        "irtaki.activeLearner",
+        "mainLearnerId",
+        "activeLearnerId",
+      ];
+      for (const k of keys) {
+        const v = window.localStorage.getItem(k);
+        if (v && v.trim().length > 0) return true;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // 2. API /api/auth/session
+  try {
+    const res = await fetch("/api/auth/session", {
+      cache: "no-store",
+      credentials: "include",
+      redirect: "manual",
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data) {
+        if (data.user && typeof data.user === "object") return true;
+        if (data.session && typeof data.session === "object") return true;
+        if (data.session && data.session.user) return true;
+        if (data.sessionToken) return true;
+        if (data.authenticated === true) return true;
+        if (data.isAuthenticated === true) return true;
+        if (data.loggedIn === true) return true;
+      }
+    }
+  } catch {
+    /* silent */
+  }
+
+  return false;
 }
 
 function SearchMenuLink(props: { onClick?: () => void; children?: React.ReactNode }) {
   const pathname = usePathname();
-  const m = pathname?.match(/^\/coran\/([^/]+)/);
-  const href = `/coran/${m?.[1] ?? "10"}/search`;
+  const router = useRouter();
+  const riwayaId = extractRiwayaId(pathname) ?? getStoredRiwayaId();
+  function handleClick(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!riwayaId) {
+      if (typeof window !== "undefined") window.alert("يرجى اختيار المصحف اولا");
+      return;
+    }
+    props.onClick?.();
+    router.push("/coran/" + riwayaId + "/search");
+  }
   return (
-    <MainMenuLink href={href} label="البحث" onClick={props.onClick}>
+    <MainMenuLink
+      href={riwayaId ? "/coran/" + riwayaId + "/search" : "#"}
+      label="البحث"
+      onClick={handleClick}
+    >
       {props.children}
     </MainMenuLink>
   );
@@ -45,10 +118,138 @@ function SearchMenuLink(props: { onClick?: () => void; children?: React.ReactNod
 
 function MobileSearchMenuLink(props: { onClick?: () => void }) {
   const pathname = usePathname();
-  const m = pathname?.match(/^\/coran\/([^/]+)/);
-  const href = `/coran/${m?.[1] ?? "10"}/search`;
-  return <MobileMenuLink href={href} label="البحث" onClick={props.onClick} />;
+  const router = useRouter();
+  const riwayaId = extractRiwayaId(pathname) ?? getStoredRiwayaId();
+  function handleClick() {
+    if (!riwayaId) {
+      if (typeof window !== "undefined") window.alert("يرجى اختيار المصحف اولا");
+      return;
+    }
+    props.onClick?.();
+    router.push("/coran/" + riwayaId + "/search");
+  }
+  return (
+    <MobileMenuLink
+      href={riwayaId ? "/coran/" + riwayaId + "/search" : "#"}
+      label="البحث"
+      onClick={handleClick}
+    />
+  );
 }
+
+function GotoMenuLink(props: { onClick?: () => void; children?: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const riwayaId = extractRiwayaId(pathname) ?? getStoredRiwayaId();
+  function handleClick(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!riwayaId) {
+      if (typeof window !== "undefined") window.alert("يرجى اختيار المصحف اولا");
+      return;
+    }
+    props.onClick?.();
+    router.push("/coran/" + riwayaId + "/goto");
+  }
+  return (
+    <MainMenuLink
+      href={riwayaId ? "/coran/" + riwayaId + "/goto" : "#"}
+      label="انتقل إلى"
+      onClick={handleClick}
+    >
+      {props.children}
+    </MainMenuLink>
+  );
+}
+
+function MobileGotoMenuLink(props: { onClick?: () => void }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const riwayaId = extractRiwayaId(pathname) ?? getStoredRiwayaId();
+  function handleClick() {
+    if (!riwayaId) {
+      if (typeof window !== "undefined") window.alert("يرجى اختيار المصحف اولا");
+      return;
+    }
+    props.onClick?.();
+    router.push("/coran/" + riwayaId + "/goto");
+  }
+  return (
+    <MobileMenuLink
+      href={riwayaId ? "/coran/" + riwayaId + "/goto" : "#"}
+      label="انتقل إلى"
+      onClick={handleClick}
+    />
+  );
+}
+
+function CompteMenuLink(props: { onClick?: () => void; children?: React.ReactNode }) {
+  const router = useRouter();
+  function handleClick(e: React.MouseEvent) {
+    e.preventDefault();
+    props.onClick?.();
+    router.push("/coran/compte");
+  }
+  return (
+    <MainMenuLink href="/coran/compte" label="الحساب" onClick={handleClick}>
+      {props.children}
+    </MainMenuLink>
+  );
+}
+
+function MobileCompteMenuLink(props: { onClick?: () => void }) {
+  const router = useRouter();
+  function handleClick() {
+    props.onClick?.();
+    router.push("/coran/compte");
+  }
+  return (
+    <MobileMenuLink href="/coran/compte" label="الحساب" onClick={handleClick} />
+  );
+}
+
+function ProtectedMenuLink(props: { href: string; label: string; onClick?: () => void; children?: React.ReactNode }) {
+  const router = useRouter();
+  async function handleClick(e: React.MouseEvent) {
+    e.preventDefault();
+    const ok = await fetchAuthStatus();
+    if (!ok) {
+      if (typeof window !== "undefined") window.alert("يرجى تسجيل الدخول اولا");
+      return;
+    }
+    props.onClick?.();
+    router.push(props.href);
+  }
+  return (
+    <MainMenuLink href={props.href} label={props.label} onClick={handleClick}>
+      {props.children}
+    </MainMenuLink>
+  );
+}
+
+function MobileProtectedMenuLink(props: { href: string; label: string; onClick?: () => void }) {
+  const router = useRouter();
+  async function handleClick() {
+    const ok = await fetchAuthStatus();
+    if (!ok) {
+      if (typeof window !== "undefined") window.alert("يرجى تسجيل الدخول اولا");
+      return;
+    }
+    props.onClick?.();
+    router.push(props.href);
+  }
+  return (
+    <MobileMenuLink href={props.href} label={props.label} onClick={handleClick} />
+  );
+}
+
+function getSearchHref(pathname: string | null): string {
+  const m = pathname?.match(/^\/coran\/([^/]+)/);
+  return `/coran/${m?.[1] ?? "10"}/search`;
+}
+
+
+
+
 
 type MainPanel = "goto" | "account" | "settings" | null;
 
@@ -362,19 +563,25 @@ export function AppMainMenu() {
 <GotoMenuLink onClick={closeMenu}>
                 <GoToIcon />
               </GotoMenuLink>
+              <CompteMenuLink onClick={closeMenu}>
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2" />
+                </svg>
+              </CompteMenuLink>
               <div className="mx-1 h-6 w-px shrink-0 bg-[var(--jannah-gold)]/40" aria-hidden="true" />
-              <MainMenuLink href="/objectifs" label="الأهداف" onClick={closeMenu}>
+              <ProtectedMenuLink href="/objectifs" label="الأهداف" onClick={closeMenu}>
                 <ObjectivesIcon />
-              </MainMenuLink>
-              <MainMenuLink href="/statistiques" label="الإحصائيات" onClick={closeMenu}>
+              </ProtectedMenuLink>
+              <ProtectedMenuLink href="/statistiques" label="الإحصائيات" onClick={closeMenu}>
                 <StatisticsIcon />
-              </MainMenuLink>
-              <MainMenuLink href="/historique" label="الإنجاز" onClick={closeMenu}>
+              </ProtectedMenuLink>
+              <ProtectedMenuLink href="/historique" label="الإنجاز" onClick={closeMenu}>
                 <HistoryIcon />
-              </MainMenuLink>
-              <MainMenuLink href="/exercices" label="التمارين" onClick={closeMenu}>
+              </ProtectedMenuLink>
+              <ProtectedMenuLink href="/exercices" label="التمارين" onClick={closeMenu}>
                 <ExercisesIcon />
-              </MainMenuLink>
+              </ProtectedMenuLink>
               <div className="mx-1 h-6 w-px shrink-0 bg-[var(--jannah-gold)]/40" aria-hidden="true" />
               <MainMenuLink href="/donnees" label="البيانات" onClick={closeMenu}>
                 <DataIcon />
@@ -444,6 +651,9 @@ export function AppMainMenu() {
               <nav className="flex flex-col p-2" aria-label="القائمة الرئيسية - الهاتف">
                 <MushafContextHeader />
 
+                                <CollapsibleSection title="الحساب" paths={["/coran/compte"]}>
+                  <MobileCompteMenuLink onClick={closeMenu} />
+                </CollapsibleSection>
                 <CollapsibleSection title="التنقل" paths={["/", "/coran"]}>
                   <MobileMenuLink href="/" label="الرئيسية" onClick={closeMenu} />
                   <MobileSearchMenuLink onClick={closeMenu} />
@@ -451,10 +661,10 @@ export function AppMainMenu() {
                 </CollapsibleSection>
 
                 <CollapsibleSection title="المسار" paths={["/objectifs", "/statistiques", "/historique", "/exercices"]}>
-                  <MobileMenuLink href="/objectifs" label="الأهداف" onClick={closeMenu} />
-                  <MobileMenuLink href="/statistiques" label="الإحصائيات" onClick={closeMenu} />
-                  <MobileMenuLink href="/historique" label="الإنجاز" onClick={closeMenu} />
-                  <MobileMenuLink href="/exercices" label="التمارين" onClick={closeMenu} />
+                  <MobileProtectedMenuLink href="/objectifs" label="الأهداف" onClick={closeMenu} />
+                  <MobileProtectedMenuLink href="/statistiques" label="الإحصائيات" onClick={closeMenu} />
+                  <MobileProtectedMenuLink href="/historique" label="الإنجاز" onClick={closeMenu} />
+                  <MobileProtectedMenuLink href="/exercices" label="التمارين" onClick={closeMenu} />
                 </CollapsibleSection>
 
                 <CollapsibleSection title="الأدوات" paths={["/donnees", "/dashboard"]}>

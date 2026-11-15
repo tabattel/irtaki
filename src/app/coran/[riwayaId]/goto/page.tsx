@@ -8,7 +8,7 @@ export default function GotoPage() {
   const router = useRouter();
   const pathname = usePathname();
   const riwayaMatch = pathname?.match(/^\/coran\/([^/]+)/);
-  const riwayaId = riwayaMatch?.[1] ?? "";const riwayaId = riwayaMatch?.[1] ?? "";
+  const riwayaId = riwayaMatch?.[1] ?? "";
 
   if (!riwayaId || !/^\d+$/.test(riwayaId)) {
     return <MushafRequired />;

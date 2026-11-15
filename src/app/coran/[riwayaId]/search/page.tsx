@@ -30,7 +30,7 @@ function displaySurah(name: string): string {
 export default function QuranSearchScopedPage() {
   const router = useRouter();
   const params = useParams<{ riwayaId: string }>();
-  const riwayaId = params?.riwayaId ?? "";const riwayaId = params?.riwayaId ?? "";
+  const riwayaId = params?.riwayaId ?? "";
 
   if (!riwayaId || !/^\d+$/.test(riwayaId)) {
     return <MushafRequired />;
