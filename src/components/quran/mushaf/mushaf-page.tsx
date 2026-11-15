@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { MushafIcon, type MushafIconName } from "./mushaf-icon";
 
 function emojiToIconName(emoji: string): MushafIconName {
@@ -35,12 +36,7 @@ const MushafQiraatPanel = dynamic(
   { ssr: false, loading: () => null }
 );
 
-import {
-  type PointerEvent as ReactPointerEvent,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState,  } from "react";;
 import { useRouter } from "next/navigation";
 
 import {
@@ -816,6 +812,67 @@ export function MushafPage({
   }, []);
 
   const router = useRouter();
+
+  // ── Recherche Coran (menu 3 points) ──
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<"partial" | "exact">("partial");
+  const [searchResults, setSearchResults] = useState<
+    Array<{ id: number; surah: number; ayah: number; text: string; page?: number; occurrences?: number; surahName?: string }>
+  >([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  const [searchTotal, setSearchTotal] = useState<number | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestRect, setSuggestRect] = useState<{ left: number; top: number; width: number } | null>(null);
+  const suggestTimerRef = useRef<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (suggestTimerRef.current !== null) {
+      window.clearTimeout(suggestTimerRef.current);
+    }
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    suggestTimerRef.current = window.setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/quran/search/suggest?q=${encodeURIComponent(q)}`,
+        );
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setSuggestions(Array.isArray(data.words) ? data.words : []);
+        console.log("[suggest] query=", q, "words=", data.words);
+      } catch (err) {
+        console.warn("[suggest] fetch failed:", err);
+        setSuggestions([]);
+      }
+    }, 200);
+    return () => {
+      if (suggestTimerRef.current !== null) {
+        window.clearTimeout(suggestTimerRef.current);
+      }
+    };
+  }, [searchQuery]);
+  useEffect(() => {
+    if (!showSuggestions || !searchInputRef.current) return;
+    const update = () => {
+      const el = searchInputRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setSuggestRect({ left: r.left, top: r.bottom + 4, width: r.width });
+    };
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [showSuggestions]);
 
   const [ayahs, setAyahs] = useState<AyahDto[]>([]);
   const [layout, setLayout] = useState<MushafPageLayout | null>(null);
@@ -1745,6 +1802,153 @@ export function MushafPage({
   const [silenceBeforeSelection, setSilenceBeforeSelection] = useState("0");
   const [silenceAfterSelection, setSilenceAfterSelection] = useState("0");
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+
+  // Popup ⋯ — panneau redimensionnable (drag)
+  const [morePopupHeight, setMorePopupHeight] = useState<number | null>(null);
+  const [isDraggingMorePopup, setIsDraggingMorePopup] = useState(false);
+  const morePopupRef = useRef<HTMLDivElement | null>(null);
+  const morePopupDragStartYRef = useRef(0);
+  const morePopupDragStartHeightRef = useRef(0);
+
+  useEffect(() => {
+    if (!isDraggingMorePopup) return;
+    const onMove = (e: PointerEvent) => {
+      const delta = morePopupDragStartYRef.current - e.clientY;
+      const maxH = (typeof window !== "undefined" ? window.innerHeight : 800) - 80;
+      const next = Math.max(200, Math.min(maxH, morePopupDragStartHeightRef.current + delta));
+      setMorePopupHeight(next);
+    };
+    const onUp = () => setIsDraggingMorePopup(false);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [isDraggingMorePopup]);
+  const [menuDetailHeight, setMenuDetailHeight] = useState<number | null>(null);
+  const [isDraggingMenu, setIsDraggingMenu] = useState(false);
+  const menuDragStartYRef = useRef(0);
+  const menuDragStartHeightRef = useRef(0);
+  const menuDetailRef = useRef<HTMLDivElement | null>(null);
+
+  // Menu secondaire : barre repliée (1 ligne) / fenêtre complète
+  const [menuExpanded, setMenuExpanded] = useState(false);
+
+  // ── Menu secondaire : feuille glissable ─────────────────────────────
+  // Barre réduite toujours en haut ; dessous : choix du mode (modePickerOpen)
+  // et/ou détails (moreMenuOpen). Les deux peuvent être ouverts ensemble :
+  // le choix du mode passe alors au-dessus des détails (CSS order).
+  const [menuTools, setMenuTools] = useState(false); // popups des boutons de la barre
+  const [menuSnap, setMenuSnap] = useState<"half" | "full">("half");
+  const sheetDragRef = useRef<{
+    y: number;
+    h: number;
+    max: number;
+    t: number;
+  } | null>(null);
+  const menuView: "modes" | "details" | "both" | "tools" =
+    modePickerOpen && moreMenuOpen
+      ? "both"
+      : modePickerOpen
+        ? "modes"
+        : moreMenuOpen
+          ? "details"
+          : "tools";
+
+  // Rien d'ouvert => la feuille se referme
+  useEffect(() => {
+    if (menuExpanded && !modePickerOpen && !moreMenuOpen && !menuTools) {
+      setMenuExpanded(false);
+    }
+  }, [menuExpanded, modePickerOpen, moreMenuOpen, menuTools]);
+
+  useEffect(() => {
+    if (!menuExpanded) setMenuTools(false);
+  }, [menuExpanded]);
+
+  // Fin du glissement : calage sur fermé / mi-hauteur / pleine page
+  const endSheetDrag = (clientY: number) => {
+    const d = sheetDragRef.current;
+    const el = menuDetailRef.current;
+    sheetDragRef.current = null;
+    if (!d || !el) return;
+    const H = window.innerHeight;
+    const dy = clientY - d.y; // > 0 : vers le bas
+    const speed = dy / Math.max(1, performance.now() - d.t); // px/ms
+    const h = el.getBoundingClientRect().height;
+    el.style.transition = "";
+    el.style.height = "";
+    el.style.maxHeight = "";
+    el.style.minHeight = "";
+    if (Math.abs(dy) < 6) {
+      setMenuSnap((v) => (v === "half" ? "full" : "half")); // simple appui
+      return;
+    }
+    if (dy > 0 && speed > 0.9) {
+      if (menuSnap === "full") setMenuSnap("half");
+      else setMenuExpanded(false);
+      return;
+    }
+    if (dy < 0 && speed < -0.9) {
+      setMenuSnap("full");
+      return;
+    }
+    const half = Math.min(d.max, H * 0.6);
+    if (h < half * 0.6) {
+      setMenuExpanded(false);
+      return;
+    }
+    setMenuSnap(h > half * 1.25 ? "full" : "half");
+  };
+
+
+  useEffect(() => {
+    if (!menuExpanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuExpanded(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuExpanded]);
+
+  useEffect(() => {
+    if (menuExpanded) return;
+    setModePickerOpen(false);
+    setReciterPickerOpen(false);
+    setAyahRepeatToolbarOpen(false);
+    setSelectionRepeatToolbarOpen(false);
+    setMoreMenuOpen(false);
+    setMenuDetailHeight(null);
+  }, [menuExpanded]);
+
+
+  useEffect(() => {
+    if (!isDraggingMenu) return;
+    let lastH = 9999;
+    const onMove = (e: PointerEvent) => {
+      const delta = menuDragStartYRef.current - e.clientY;
+      const maxH = (typeof window !== "undefined" ? window.innerHeight : 800) - 8;
+      const next = Math.max(96, Math.min(maxH, menuDragStartHeightRef.current + delta));
+      lastH = next;
+      setMenuDetailHeight(next);
+    };
+    const onUp = () => {
+      setIsDraggingMenu(false);
+      if (lastH < 150) setMenuExpanded(false); // glisser vers le bas = replier
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [isDraggingMenu]);
+
   const [annotationOptions, setAnnotationOptions] = useState<
     Record<string, boolean>
   >({});
@@ -6342,14 +6546,236 @@ export function MushafPage({
         role="region"
         aria-label="القائمة الثانوية للمصحف"
         dir="rtl"
-        className="mushaf-bottom-menu fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--background)] px-1.5 pt-1.5 pb-[max(0.25rem,env(safe-area-inset-bottom))] shadow-lg"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+        data-expanded={menuExpanded ? "true" : "false"}
+        data-view={menuView}
+        data-snap={menuSnap}
+        onClickCapture={(e) => {
+          const target = e.target as Element;
+          if (target.closest("[data-sheet-close]")) return;
+          const isMode = !!target.closest("[data-menu-opener]");
+          const isMore = !!target.closest('[aria-label="المزيد من الخيارات"]');
+
+          // Bouton du mode / bouton ⋮ : deux interrupteurs indépendants
+          if (isMode || isMore) {
+            e.preventDefault();
+            e.stopPropagation();
+            const nextMode = isMode ? !modePickerOpen : modePickerOpen;
+            const nextMore = isMore ? !moreMenuOpen : moreMenuOpen;
+            setReciterPickerOpen(false);
+            setAyahRepeatToolbarOpen(false);
+            setSelectionRepeatToolbarOpen(false);
+            setMenuTools(false);
+            setModePickerOpen(nextMode);
+            setMoreMenuOpen(nextMore);
+            if (nextMode || nextMore) {
+              if (nextMore && !moreMenuOpen) setMenuSnap("full");
+              else if (!menuExpanded) setMenuSnap("half");
+              setMenuExpanded(true);
+            } else {
+              setMenuExpanded(false);
+            }
+            return;
+          }
+
+          // Autres boutons à popup de la barre (↻¹…) : petite feuille
+          if (
+            target.closest(
+              "[data-menu-toolbar] button[aria-expanded], [data-menu-toolbar] button[aria-haspopup]",
+            ) &&
+            (!menuExpanded || menuView !== "tools")
+          ) {
+            setModePickerOpen(false);
+            setMoreMenuOpen(false);
+            setMenuTools(true);
+            setMenuExpanded(true);
+          }
+        }}
+        className={`mushaf-bottom-menu fixed inset-x-0 bottom-0 border-t border-[var(--border)] bg-[var(--background)] shadow-lg ${
+          menuExpanded ? "z-50 overflow-hidden rounded-t-2xl" : "z-40 px-1 pt-0.5"
+        }`}
+        style={{
+          paddingBottom: menuExpanded
+            ? 0
+            : "calc(env(safe-area-inset-bottom) + 2px)",
+        }}
       >
-        <div className="mx-auto max-h-[22dvh] w-full max-w-3xl overflow-y-auto overscroll-contain">
-          <div className="flex max-w-[min(100vw-2rem,56rem)] flex-col gap-3">
-              <div className="flex flex-wrap items-center justify-center gap-1.5">
+        <style>{`
+          /* ── Feuille ── */
+          [data-menu-sheet] { transition: max-height .2s ease; }
+          [data-expanded="false"] [data-menu-sheet] { height: auto; max-height: none; }
+          [data-expanded="true"] [data-menu-sheet] { height: auto; }
+          [data-expanded="true"][data-snap="half"] [data-menu-sheet] { max-height: 60dvh; }
+          [data-expanded="true"][data-snap="full"] [data-menu-sheet] { max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 12px); }
+          [data-expanded="true"][data-view="tools"] [data-menu-sheet] { max-height: none; min-height: 15rem; }
+          [data-expanded="true"] [data-sheet-body] {
+            flex: 1 0 auto;
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + .75rem);
+          }
+
+          /* ── Ordre vertical : barre > choix du mode > réglages du mode > sélection > recherche ── */
+          [data-menu-toolbar] { order: -10; }
+          [data-tarteel-ctl] { order: -9; }
+          [data-tarteel-ctl]:empty { display: none; }
+          [data-mode-picker] { order: -5; }
+          [data-mode-note] { order: -4; }
+          [data-reciter-picker] { order: -3; }
+          [data-mode-settings],
+          [data-sheet-body] > [aria-label="إعدادات التلاوة"],
+          [data-sheet-body] > [aria-label="إعدادات الاستماع"] { order: -2; }
+          [data-view="details"] [data-mode-note],
+          [data-view="tools"] [data-mode-note],
+          [data-view="tools"] [data-mode-picker] { display: none !important; }
+
+          /* ── Barre réduite sous la poignée (collante) ── */
+          [data-expanded="true"] [data-menu-toolbar]:not([data-wrap]) {
+            position: sticky; top: 44px; z-index: 15;
+            background: var(--background);
+            border-bottom: 1px solid var(--border);
+            padding: .125rem 0 .375rem;
+          }
+          [data-expanded="true"][data-view="tools"] [data-menu-toolbar] { order: 10; margin-top: auto; }
+
+          /* ── Barre réduite : une ligne, centrée, condensée ── */
+          [data-menu-toolbar] {
+            --mh: 30px; justify-content: center; justify-content: safe center;
+            scrollbar-width: none; min-height: 0;
+          }
+          [data-menu-toolbar]::-webkit-scrollbar { display: none; }
+          [data-menu-toolbar] > * { flex-shrink: 0; }
+          [data-menu-toolbar] [role="toolbar"] { flex-shrink: 0 !important; overflow-y: hidden !important; gap: 4px !important; }
+          [data-menu-toolbar] button {
+            height: var(--mh) !important; min-height: 0 !important; min-width: 0 !important;
+            padding: 0 8px !important; font-size: 12px !important; line-height: 1 !important;
+            white-space: nowrap; flex-shrink: 0;
+          }
+          [data-menu-toolbar] button.w-10 { width: var(--mh) !important; padding: 0 !important; }
+          [data-menu-toolbar] button.rounded-full { width: var(--mh) !important; height: var(--mh) !important; padding: 0 !important; }
+          [data-menu-toolbar] [style*="68px"] { width: calc(var(--mh) + 6px) !important; height: calc(var(--mh) + 6px) !important; }
+          [data-menu-toolbar] .h-10 { height: var(--mh) !important; min-height: 0 !important; }
+          [data-menu-toolbar] [role="toolbar"] [aria-live] { min-width: 6rem !important; max-width: 9rem !important; padding: 0 6px !important; font-size: 11px !important; }
+          [data-menu-toolbar] [aria-label="المزيد من الخيارات"] { font-size: 16px !important; padding: 0 6px !important; }
+
+          /* ── Choix du mode : tuiles tactiles ── */
+          [data-mode-picker] {
+            position: static !important; transform: none !important; translate: none !important;
+            width: auto !important; max-width: none !important; max-height: none !important;
+            margin: 0 !important; box-shadow: none !important; overflow: visible !important;
+            border-top-width: 0 !important; padding-top: .25rem !important;
+          }
+          [data-mode-picker] .flex-wrap,
+          [data-mode-picker] [role="menu"] {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+            gap: .5rem;
+          }
+          [data-mode-picker] button {
+            min-height: 48px; font-size: .95rem; border-radius: .75rem;
+            justify-content: center; padding-inline: .75rem;
+          }
+
+          /* ── Détails : lisibles et tactiles sur mobile ── */
+          [data-expanded="true"] [data-sheet-body] > :not([data-menu-toolbar]) {
+            min-width: 0; max-width: 100% !important; overflow-wrap: anywhere;
+          }
+          [data-expanded="true"] [data-sheet-body] > :not([data-menu-toolbar]) button {
+            min-height: 44px; touch-action: manipulation;
+          }
+          [data-expanded="true"] [data-sheet-body] > :not([data-menu-toolbar]) :is(input, select, textarea) {
+            min-height: 44px; font-size: 16px !important; max-width: 100%;
+          }
+        `}</style>
+        <div
+          ref={menuDetailRef}
+          data-menu-sheet
+          className={`mx-auto flex w-full max-w-3xl flex-col overscroll-contain ${
+            menuExpanded ? "overflow-y-auto" : "overflow-visible"
+          }`}
+        >
+          <div
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="اسحب لتغيير ارتفاع القائمة"
+            data-sheet-handle
+            style={{ height: 44 }}
+            className={`${
+              menuExpanded ? "flex" : "hidden"
+            } sticky top-0 z-20 shrink-0 cursor-grab touch-none select-none items-center justify-center rounded-t-2xl bg-[var(--background)] active:cursor-grabbing`}
+            onPointerDown={(e) => {
+              if ((e.target as Element).closest("[data-sheet-close]")) return;
+              const el = menuDetailRef.current;
+              if (!el) return;
+              try {
+                e.currentTarget.setPointerCapture(e.pointerId);
+              } catch {}
+              const h = el.getBoundingClientRect().height;
+              sheetDragRef.current = {
+                y: e.clientY,
+                h,
+                max: Math.min(window.innerHeight - 12, el.scrollHeight),
+                t: performance.now(),
+              };
+              el.style.transition = "none";
+              el.style.maxHeight = "none";
+              el.style.minHeight = "0";
+              el.style.height = `${h}px`;
+            }}
+            onPointerMove={(e) => {
+              const d = sheetDragRef.current;
+              const el = menuDetailRef.current;
+              if (!d || !el) return;
+              el.style.height = `${Math.max(56, Math.min(d.max, d.h + (d.y - e.clientY)))}px`;
+            }}
+            onPointerUp={(e) => endSheetDrag(e.clientY)}
+            onPointerCancel={(e) => endSheetDrag(e.clientY)}
+          >
+            <span className="pointer-events-none absolute start-3 text-xs font-semibold text-[var(--muted-foreground)]">
+              {menuView === "modes"
+                ? "اختيار الوضع"
+                : menuView === "details"
+                  ? "خيارات الوضع"
+                  : menuView === "both"
+                    ? "الوضع والخيارات"
+                    : "أدوات"}
+            </span>
+            <div className="pointer-events-none h-1.5 w-12 rounded-full bg-[var(--muted-foreground)] opacity-60" />
+            <button
+              type="button"
+              data-sheet-close
+              aria-label="إغلاق"
+              title="إغلاق"
+              className="absolute end-1 flex h-10 w-10 items-center justify-center rounded-lg text-base"
+              onClick={() => setMenuExpanded(false)}
+            >
+              ✕
+            </button>
+          </div>
+          <div
+            ref={morePopupRef}
+            data-sheet-body
+            className={`flex w-full min-w-0 flex-col gap-3 ${
+              menuExpanded ? "px-2" : "[&>*:not([data-menu-toolbar])]:hidden"
+            }`}
+          >
+            <div
+              data-menu-toolbar
+              data-wrap={menuExpanded && menuView === "tools" ? "true" : undefined}
+              className={`flex items-center ${
+                menuExpanded && menuView === "tools"
+                  ? "flex-wrap justify-center gap-1.5"
+                  : "w-full min-w-0 flex-nowrap gap-1 overflow-x-auto overflow-y-hidden"
+              }`}
+            >
                 <button
                   type="button"
+                  data-menu-opener
+                  aria-label={
+                    SECONDARY_MODES.find((mode) => mode.id === secondaryMode)
+                      ?.label
+                  }
+                  title={
+                    SECONDARY_MODES.find((mode) => mode.id === secondaryMode)
+                      ?.label
+                  }
                   className="rounded-lg border border-[var(--jannah-green)] bg-[var(--jannah-green)] px-2 py-1.5 text-xs text-white"
                   aria-expanded={modePickerOpen}
                   aria-haspopup="menu"
@@ -6361,11 +6787,8 @@ export function MushafPage({
                   {
                     SECONDARY_MODES.find((mode) => mode.id === secondaryMode)
                       ?.icon
-                  }{" "}
-                  {
-                    SECONDARY_MODES.find((mode) => mode.id === secondaryMode)
-                      ?.label
                   }
+                  
                 </button>
 
                 {secondaryMode === "listening" && (
@@ -6855,7 +7278,7 @@ export function MushafPage({
 
               {(secondaryMode === "tarteel1" ||
                 secondaryMode === "tarteel2") && (
-                <div
+                <div data-tarteel-ctl
                   key={secondaryMode}
                   className="w-full min-w-0 border-t border-[var(--border)] pt-2"
                 >
@@ -6871,7 +7294,7 @@ export function MushafPage({
               {moreMenuOpen && (
                 <>
                   <div
-                    className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
+                    className="flex min-w-[min(92vw,42rem)] flex-col gap-3 border-t border-[var(--border)] pt-3"
                     role="menu"
                     aria-label="تحديد"
                   >
@@ -7182,6 +7605,189 @@ export function MushafPage({
                   >
                     اعتماد التحديد
                   </button>
+
+                  <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-3">
+                    <div className="text-center text-sm font-semibold">
+                      البحث في القرآن
+                    </div>
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!searchQuery.trim()) return;
+                        setSearchLoading(true);
+                        setSearchError(null);
+                        setSearchTotal(null);
+                        try {
+                          const res = await fetch(
+                            `/api/quran/search?q=${encodeURIComponent(searchQuery)}&mode=${searchMode}`,
+                          );
+                          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                          const data = await res.json();
+                          setSearchResults(data.results ?? []);
+                          setSearchTotal(typeof data.total === "number" ? data.total : null);
+                          setShowSuggestions(false);
+                        } catch {
+                          setSearchError("تعذر إجراء البحث. حاول مرة أخرى.");
+                          setSearchResults([]);
+                        } finally {
+                          setSearchLoading(false);
+                        }
+                      }}
+                      className="flex flex-col gap-2 sm:flex-row"
+                      role="search"
+                    >
+                      <label htmlFor="menu-quran-search" className="sr-only">
+                        البحث في القرآن
+                      </label>
+                      <div className="relative flex-1">
+                        <input
+                          ref={searchInputRef}
+                          id="menu-quran-search"
+                          name="quran-word-input"
+                          type="text"
+                          inputMode="search"
+                          dir="rtl"
+                          placeholder="ابحث في القرآن..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          onFocus={() => {
+                            const el = searchInputRef.current;
+                            if (el) {
+                              const r = el.getBoundingClientRect();
+                              setSuggestRect({ left: r.left, top: r.bottom + 4, width: r.width });
+                            }
+                            setShowSuggestions(true);
+                          }}
+                          onBlur={() =>
+                            window.setTimeout(() => setShowSuggestions(false), 200)
+                          }
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          className="min-h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 outline-none focus:ring-2 focus:ring-[var(--foreground)]"
+                        />
+                      </div>
+                      {showSuggestions &&
+                        suggestions.length > 0 &&
+                        suggestRect &&
+                        typeof document !== "undefined" &&
+                        createPortal(
+                          <ul
+                            dir="rtl"
+                            style={{
+                              position: "fixed",
+                              left: suggestRect.left,
+                              top: suggestRect.top,
+                              width: suggestRect.width,
+                              zIndex: 9999,
+                            }}
+                            className="max-h-56 overflow-y-auto overscroll-contain rounded-lg border border-[var(--border)] bg-[var(--background)] shadow-xl"
+                          >
+                            {suggestions.map((w) => (
+                              <li key={w}>
+                                <button
+                                  type="button"
+                                  dir="rtl"
+                                  className="w-full px-3 py-2 text-right text-sm hover:bg-[var(--border)]"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    setSearchQuery(w);
+                                    setShowSuggestions(false);
+                                  }}
+                                >
+                                  {w}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>,
+                          document.body,
+                        )}
+                      <label htmlFor="menu-search-mode" className="sr-only">
+                        نوع البحث
+                      </label>
+                      <select
+                        id="menu-search-mode"
+                        value={searchMode}
+                        onChange={(e) =>
+                          setSearchMode(e.target.value as "partial" | "exact")
+                        }
+                        className="min-h-10 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3"
+                      >
+                        <option value="partial">بحث جزئي</option>
+                        <option value="exact">بحث مطابق</option>
+                      </select>
+                      <button
+                        type="submit"
+                        disabled={!searchQuery.trim() || searchLoading}
+                        className="min-h-10 rounded-lg bg-[var(--foreground)] px-4 font-semibold text-[var(--background)] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {searchLoading ? "…" : "بحث"}
+                      </button>
+                    </form>
+                    {searchError && (
+                      <p className="text-xs text-red-600" role="alert">
+                        {searchError}
+                      </p>
+                    )}
+                    {searchTotal !== null && (
+                      <div className="text-center text-xs font-semibold text-[var(--muted)]">
+                        {searchTotal === 0
+                          ? "لا توجد نتائج"
+                          : searchTotal > searchResults.length
+                            ? `${searchTotal} نتيجة (عرض ${searchResults.length})`
+                            : `${searchTotal} نتيجة`}
+                      </div>
+                    )}
+                    {searchResults.length > 0 && (
+                      <ul className="max-h-64 space-y-1 overflow-y-auto overscroll-contain">
+                        {searchResults.map((h, i) => (
+                          <li
+                            key={`${h.surah}-${h.ayah}-${i}`}
+                            className="cursor-pointer rounded-lg border border-[var(--border)] p-2 text-sm transition-colors hover:bg-[var(--background)] focus:outline-none focus:ring-2 focus:ring-[var(--foreground)]"
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              if (!h.id || !h.page) return;
+                              setMoreMenuOpen(false);
+                              router.push(
+                                `/coran/${riwayaId}/page/${h.page}?ayah=${h.id}`,
+                              );
+                            }}
+                            onKeyDown={(e) => {
+                              if (!h.id || !h.page) return;
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setMoreMenuOpen(false);
+                                router.push(
+                                  `/coran/${riwayaId}/page/${h.page}?ayah=${h.id}`,
+                                );
+                              }
+                            }}
+                          >
+                            <div className="flex items-center justify-between gap-2 text-xs text-[var(--muted)]">
+                              <span>
+                                {h.surahName ? `${h.surahName} · ` : ""}
+                                {h.surah}:{h.ayah}
+                                {h.page ? ` · صفحة ${h.page}` : ""}
+                              </span>
+                              {typeof h.occurrences === "number" && h.occurrences > 0 ? (
+                                <span
+                                  className="shrink-0 rounded bg-[var(--foreground)] px-2 py-0.5 text-[var(--background)]"
+                                  title="عدد المرات في الآية"
+                                >
+                                  {h.occurrences}×
+                                </span>
+                              ) : null}
+                            </div>
+                            <p dir="rtl" className="mt-1">
+                              {h.text}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </>
               )}
 
@@ -7284,7 +7890,7 @@ export function MushafPage({
                 )}
 
               {moreMenuOpen && secondaryMode === "recitation" && (
-                <div
+                <div data-mode-settings
                   className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
                   role="menu"
                   aria-label="إعدادات التلاوة"
@@ -7348,7 +7954,7 @@ export function MushafPage({
               )}
 
               {moreMenuOpen && secondaryMode === "listening" && (
-                <div
+                <div data-mode-settings
                   className="flex max-h-[75dvh] min-w-[min(92vw,42rem)] flex-col gap-3 overflow-y-auto overscroll-contain border-t border-[var(--border)] pt-3"
                   role="menu"
                   aria-label="إعدادات الاستماع"
@@ -7566,7 +8172,7 @@ export function MushafPage({
               )}
 
               {modePickerOpen && (
-                <div className="space-y-3 border-t border-[var(--border)] pt-3">
+                <div data-mode-picker className="space-y-3 border-t border-[var(--border)] pt-3">
                   <div
                     className="grid grid-cols-2 justify-center gap-2 sm:grid-cols-5"
                     role="menu"
@@ -7594,7 +8200,7 @@ export function MushafPage({
               )}
 
               {reciterPickerOpen && secondaryMode === "listening" && (
-                <div
+                <div data-reciter-picker
                   className="flex flex-wrap justify-center gap-2 border-t border-[var(--border)] pt-3"
                   role="menu"
                   aria-label="اختيار القارئ"
@@ -7639,7 +8245,7 @@ export function MushafPage({
                 </div>
               )}
 
-              <div className="text-center text-xs text-[var(--muted)]">
+              <div className="text-center text-xs text-[var(--muted)]" data-mode-note>
                 تغيير الوضع يحافظ على الصفحة والتحديد والسياق الحالي.
               </div>
             </div>

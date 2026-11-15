@@ -12,6 +12,24 @@ export function RegisterServiceWorker() {
       window.location.hostname === "www.irtaki.com";
     if (process.env.NODE_ENV !== "production" && !isProdHost && window.location.hostname !== "localhost") return;
 
+    // next dev : jamais de service worker. Ses caches servent des chunks perimes
+    // ("module factory is not available"). On nettoie ceux deja installes.
+    if (process.env.NODE_ENV !== "production") {
+      if ("serviceWorker" in navigator) {
+        void navigator.serviceWorker
+          .getRegistrations()
+          .then((registrations) =>
+            Promise.all(registrations.map((registration) => registration.unregister())),
+          );
+      }
+      if ("caches" in window) {
+        void caches
+          .keys()
+          .then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
+      }
+      return;
+    }
+
     const onLoad = () => {
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })

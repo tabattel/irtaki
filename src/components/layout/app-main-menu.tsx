@@ -9,6 +9,47 @@ import { useEffect, useState } from "react";
 import { AccountPanel } from "./account-panel";
 import { DownloadMushafButton } from "@/components/pwa/download-mushaf-button";
 
+function GotoMenuLink(props: { onClick?: () => void; children?: React.ReactNode; active?: boolean }) {
+  const pathname = usePathname();
+  const m = pathname?.match(/^\/coran\/([^/]+)/);
+  const riwayaId = m?.[1] ?? "10";
+  return (
+    <MainMenuLink href={`/coran/${riwayaId}/goto`} label="انتقل إلى" onClick={props.onClick}>
+      {props.children}
+    </MainMenuLink>
+  );
+}
+
+function MobileGotoMenuLink(props: { onClick?: () => void; active?: boolean }) {
+  const pathname = usePathname();
+  const m = pathname?.match(/^\/coran\/([^/]+)/);
+  const riwayaId = m?.[1] ?? "10";
+  return <MobileMenuLink href={`/coran/${riwayaId}/goto`} label="انتقل إلى" onClick={props.onClick} />;
+}
+
+function getSearchHref(pathname: string | null): string {
+  const m = pathname?.match(/^\/coran\/([^/]+)/);
+  return `/coran/${m?.[1] ?? "10"}/search`;
+}
+
+function SearchMenuLink(props: { onClick?: () => void; children?: React.ReactNode }) {
+  const pathname = usePathname();
+  const m = pathname?.match(/^\/coran\/([^/]+)/);
+  const href = `/coran/${m?.[1] ?? "10"}/search`;
+  return (
+    <MainMenuLink href={href} label="البحث" onClick={props.onClick}>
+      {props.children}
+    </MainMenuLink>
+  );
+}
+
+function MobileSearchMenuLink(props: { onClick?: () => void }) {
+  const pathname = usePathname();
+  const m = pathname?.match(/^\/coran\/([^/]+)/);
+  const href = `/coran/${m?.[1] ?? "10"}/search`;
+  return <MobileMenuLink href={href} label="البحث" onClick={props.onClick} />;
+}
+
 type MainPanel = "goto" | "account" | "settings" | null;
 
 function HomeIcon() {
@@ -129,9 +170,6 @@ function HistoryIcon() {
   );
 }
 
-
-
-
 function ExercisesIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -150,7 +188,6 @@ function DataIcon() {
     </svg>
   );
 }
-
 
 function ObjectivesIcon() {
   return (
@@ -275,8 +312,6 @@ export function AppMainMenu() {
       window.removeEventListener("irtaki:open-account-panel", handler);
   }, []);
 
-  
-
   function closeMenu() {
     setPanel(null);
     setMobileOpen(false);
@@ -321,12 +356,12 @@ export function AppMainMenu() {
               <MainMenuLink href="/" label="الرئيسية" onClick={closeMenu}>
                 <HomeIcon />
               </MainMenuLink>
-              <MainMenuLink href="/recherche" label="البحث" onClick={closeMenu}>
+              <SearchMenuLink onClick={closeMenu}>
                 <SearchIcon />
-              </MainMenuLink>
-              <MainMenuButton label="انتقل إلى" onClick={() => togglePanel("goto")} active={panel === "goto"}>
+              </SearchMenuLink>
+<GotoMenuLink onClick={closeMenu}>
                 <GoToIcon />
-              </MainMenuButton>
+              </GotoMenuLink>
               <div className="mx-1 h-6 w-px shrink-0 bg-[var(--jannah-gold)]/40" aria-hidden="true" />
               <MainMenuLink href="/objectifs" label="الأهداف" onClick={closeMenu}>
                 <ObjectivesIcon />
@@ -355,7 +390,6 @@ export function AppMainMenu() {
               ) : null}
             </nav>
 
-            
           </div>
 
           {panel ? (
@@ -379,28 +413,6 @@ export function AppMainMenu() {
                   </svg>
                 </button>
               </div>
-
-              {panel === "goto" ? (
-                <div className="space-y-3 text-sm">
-                  <p className="text-[var(--muted)]">
-                    اختر الصفحة أو السورة أو موضع القراءة للانتقال إليه.
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <PanelButton>الصفحة</PanelButton>
-                    <PanelButton>السورة</PanelButton>
-                    <PanelButton>الآية</PanelButton>
-                    <PanelButton>الجزء</PanelButton>
-                    <PanelButton>الحزب</PanelButton>
-                    <PanelButton>النصف</PanelButton>
-                    <PanelButton>الربع</PanelButton>
-                  </div>
-
-                  <p className="text-xs text-[var(--muted)]">
-                    سيتم ربط الحقول تلقائيًا ببيانات المصحف.
-                  </p>
-                </div>
-              ) : null}
 
               {panel === "account" ? <AccountPanel /> : null}
 
@@ -432,10 +444,10 @@ export function AppMainMenu() {
               <nav className="flex flex-col p-2" aria-label="القائمة الرئيسية - الهاتف">
                 <MushafContextHeader />
 
-                <CollapsibleSection title="التنقل" paths={["/", "/recherche"]}>
+                <CollapsibleSection title="التنقل" paths={["/", "/coran"]}>
                   <MobileMenuLink href="/" label="الرئيسية" onClick={closeMenu} />
-                  <MobileMenuLink href="/recherche" label="البحث" onClick={closeMenu} />
-                  <MobileMenuButton label="انتقل إلى" onClick={() => { setPanel("goto"); setMobileOpen(false); }} />
+                  <MobileSearchMenuLink onClick={closeMenu} />
+<MobileGotoMenuLink onClick={closeMenu} />
                 </CollapsibleSection>
 
                 <CollapsibleSection title="المسار" paths={["/objectifs", "/statistiques", "/historique", "/exercices"]}>
@@ -460,8 +472,6 @@ export function AppMainMenu() {
       </header>
   );
 }
-
-
 
 function CollapsibleSection({
   title,
