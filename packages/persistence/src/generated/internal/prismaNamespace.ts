@@ -400,6 +400,7 @@ export const ModelName = {
   Qiraa: 'Qiraa',
   Riwaya: 'Riwaya',
   Tariq: 'Tariq',
+  Wajh: 'Wajh',
   Mushaf: 'Mushaf',
   Surah: 'Surah',
   Ayah: 'Ayah',
@@ -434,7 +435,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "qiraa" | "riwaya" | "tariq" | "mushaf" | "surah" | "ayah" | "reciter" | "audioTrack" | "annotation" | "user" | "account" | "session" | "childProfile" | "learner" | "learnerPreference" | "goal" | "goalTarget" | "activity" | "activityResult" | "progressRecord" | "activityAyahTrace" | "passwordResetToken"
+    modelProps: "qiraa" | "riwaya" | "tariq" | "wajh" | "mushaf" | "surah" | "ayah" | "reciter" | "audioTrack" | "annotation" | "user" | "account" | "session" | "childProfile" | "learner" | "learnerPreference" | "goal" | "goalTarget" | "activity" | "activityResult" | "progressRecord" | "activityAyahTrace" | "passwordResetToken"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -657,6 +658,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.TariqCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.TariqCountAggregateOutputType> | number
+        }
+      }
+    }
+    Wajh: {
+      payload: Prisma.$WajhPayload<ExtArgs>
+      fields: Prisma.WajhFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WajhFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WajhPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WajhFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WajhPayload>
+        }
+        findFirst: {
+          args: Prisma.WajhFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WajhPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WajhFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WajhPayload>
+        }
+        findMany: {
+          args: Prisma.WajhFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WajhPayload>[]
+        }
+        create: {
+          args: Prisma.WajhCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WajhPayload>
+        }
+        createMany: {
+          args: Prisma.WajhCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.WajhCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WajhPayload>[]
+        }
+        delete: {
+          args: Prisma.WajhDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WajhPayload>
+        }
+        update: {
+          args: Prisma.WajhUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WajhPayload>
+        }
+        deleteMany: {
+          args: Prisma.WajhDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WajhUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.WajhUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WajhPayload>[]
+        }
+        upsert: {
+          args: Prisma.WajhUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WajhPayload>
+        }
+        aggregate: {
+          args: Prisma.WajhAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWajh>
+        }
+        groupBy: {
+          args: Prisma.WajhGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WajhGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WajhCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WajhCountAggregateOutputType> | number
         }
       }
     }
@@ -2134,6 +2209,19 @@ export const TariqScalarFieldEnum = {
 export type TariqScalarFieldEnum = (typeof TariqScalarFieldEnum)[keyof typeof TariqScalarFieldEnum]
 
 
+export const WajhScalarFieldEnum = {
+  id: 'id',
+  tariqId: 'tariqId',
+  name: 'name',
+  position: 'position',
+  isDefault: 'isDefault',
+  isActive: 'isActive',
+  createdAt: 'createdAt'
+} as const
+
+export type WajhScalarFieldEnum = (typeof WajhScalarFieldEnum)[keyof typeof WajhScalarFieldEnum]
+
+
 export const MushafScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -2484,6 +2572,27 @@ export type ListEnumQiraaRegionFieldRefInput<$PrismaModel> = FieldRefInputType<$
 
 
 /**
+ * Reference to a field of type 'Boolean'
+ */
+export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+/**
+ * Reference to a field of type 'DateTime'
+ */
+export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
+    
+
+
+/**
+ * Reference to a field of type 'DateTime[]'
+ */
+export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+/**
  * Reference to a field of type 'SurahRevelationType'
  */
 export type EnumSurahRevelationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SurahRevelationType'>
@@ -2508,20 +2617,6 @@ export type EnumAudioFormatFieldRefInput<$PrismaModel> = FieldRefInputType<$Pris
  * Reference to a field of type 'AudioFormat[]'
  */
 export type ListEnumAudioFormatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AudioFormat[]'>
-    
-
-
-/**
- * Reference to a field of type 'DateTime'
- */
-export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
-    
-
-
-/**
- * Reference to a field of type 'DateTime[]'
- */
-export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
     
 
 
@@ -2634,13 +2729,6 @@ export type EnumGoalStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$Prism
  * Reference to a field of type 'GoalStatus[]'
  */
 export type ListEnumGoalStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'GoalStatus[]'>
-    
-
-
-/**
- * Reference to a field of type 'Boolean'
- */
-export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
     
 
 
@@ -2853,6 +2941,7 @@ export type GlobalOmitConfig = {
   qiraa?: Prisma.QiraaOmit
   riwaya?: Prisma.RiwayaOmit
   tariq?: Prisma.TariqOmit
+  wajh?: Prisma.WajhOmit
   mushaf?: Prisma.MushafOmit
   surah?: Prisma.SurahOmit
   ayah?: Prisma.AyahOmit

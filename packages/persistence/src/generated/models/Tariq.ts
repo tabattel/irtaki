@@ -205,6 +205,7 @@ export type TariqWhereInput = {
   name?: Prisma.StringFilter<"Tariq"> | string
   riwayaId?: Prisma.IntFilter<"Tariq"> | number
   riwaya?: Prisma.XOR<Prisma.RiwayaScalarRelationFilter, Prisma.RiwayaWhereInput>
+  wujuh?: Prisma.WajhListRelationFilter
 }
 
 export type TariqOrderByWithRelationInput = {
@@ -212,6 +213,7 @@ export type TariqOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   riwayaId?: Prisma.SortOrder
   riwaya?: Prisma.RiwayaOrderByWithRelationInput
+  wujuh?: Prisma.WajhOrderByRelationAggregateInput
 }
 
 export type TariqWhereUniqueInput = Prisma.AtLeast<{
@@ -222,6 +224,7 @@ export type TariqWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"Tariq"> | string
   riwayaId?: Prisma.IntFilter<"Tariq"> | number
   riwaya?: Prisma.XOR<Prisma.RiwayaScalarRelationFilter, Prisma.RiwayaWhereInput>
+  wujuh?: Prisma.WajhListRelationFilter
 }, "id">
 
 export type TariqOrderByWithAggregationInput = {
@@ -248,24 +251,28 @@ export type TariqCreateInput = {
   id: number
   name: string
   riwaya: Prisma.RiwayaCreateNestedOneWithoutTariqsInput
+  wujuh?: Prisma.WajhCreateNestedManyWithoutTariqInput
 }
 
 export type TariqUncheckedCreateInput = {
   id: number
   name: string
   riwayaId: number
+  wujuh?: Prisma.WajhUncheckedCreateNestedManyWithoutTariqInput
 }
 
 export type TariqUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   riwaya?: Prisma.RiwayaUpdateOneRequiredWithoutTariqsNestedInput
+  wujuh?: Prisma.WajhUpdateManyWithoutTariqNestedInput
 }
 
 export type TariqUncheckedUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   riwayaId?: Prisma.IntFieldUpdateOperationsInput | number
+  wujuh?: Prisma.WajhUncheckedUpdateManyWithoutTariqNestedInput
 }
 
 export type TariqCreateManyInput = {
@@ -323,6 +330,11 @@ export type TariqSumOrderByAggregateInput = {
   riwayaId?: Prisma.SortOrder
 }
 
+export type TariqScalarRelationFilter = {
+  is?: Prisma.TariqWhereInput
+  isNot?: Prisma.TariqWhereInput
+}
+
 export type TariqCreateNestedManyWithoutRiwayaInput = {
   create?: Prisma.XOR<Prisma.TariqCreateWithoutRiwayaInput, Prisma.TariqUncheckedCreateWithoutRiwayaInput> | Prisma.TariqCreateWithoutRiwayaInput[] | Prisma.TariqUncheckedCreateWithoutRiwayaInput[]
   connectOrCreate?: Prisma.TariqCreateOrConnectWithoutRiwayaInput | Prisma.TariqCreateOrConnectWithoutRiwayaInput[]
@@ -365,14 +377,30 @@ export type TariqUncheckedUpdateManyWithoutRiwayaNestedInput = {
   deleteMany?: Prisma.TariqScalarWhereInput | Prisma.TariqScalarWhereInput[]
 }
 
+export type TariqCreateNestedOneWithoutWujuhInput = {
+  create?: Prisma.XOR<Prisma.TariqCreateWithoutWujuhInput, Prisma.TariqUncheckedCreateWithoutWujuhInput>
+  connectOrCreate?: Prisma.TariqCreateOrConnectWithoutWujuhInput
+  connect?: Prisma.TariqWhereUniqueInput
+}
+
+export type TariqUpdateOneRequiredWithoutWujuhNestedInput = {
+  create?: Prisma.XOR<Prisma.TariqCreateWithoutWujuhInput, Prisma.TariqUncheckedCreateWithoutWujuhInput>
+  connectOrCreate?: Prisma.TariqCreateOrConnectWithoutWujuhInput
+  upsert?: Prisma.TariqUpsertWithoutWujuhInput
+  connect?: Prisma.TariqWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TariqUpdateToOneWithWhereWithoutWujuhInput, Prisma.TariqUpdateWithoutWujuhInput>, Prisma.TariqUncheckedUpdateWithoutWujuhInput>
+}
+
 export type TariqCreateWithoutRiwayaInput = {
   id: number
   name: string
+  wujuh?: Prisma.WajhCreateNestedManyWithoutTariqInput
 }
 
 export type TariqUncheckedCreateWithoutRiwayaInput = {
   id: number
   name: string
+  wujuh?: Prisma.WajhUncheckedCreateNestedManyWithoutTariqInput
 }
 
 export type TariqCreateOrConnectWithoutRiwayaInput = {
@@ -410,6 +438,46 @@ export type TariqScalarWhereInput = {
   riwayaId?: Prisma.IntFilter<"Tariq"> | number
 }
 
+export type TariqCreateWithoutWujuhInput = {
+  id: number
+  name: string
+  riwaya: Prisma.RiwayaCreateNestedOneWithoutTariqsInput
+}
+
+export type TariqUncheckedCreateWithoutWujuhInput = {
+  id: number
+  name: string
+  riwayaId: number
+}
+
+export type TariqCreateOrConnectWithoutWujuhInput = {
+  where: Prisma.TariqWhereUniqueInput
+  create: Prisma.XOR<Prisma.TariqCreateWithoutWujuhInput, Prisma.TariqUncheckedCreateWithoutWujuhInput>
+}
+
+export type TariqUpsertWithoutWujuhInput = {
+  update: Prisma.XOR<Prisma.TariqUpdateWithoutWujuhInput, Prisma.TariqUncheckedUpdateWithoutWujuhInput>
+  create: Prisma.XOR<Prisma.TariqCreateWithoutWujuhInput, Prisma.TariqUncheckedCreateWithoutWujuhInput>
+  where?: Prisma.TariqWhereInput
+}
+
+export type TariqUpdateToOneWithWhereWithoutWujuhInput = {
+  where?: Prisma.TariqWhereInput
+  data: Prisma.XOR<Prisma.TariqUpdateWithoutWujuhInput, Prisma.TariqUncheckedUpdateWithoutWujuhInput>
+}
+
+export type TariqUpdateWithoutWujuhInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  riwaya?: Prisma.RiwayaUpdateOneRequiredWithoutTariqsNestedInput
+}
+
+export type TariqUncheckedUpdateWithoutWujuhInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  riwayaId?: Prisma.IntFieldUpdateOperationsInput | number
+}
+
 export type TariqCreateManyRiwayaInput = {
   id: number
   name: string
@@ -418,11 +486,13 @@ export type TariqCreateManyRiwayaInput = {
 export type TariqUpdateWithoutRiwayaInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  wujuh?: Prisma.WajhUpdateManyWithoutTariqNestedInput
 }
 
 export type TariqUncheckedUpdateWithoutRiwayaInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  wujuh?: Prisma.WajhUncheckedUpdateManyWithoutTariqNestedInput
 }
 
 export type TariqUncheckedUpdateManyWithoutRiwayaInput = {
@@ -431,12 +501,43 @@ export type TariqUncheckedUpdateManyWithoutRiwayaInput = {
 }
 
 
+/**
+ * Count Type TariqCountOutputType
+ */
+
+export type TariqCountOutputType = {
+  wujuh: number
+}
+
+export type TariqCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  wujuh?: boolean | TariqCountOutputTypeCountWujuhArgs
+}
+
+/**
+ * TariqCountOutputType without action
+ */
+export type TariqCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the TariqCountOutputType
+   */
+  select?: Prisma.TariqCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * TariqCountOutputType without action
+ */
+export type TariqCountOutputTypeCountWujuhArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.WajhWhereInput
+}
+
 
 export type TariqSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
   riwayaId?: boolean
   riwaya?: boolean | Prisma.RiwayaDefaultArgs<ExtArgs>
+  wujuh?: boolean | Prisma.Tariq$wujuhArgs<ExtArgs>
+  _count?: boolean | Prisma.TariqCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["tariq"]>
 
 export type TariqSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -462,6 +563,8 @@ export type TariqSelectScalar = {
 export type TariqOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "riwayaId", ExtArgs["result"]["tariq"]>
 export type TariqInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   riwaya?: boolean | Prisma.RiwayaDefaultArgs<ExtArgs>
+  wujuh?: boolean | Prisma.Tariq$wujuhArgs<ExtArgs>
+  _count?: boolean | Prisma.TariqCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TariqIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   riwaya?: boolean | Prisma.RiwayaDefaultArgs<ExtArgs>
@@ -474,6 +577,7 @@ export type $TariqPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   name: "Tariq"
   objects: {
     riwaya: Prisma.$RiwayaPayload<ExtArgs>
+    wujuh: Prisma.$WajhPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -874,6 +978,7 @@ readonly fields: TariqFieldRefs;
 export interface Prisma__TariqClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   riwaya<T extends Prisma.RiwayaDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RiwayaDefaultArgs<ExtArgs>>): Prisma.Prisma__RiwayaClient<runtime.Types.Result.GetResult<Prisma.$RiwayaPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  wujuh<T extends Prisma.Tariq$wujuhArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tariq$wujuhArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WajhPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1304,6 +1409,30 @@ export type TariqDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Limit how many Tariqs to delete.
    */
   limit?: number
+}
+
+/**
+ * Tariq.wujuh
+ */
+export type Tariq$wujuhArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Wajh
+   */
+  select?: Prisma.WajhSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Wajh
+   */
+  omit?: Prisma.WajhOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WajhInclude<ExtArgs> | null
+  where?: Prisma.WajhWhereInput
+  orderBy?: Prisma.WajhOrderByWithRelationInput | Prisma.WajhOrderByWithRelationInput[]
+  cursor?: Prisma.WajhWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.WajhScalarFieldEnum | Prisma.WajhScalarFieldEnum[]
 }
 
 /**

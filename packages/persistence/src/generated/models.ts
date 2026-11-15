@@ -11,6 +11,7 @@
 export type * from './models/Qiraa'
 export type * from './models/Riwaya'
 export type * from './models/Tariq'
+export type * from './models/Wajh'
 export type * from './models/Mushaf'
 export type * from './models/Surah'
 export type * from './models/Ayah'

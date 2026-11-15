@@ -57,6 +57,11 @@ export type Riwaya = Prisma.RiwayaModel
  */
 export type Tariq = Prisma.TariqModel
 /**
+ * Model Wajh
+ * 
+ */
+export type Wajh = Prisma.WajhModel
+/**
  * Model Mushaf
  * 
  */

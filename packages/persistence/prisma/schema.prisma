@@ -33,8 +33,24 @@ model Tariq {
   name     String
   riwayaId Int
   riwaya   Riwaya @relation(fields: [riwayaId], references: [id])
+  wujuh    Wajh[]
 
   @@index([riwayaId])
+}
+
+// Variante de récitation (wajh) propre à un Tariq : zéro, un ou plusieurs par Tariq.
+model Wajh {
+  id        Int      @id @default(autoincrement())
+  tariqId   Int
+  name      String
+  position  Int      @default(0)
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  tariq     Tariq    @relation(fields: [tariqId], references: [id])
+
+  @@unique([tariqId, name])
+  @@index([tariqId])
 }
 
 model Mushaf {

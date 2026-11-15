@@ -54,6 +54,7 @@ export const ModelName = {
   Qiraa: 'Qiraa',
   Riwaya: 'Riwaya',
   Tariq: 'Tariq',
+  Wajh: 'Wajh',
   Mushaf: 'Mushaf',
   Surah: 'Surah',
   Ayah: 'Ayah',
@@ -118,6 +119,19 @@ export const TariqScalarFieldEnum = {
 } as const
 
 export type TariqScalarFieldEnum = (typeof TariqScalarFieldEnum)[keyof typeof TariqScalarFieldEnum]
+
+
+export const WajhScalarFieldEnum = {
+  id: 'id',
+  tariqId: 'tariqId',
+  name: 'name',
+  position: 'position',
+  isDefault: 'isDefault',
+  isActive: 'isActive',
+  createdAt: 'createdAt'
+} as const
+
+export type WajhScalarFieldEnum = (typeof WajhScalarFieldEnum)[keyof typeof WajhScalarFieldEnum]
 
 
 export const MushafScalarFieldEnum = {
