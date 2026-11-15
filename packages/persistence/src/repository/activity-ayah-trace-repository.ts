@@ -247,9 +247,22 @@ export class ActivityAyahTraceRepository {
             action: true,
             startedAt: true,
             endedAt: true,
+            riwayaId: true,
+            tariqId: true,
             result: {
               select: {
                 createdAt: true,
+              },
+            },
+            riwaya: {
+              select: {
+                shortName: true,
+                fullName: true,
+              },
+            },
+            tariq: {
+              select: {
+                name: true,
               },
             },
           },
@@ -279,6 +292,11 @@ export class ActivityAyahTraceRepository {
       pageNumber: trace.mushafPageNumber ?? trace.ayah.pageNumber,
       lineNumbers: trace.lineNumbers,
       pageLineCount: trace.pageLineCount,
-    }));
+          riwayaId: trace.activity.riwayaId,
+      tariqId: trace.activity.tariqId,
+      riwayaShortName: trace.activity.riwaya?.shortName ?? null,
+      riwayaFullName: trace.activity.riwaya?.fullName ?? null,
+      tariqName: trace.activity.tariq?.name ?? null,
+}));
   }
 }

@@ -9,6 +9,8 @@ export type StartActivityInput = {
   endedAt?: Date;
   durationSec?: number;
   notes?: string;
+  riwayaId?: number;
+  tariqId?: number;
 };
 
 type GoalRecord = LearningGoal & {

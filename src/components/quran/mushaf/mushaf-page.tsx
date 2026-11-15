@@ -2981,6 +2981,7 @@ export function MushafPage({
           intent: "complete",
           learnerId,
           action,
+          riwayaId,
           ayahIds,
           ...(pageMetadata
             ? {

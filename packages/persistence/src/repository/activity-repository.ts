@@ -17,11 +17,15 @@ export class ActivityRepository {
       | "tathbit"
       | "qiraa"
       | "khatma"
-      | "tahajjud";
+      | "tahajjud"
+      | "tarteel1"
+      | "tarteel2";
     startedAt: Date;
     endedAt?: Date;
     durationSec?: number;
     notes?: string;
+    riwayaId?: number;
+    tariqId?: number;
   }): Promise<Activity> {
     return prisma.activity.create({
       data: {
@@ -32,6 +36,8 @@ export class ActivityRepository {
         endedAt: input.endedAt,
         durationSec: input.durationSec,
         notes: input.notes,
+        riwayaId: input.riwayaId,
+        tariqId: input.tariqId,
       },
     });
   }

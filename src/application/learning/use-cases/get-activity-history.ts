@@ -14,6 +14,11 @@ export type ActivityHistoryTrace = {
   pageNumber: number;
   lineNumbers?: number[];
   pageLineCount?: number | null;
+  riwayaId?: number | null;
+  tariqId?: number | null;
+  riwayaShortName?: string | null;
+  riwayaFullName?: string | null;
+  tariqName?: string | null;
 };
 
 export type GetActivityHistoryDependencies = {
@@ -68,6 +73,11 @@ export async function getActivityHistory(
         trace.startedAt
       ).toISOString(),
       startedAt: trace.startedAt.toISOString(),
+      riwayaId: trace.riwayaId ?? null,
+      tariqId: trace.tariqId ?? null,
+      riwayaShortName: trace.riwayaShortName ?? null,
+      riwayaFullName: trace.riwayaFullName ?? null,
+      tariqName: trace.tariqName ?? null,
     })),
   };
 }

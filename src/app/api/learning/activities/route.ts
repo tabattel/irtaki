@@ -221,11 +221,27 @@ export async function POST(request: Request) {
       // chacun leur propre ProgressRecord lors de la finalisation.
       const selectedGoal = compatibleGoals[0] ?? null;
 
+      const riwayaId =
+        typeof body.riwayaId === "number" &&
+        Number.isInteger(body.riwayaId) &&
+        body.riwayaId > 0
+          ? body.riwayaId
+          : undefined;
+
+      const tariqId =
+        typeof body.tariqId === "number" &&
+        Number.isInteger(body.tariqId) &&
+        body.tariqId > 0
+          ? body.tariqId
+          : undefined;
+
       const created = await engine.startActivity(user.id, {
         learnerId: body.learnerId,
         action: body.action as TaskAction,
         startedAt,
         ...(selectedGoal ? { goalId: selectedGoal.id } : {}),
+        ...(riwayaId !== undefined ? { riwayaId } : {}),
+        ...(tariqId !== undefined ? { tariqId } : {}),
       });
 
       const activityId = (created as { id?: unknown } | null)?.id;
