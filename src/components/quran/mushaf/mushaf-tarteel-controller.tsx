@@ -10,6 +10,7 @@ import {
 import { MushafTarteelRecognitionCapture } from "./mushaf-tarteel-recognition-capture";
 import { MushafTarteelRecognitionClient } from "./mushaf-tarteel-recognition-client";
 
+import { ErrorAlert } from "@/components/ui/error-alert";
 type TarteelMode = "tarteel1" | "tarteel2";
 type ControllerStatus =
   | "idle"
@@ -97,6 +98,29 @@ function microphoneErrorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
     : "تعذر تشغيل الميكروفون";
+}
+
+
+function translateErrorMessage(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  // Codes TARTEEL_TICKET_HTTP_401 / 403 / 500
+  if (/TARTEEL_TICKET_HTTP_401/i.test(s) || /HTTP[\s_]?401/i.test(s)) {
+    return "تسجيل الدخول ضروري";
+  }
+  if (/TARTEEL_TICKET_HTTP_403/i.test(s) || /HTTP[\s_]?403/i.test(s)) {
+    return "ليس لديك صلاحية للوصول";
+  }
+  if (/TARTEEL_TICKET_HTTP_404/i.test(s)) {
+    return "الخدمة غير متاحة";
+  }
+  if (/TARTEEL_TICKET_HTTP_5\d\d/i.test(s)) {
+    return "خطأ في الخادم، يرجى المحاولة لاحقاً";
+  }
+  if (/TARTEEL_TICKET_INVALID_RESPONSE/i.test(s)) {
+    return "استجابة غير صالحة من الخادم";
+  }
+  return s;
 }
 
 function dispatchLifecycle(
@@ -648,11 +672,23 @@ export function MushafTarteelController({
           )
         : null}
 
-      {message && (
-        <p className="text-sm text-rose-600" role="alert">
-          {message}
-        </p>
-      )}
+      {translateErrorMessage(message) && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="pointer-events-none fixed inset-x-0 top-0 z-[9999] flex justify-center px-3 pt-3"
+            >
+              <div className="pointer-events-auto w-full max-w-xl">
+                <ErrorAlert
+                  message={translateErrorMessage(message)}
+                  onDismiss={() => setMessage(null)}
+                />
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
