@@ -516,10 +516,6 @@ export type NullableIntFieldUpdateOperationsInput = {
   divide?: number
 }
 
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
-}
-
 export type AudioTrackCreateWithoutAyahInput = {
   id?: string
   format: $Enums.AudioFormat

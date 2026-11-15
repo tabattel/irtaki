@@ -811,10 +811,6 @@ export type EnumGoalStatusFieldUpdateOperationsInput = {
   set?: $Enums.GoalStatus
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
-}
-
 export type GoalUpdateOneWithoutSubGoalsNestedInput = {
   create?: Prisma.XOR<Prisma.GoalCreateWithoutSubGoalsInput, Prisma.GoalUncheckedCreateWithoutSubGoalsInput>
   connectOrCreate?: Prisma.GoalCreateOrConnectWithoutSubGoalsInput
