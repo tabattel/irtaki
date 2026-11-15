@@ -8,6 +8,7 @@ const ALLOWED_ACTIONS = [
   "read", "listen", "recite", "memorize", "revise",
   "tajwid", "tadabbur", "talkin", "tathbit",
   "qiraa", "khatma", "tahajjud",
+  "tarteel1", "tarteel2",
 ] as const;
 
 const ALLOWED_UNITS = [

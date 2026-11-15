@@ -12,7 +12,9 @@ export type LearningGoalAction =
   | "tathbit"
   | "qiraa"
   | "khatma"
-  | "tahajjud";
+  | "tahajjud"
+  | "tarteel1"
+  | "tarteel2";
 
 export type LearningGoalStatus =
   "draft" | "active" | "paused" | "completed" | "cancelled" | "archived";

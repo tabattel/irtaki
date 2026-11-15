@@ -17,6 +17,8 @@ const TASK_ACTIONS = [
   "qiraa",
   "khatma",
   "tahajjud",
+  "tarteel1",
+  "tarteel2",
 ] as const;
 
 const FINAL_STATUSES = ["completed", "partial", "failed", "skipped"] as const;

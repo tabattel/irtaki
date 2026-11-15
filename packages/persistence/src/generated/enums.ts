@@ -66,7 +66,9 @@ export const GoalAction = {
   tathbit: 'tathbit',
   qiraa: 'qiraa',
   khatma: 'khatma',
-  tahajjud: 'tahajjud'
+  tahajjud: 'tahajjud',
+  tarteel1: 'tarteel1',
+  tarteel2: 'tarteel2'
 } as const
 
 export type GoalAction = (typeof GoalAction)[keyof typeof GoalAction]

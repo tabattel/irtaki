@@ -56,6 +56,8 @@ const ACTIONS = [
   { value: "qiraa", label: "القراءات" },
   { value: "khatma", label: "الختمة" },
   { value: "tahajjud", label: "التهجد" },
+  { value: "tarteel1", label: "ترتيل ١" },
+  { value: "tarteel2", label: "ترتيل ٢" },
 ] as const;
 
 const UNITS = [

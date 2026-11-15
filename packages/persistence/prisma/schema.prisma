@@ -397,6 +397,8 @@ enum GoalAction {
   qiraa
   khatma
   tahajjud
+  tarteel1
+  tarteel2
 }
 
 enum ProgressUnit {

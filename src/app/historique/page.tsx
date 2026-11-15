@@ -65,6 +65,10 @@ const MODES = [
   { value: "khatma", label: "ختمة" },
   { value: "tadabbur", label: "تدبر" },
   { value: "talkin", label: "تلقين" },
+  { value: "tajwid", label: "تجويد" },
+  { value: "qiraa", label: "قراءات" },
+  { value: "tarteel1", label: "ترتيل ١" },
+  { value: "tarteel2", label: "ترتيل ٢" },
 ] as const;
 
 const DISPLAYED_ACTIONS = new Set<string>(MODES.map((mode) => mode.value));

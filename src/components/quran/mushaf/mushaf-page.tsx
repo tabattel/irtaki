@@ -93,7 +93,9 @@ type TrackedTaskAction =
   | "listen"
   | "recite"
   | "khatma"
-  | "tahajjud";
+  | "tahajjud"
+  | "tarteel1"
+  | "tarteel2";
 
 type ActiveLearningTask = {
   learnerId: string;
@@ -117,6 +119,8 @@ const TRACKED_TASK_OPTIONS: Array<{
   { action: "tadabbur", label: "التدبر" },
   { action: "khatma", label: "الختمة" },
   { action: "tahajjud", label: "التهجد" },
+  { action: "tarteel1", label: "ترتيل ١" },
+  { action: "tarteel2", label: "ترتيل ٢" },
 ];
 
 const TRACKED_TASK_LABELS: Record<TrackedTaskAction, string> = {
@@ -130,6 +134,8 @@ const TRACKED_TASK_LABELS: Record<TrackedTaskAction, string> = {
   recite: "التلاوة",
   khatma: "الختمة",
   tahajjud: "التهجد",
+  tarteel1: "ترتيل ١",
+  tarteel2: "ترتيل ٢",
 };
 
 function activeTaskStorageKey(learnerId: string): string {

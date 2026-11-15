@@ -33,6 +33,8 @@ const ACTION_META: Record<StatisticsAction, { label: string; color: string }> = 
   qiraa: { label: "قراءة", color: "#475569" },
   khatma: { label: "ختمة", color: "#ea580c" },
   tahajjud: { label: "تهجد", color: "#4f46e5" },
+  tarteel1: { label: "ترتيل ١", color: "#f59e0b" },
+  tarteel2: { label: "ترتيل ٢", color: "#06b6d4" },
 };
 
 const QURAN_DIMENSIONS: {

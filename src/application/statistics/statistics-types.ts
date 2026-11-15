@@ -11,6 +11,8 @@ export const STATISTICS_ACTIONS = [
   "qiraa",
   "khatma",
   "tahajjud",
+  "tarteel1",
+  "tarteel2",
 ] as const;
 
 export type StatisticsAction = (typeof STATISTICS_ACTIONS)[number];
