@@ -163,6 +163,16 @@ export default function ObjectivesPage() {
   const [goalsError, setGoalsError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [riwayaId, setRiwayaId] = useState<number | null>(null);
+  const [tariqId, setTariqId] = useState<number | null>(null);
+  const [riwayaList, setRiwayaList] = useState<
+    { id: number; shortName: string; fullName: string }[]
+  >([]);
+  const [tariqList, setTariqList] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderTime, setReminderTime] = useState("17:30");
   const [form, setForm] = useState<GoalForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -176,6 +186,28 @@ export default function ObjectivesPage() {
         : { ...current, startDate: localDateValue() },
     );
   }, []);
+
+  useEffect(() => {
+    void fetch("/api/riwayat")
+      .then((r) => r.json())
+      .then((p) => {
+        if (Array.isArray(p?.data)) setRiwayaList(p.data);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (riwayaId === null) {
+      setTariqList([]);
+      return;
+    }
+    void fetch(`/api/turuq?riwayaId=${riwayaId}`)
+      .then((r) => r.json())
+      .then((p) => {
+        if (Array.isArray(p?.data)) setTariqList(p.data);
+      })
+      .catch(() => undefined);
+  }, [riwayaId]);
 
   useEffect(() => {
     let alive = true;
@@ -376,7 +408,11 @@ export default function ObjectivesPage() {
           learnerId,
           title: form.title.trim(),
           description: form.description.trim() || undefined,
-          action: form.action,
+          riwayaId: riwayaId ?? undefined,
+        tariqId: tariqId ?? undefined,
+        notificationEnabled: reminderEnabled,
+        notificationTime: reminderEnabled ? reminderTime : undefined,
+        action: form.action,
           quantity,
           unit: form.unit,
           frequencyCount,
@@ -687,6 +723,104 @@ export default function ObjectivesPage() {
                   >
                     إلغاء
                   </button>
+                </div>
+              
+                <div className="space-y-4 border-t border-[var(--border)] pt-4">
+                  <h3 className="text-sm font-semibold">
+                    تفاصيل إضافية (اختيارية)
+                  </h3>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="min-w-0 space-y-1.5">
+                      <label
+                        htmlFor="goal-riwaya"
+                        className="block text-sm font-medium"
+                      >
+                        الرواية
+                      </label>
+                      <select
+                        id="goal-riwaya"
+                        className="block w-full min-w-0 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-base text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--foreground)]"
+                        value={riwayaId ?? ""}
+                        onChange={(event) => {
+                          const v = event.target.value;
+                          setRiwayaId(v ? Number(v) : null);
+                          setTariqId(null);
+                        }}
+                      >
+                        <option value="">— بدون —</option>
+                        {riwayaList.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.shortName} — {r.fullName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="min-w-0 space-y-1.5">
+                      <label
+                        htmlFor="goal-tariq"
+                        className="block text-sm font-medium"
+                      >
+                        الطريق
+                      </label>
+                      <select
+                        id="goal-tariq"
+                        className="block w-full min-w-0 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-base text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--foreground)] disabled:opacity-50"
+                        value={tariqId ?? ""}
+                        onChange={(event) => {
+                          const v = event.target.value;
+                          setTariqId(v ? Number(v) : null);
+                        }}
+                        disabled={riwayaId === null || tariqList.length === 0}
+                      >
+                        <option value="">— بدون —</option>
+                        {tariqList.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <input
+                      id="goal-reminder-enabled"
+                      type="checkbox"
+                      checked={reminderEnabled}
+                      onChange={(event) =>
+                        setReminderEnabled(event.target.checked)
+                      }
+                      className="h-5 w-5"
+                    />
+                    <label
+                      htmlFor="goal-reminder-enabled"
+                      className="text-sm font-medium"
+                    >
+                      تفعيل تذكير البدء
+                    </label>
+                  </div>
+
+                  {reminderEnabled ? (
+                    <div className="min-w-0 space-y-1.5">
+                      <label
+                        htmlFor="goal-reminder-time"
+                        className="block text-sm font-medium"
+                      >
+                        وقت التذكير
+                      </label>
+                      <input
+                        id="goal-reminder-time"
+                        type="time"
+                        className="block w-full min-w-0 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-base text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--foreground)]"
+                        value={reminderTime}
+                        onChange={(event) =>
+                          setReminderTime(event.target.value)
+                        }
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </form>
             </section>

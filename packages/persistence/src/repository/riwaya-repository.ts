@@ -1,23 +1,25 @@
-import type { Riwaya } from "../generated/client";
 import { prisma } from "../client/prisma";
 
 export class RiwayaRepository {
-  findById(id: number): Promise<Riwaya | null> {
-    return prisma.riwaya.findUnique({
-      where: { id },
+  async findAll() {
+    return prisma.riwaya.findMany({
+      orderBy: { id: "asc" },
+      select: { id: true, shortName: true, fullName: true, qiraaId: true },
     });
   }
 
-  findByQiraaId(qiraaId: number): Promise<Riwaya[]> {
+  async findById(id: number) {
+    return prisma.riwaya.findUnique({
+      where: { id },
+      select: { id: true, shortName: true, fullName: true, qiraaId: true },
+    });
+  }
+
+  async findByQiraaId(qiraaId: number) {
     return prisma.riwaya.findMany({
       where: { qiraaId },
       orderBy: { id: "asc" },
-    });
-  }
-
-  findAll(): Promise<Riwaya[]> {
-    return prisma.riwaya.findMany({
-      orderBy: { id: "asc" },
+      select: { id: true, shortName: true, fullName: true, qiraaId: true },
     });
   }
 }

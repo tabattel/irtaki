@@ -1,10 +1,8 @@
-import { getRiwayat } from "@/application/riwaya/get-riwayat";
 import { NextResponse } from "next/server";
+import { RiwayaRepository } from "@irtaki/persistence";
 
 export async function GET() {
-  const riwayat = await getRiwayat();
-
-  return NextResponse.json({
-    data: riwayat,
-  });
+  const repo = new RiwayaRepository();
+  const riwayat = await repo.findAll();
+  return NextResponse.json({ data: riwayat });
 }

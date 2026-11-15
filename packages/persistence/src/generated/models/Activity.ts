@@ -28,10 +28,14 @@ export type AggregateActivity = {
 
 export type ActivityAvgAggregateOutputType = {
   durationSec: number | null
+  riwayaId: number | null
+  tariqId: number | null
 }
 
 export type ActivitySumAggregateOutputType = {
   durationSec: number | null
+  riwayaId: number | null
+  tariqId: number | null
 }
 
 export type ActivityMinAggregateOutputType = {
@@ -43,6 +47,8 @@ export type ActivityMinAggregateOutputType = {
   endedAt: Date | null
   durationSec: number | null
   notes: string | null
+  riwayaId: number | null
+  tariqId: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -56,6 +62,8 @@ export type ActivityMaxAggregateOutputType = {
   endedAt: Date | null
   durationSec: number | null
   notes: string | null
+  riwayaId: number | null
+  tariqId: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -69,6 +77,8 @@ export type ActivityCountAggregateOutputType = {
   endedAt: number
   durationSec: number
   notes: number
+  riwayaId: number
+  tariqId: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -77,10 +87,14 @@ export type ActivityCountAggregateOutputType = {
 
 export type ActivityAvgAggregateInputType = {
   durationSec?: true
+  riwayaId?: true
+  tariqId?: true
 }
 
 export type ActivitySumAggregateInputType = {
   durationSec?: true
+  riwayaId?: true
+  tariqId?: true
 }
 
 export type ActivityMinAggregateInputType = {
@@ -92,6 +106,8 @@ export type ActivityMinAggregateInputType = {
   endedAt?: true
   durationSec?: true
   notes?: true
+  riwayaId?: true
+  tariqId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -105,6 +121,8 @@ export type ActivityMaxAggregateInputType = {
   endedAt?: true
   durationSec?: true
   notes?: true
+  riwayaId?: true
+  tariqId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -118,6 +136,8 @@ export type ActivityCountAggregateInputType = {
   endedAt?: true
   durationSec?: true
   notes?: true
+  riwayaId?: true
+  tariqId?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -218,6 +238,8 @@ export type ActivityGroupByOutputType = {
   endedAt: Date | null
   durationSec: number | null
   notes: string | null
+  riwayaId: number | null
+  tariqId: number | null
   createdAt: Date
   updatedAt: Date
   _count: ActivityCountAggregateOutputType | null
@@ -254,10 +276,14 @@ export type ActivityWhereInput = {
   endedAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
   durationSec?: Prisma.IntNullableFilter<"Activity"> | number | null
   notes?: Prisma.StringNullableFilter<"Activity"> | string | null
+  riwayaId?: Prisma.IntNullableFilter<"Activity"> | number | null
+  tariqId?: Prisma.IntNullableFilter<"Activity"> | number | null
   createdAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
   learner?: Prisma.XOR<Prisma.LearnerScalarRelationFilter, Prisma.LearnerWhereInput>
   goal?: Prisma.XOR<Prisma.GoalNullableScalarRelationFilter, Prisma.GoalWhereInput> | null
+  riwaya?: Prisma.XOR<Prisma.RiwayaNullableScalarRelationFilter, Prisma.RiwayaWhereInput> | null
+  tariq?: Prisma.XOR<Prisma.TariqNullableScalarRelationFilter, Prisma.TariqWhereInput> | null
   result?: Prisma.XOR<Prisma.ActivityResultNullableScalarRelationFilter, Prisma.ActivityResultWhereInput> | null
   progress?: Prisma.ProgressRecordListRelationFilter
   ayahTraces?: Prisma.ActivityAyahTraceListRelationFilter
@@ -272,10 +298,14 @@ export type ActivityOrderByWithRelationInput = {
   endedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   durationSec?: Prisma.SortOrderInput | Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  riwayaId?: Prisma.SortOrderInput | Prisma.SortOrder
+  tariqId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   learner?: Prisma.LearnerOrderByWithRelationInput
   goal?: Prisma.GoalOrderByWithRelationInput
+  riwaya?: Prisma.RiwayaOrderByWithRelationInput
+  tariq?: Prisma.TariqOrderByWithRelationInput
   result?: Prisma.ActivityResultOrderByWithRelationInput
   progress?: Prisma.ProgressRecordOrderByRelationAggregateInput
   ayahTraces?: Prisma.ActivityAyahTraceOrderByRelationAggregateInput
@@ -293,10 +323,14 @@ export type ActivityWhereUniqueInput = Prisma.AtLeast<{
   endedAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
   durationSec?: Prisma.IntNullableFilter<"Activity"> | number | null
   notes?: Prisma.StringNullableFilter<"Activity"> | string | null
+  riwayaId?: Prisma.IntNullableFilter<"Activity"> | number | null
+  tariqId?: Prisma.IntNullableFilter<"Activity"> | number | null
   createdAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
   learner?: Prisma.XOR<Prisma.LearnerScalarRelationFilter, Prisma.LearnerWhereInput>
   goal?: Prisma.XOR<Prisma.GoalNullableScalarRelationFilter, Prisma.GoalWhereInput> | null
+  riwaya?: Prisma.XOR<Prisma.RiwayaNullableScalarRelationFilter, Prisma.RiwayaWhereInput> | null
+  tariq?: Prisma.XOR<Prisma.TariqNullableScalarRelationFilter, Prisma.TariqWhereInput> | null
   result?: Prisma.XOR<Prisma.ActivityResultNullableScalarRelationFilter, Prisma.ActivityResultWhereInput> | null
   progress?: Prisma.ProgressRecordListRelationFilter
   ayahTraces?: Prisma.ActivityAyahTraceListRelationFilter
@@ -311,6 +345,8 @@ export type ActivityOrderByWithAggregationInput = {
   endedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   durationSec?: Prisma.SortOrderInput | Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  riwayaId?: Prisma.SortOrderInput | Prisma.SortOrder
+  tariqId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ActivityCountOrderByAggregateInput
@@ -332,6 +368,8 @@ export type ActivityScalarWhereWithAggregatesInput = {
   endedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Activity"> | Date | string | null
   durationSec?: Prisma.IntNullableWithAggregatesFilter<"Activity"> | number | null
   notes?: Prisma.StringNullableWithAggregatesFilter<"Activity"> | string | null
+  riwayaId?: Prisma.IntNullableWithAggregatesFilter<"Activity"> | number | null
+  tariqId?: Prisma.IntNullableWithAggregatesFilter<"Activity"> | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Activity"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Activity"> | Date | string
 }
@@ -347,6 +385,8 @@ export type ActivityCreateInput = {
   updatedAt?: Date | string
   learner: Prisma.LearnerCreateNestedOneWithoutActivitiesInput
   goal?: Prisma.GoalCreateNestedOneWithoutActivitiesInput
+  riwaya?: Prisma.RiwayaCreateNestedOneWithoutActivitiesInput
+  tariq?: Prisma.TariqCreateNestedOneWithoutActivitiesInput
   result?: Prisma.ActivityResultCreateNestedOneWithoutActivityInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutActivityInput
   ayahTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutActivityInput
@@ -361,6 +401,8 @@ export type ActivityUncheckedCreateInput = {
   endedAt?: Date | string | null
   durationSec?: number | null
   notes?: string | null
+  riwayaId?: number | null
+  tariqId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   result?: Prisma.ActivityResultUncheckedCreateNestedOneWithoutActivityInput
@@ -379,6 +421,8 @@ export type ActivityUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   learner?: Prisma.LearnerUpdateOneRequiredWithoutActivitiesNestedInput
   goal?: Prisma.GoalUpdateOneWithoutActivitiesNestedInput
+  riwaya?: Prisma.RiwayaUpdateOneWithoutActivitiesNestedInput
+  tariq?: Prisma.TariqUpdateOneWithoutActivitiesNestedInput
   result?: Prisma.ActivityResultUpdateOneWithoutActivityNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutActivityNestedInput
   ayahTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutActivityNestedInput
@@ -393,6 +437,8 @@ export type ActivityUncheckedUpdateInput = {
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   result?: Prisma.ActivityResultUncheckedUpdateOneWithoutActivityNestedInput
@@ -409,6 +455,8 @@ export type ActivityCreateManyInput = {
   endedAt?: Date | string | null
   durationSec?: number | null
   notes?: string | null
+  riwayaId?: number | null
+  tariqId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -433,6 +481,8 @@ export type ActivityUncheckedUpdateManyInput = {
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -456,12 +506,16 @@ export type ActivityCountOrderByAggregateInput = {
   endedAt?: Prisma.SortOrder
   durationSec?: Prisma.SortOrder
   notes?: Prisma.SortOrder
+  riwayaId?: Prisma.SortOrder
+  tariqId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type ActivityAvgOrderByAggregateInput = {
   durationSec?: Prisma.SortOrder
+  riwayaId?: Prisma.SortOrder
+  tariqId?: Prisma.SortOrder
 }
 
 export type ActivityMaxOrderByAggregateInput = {
@@ -473,6 +527,8 @@ export type ActivityMaxOrderByAggregateInput = {
   endedAt?: Prisma.SortOrder
   durationSec?: Prisma.SortOrder
   notes?: Prisma.SortOrder
+  riwayaId?: Prisma.SortOrder
+  tariqId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -486,12 +542,16 @@ export type ActivityMinOrderByAggregateInput = {
   endedAt?: Prisma.SortOrder
   durationSec?: Prisma.SortOrder
   notes?: Prisma.SortOrder
+  riwayaId?: Prisma.SortOrder
+  tariqId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type ActivitySumOrderByAggregateInput = {
   durationSec?: Prisma.SortOrder
+  riwayaId?: Prisma.SortOrder
+  tariqId?: Prisma.SortOrder
 }
 
 export type ActivityScalarRelationFilter = {
@@ -502,6 +562,90 @@ export type ActivityScalarRelationFilter = {
 export type ActivityNullableScalarRelationFilter = {
   is?: Prisma.ActivityWhereInput | null
   isNot?: Prisma.ActivityWhereInput | null
+}
+
+export type ActivityCreateNestedManyWithoutRiwayaInput = {
+  create?: Prisma.XOR<Prisma.ActivityCreateWithoutRiwayaInput, Prisma.ActivityUncheckedCreateWithoutRiwayaInput> | Prisma.ActivityCreateWithoutRiwayaInput[] | Prisma.ActivityUncheckedCreateWithoutRiwayaInput[]
+  connectOrCreate?: Prisma.ActivityCreateOrConnectWithoutRiwayaInput | Prisma.ActivityCreateOrConnectWithoutRiwayaInput[]
+  createMany?: Prisma.ActivityCreateManyRiwayaInputEnvelope
+  connect?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+}
+
+export type ActivityUncheckedCreateNestedManyWithoutRiwayaInput = {
+  create?: Prisma.XOR<Prisma.ActivityCreateWithoutRiwayaInput, Prisma.ActivityUncheckedCreateWithoutRiwayaInput> | Prisma.ActivityCreateWithoutRiwayaInput[] | Prisma.ActivityUncheckedCreateWithoutRiwayaInput[]
+  connectOrCreate?: Prisma.ActivityCreateOrConnectWithoutRiwayaInput | Prisma.ActivityCreateOrConnectWithoutRiwayaInput[]
+  createMany?: Prisma.ActivityCreateManyRiwayaInputEnvelope
+  connect?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+}
+
+export type ActivityUpdateManyWithoutRiwayaNestedInput = {
+  create?: Prisma.XOR<Prisma.ActivityCreateWithoutRiwayaInput, Prisma.ActivityUncheckedCreateWithoutRiwayaInput> | Prisma.ActivityCreateWithoutRiwayaInput[] | Prisma.ActivityUncheckedCreateWithoutRiwayaInput[]
+  connectOrCreate?: Prisma.ActivityCreateOrConnectWithoutRiwayaInput | Prisma.ActivityCreateOrConnectWithoutRiwayaInput[]
+  upsert?: Prisma.ActivityUpsertWithWhereUniqueWithoutRiwayaInput | Prisma.ActivityUpsertWithWhereUniqueWithoutRiwayaInput[]
+  createMany?: Prisma.ActivityCreateManyRiwayaInputEnvelope
+  set?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  disconnect?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  delete?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  connect?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  update?: Prisma.ActivityUpdateWithWhereUniqueWithoutRiwayaInput | Prisma.ActivityUpdateWithWhereUniqueWithoutRiwayaInput[]
+  updateMany?: Prisma.ActivityUpdateManyWithWhereWithoutRiwayaInput | Prisma.ActivityUpdateManyWithWhereWithoutRiwayaInput[]
+  deleteMany?: Prisma.ActivityScalarWhereInput | Prisma.ActivityScalarWhereInput[]
+}
+
+export type ActivityUncheckedUpdateManyWithoutRiwayaNestedInput = {
+  create?: Prisma.XOR<Prisma.ActivityCreateWithoutRiwayaInput, Prisma.ActivityUncheckedCreateWithoutRiwayaInput> | Prisma.ActivityCreateWithoutRiwayaInput[] | Prisma.ActivityUncheckedCreateWithoutRiwayaInput[]
+  connectOrCreate?: Prisma.ActivityCreateOrConnectWithoutRiwayaInput | Prisma.ActivityCreateOrConnectWithoutRiwayaInput[]
+  upsert?: Prisma.ActivityUpsertWithWhereUniqueWithoutRiwayaInput | Prisma.ActivityUpsertWithWhereUniqueWithoutRiwayaInput[]
+  createMany?: Prisma.ActivityCreateManyRiwayaInputEnvelope
+  set?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  disconnect?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  delete?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  connect?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  update?: Prisma.ActivityUpdateWithWhereUniqueWithoutRiwayaInput | Prisma.ActivityUpdateWithWhereUniqueWithoutRiwayaInput[]
+  updateMany?: Prisma.ActivityUpdateManyWithWhereWithoutRiwayaInput | Prisma.ActivityUpdateManyWithWhereWithoutRiwayaInput[]
+  deleteMany?: Prisma.ActivityScalarWhereInput | Prisma.ActivityScalarWhereInput[]
+}
+
+export type ActivityCreateNestedManyWithoutTariqInput = {
+  create?: Prisma.XOR<Prisma.ActivityCreateWithoutTariqInput, Prisma.ActivityUncheckedCreateWithoutTariqInput> | Prisma.ActivityCreateWithoutTariqInput[] | Prisma.ActivityUncheckedCreateWithoutTariqInput[]
+  connectOrCreate?: Prisma.ActivityCreateOrConnectWithoutTariqInput | Prisma.ActivityCreateOrConnectWithoutTariqInput[]
+  createMany?: Prisma.ActivityCreateManyTariqInputEnvelope
+  connect?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+}
+
+export type ActivityUncheckedCreateNestedManyWithoutTariqInput = {
+  create?: Prisma.XOR<Prisma.ActivityCreateWithoutTariqInput, Prisma.ActivityUncheckedCreateWithoutTariqInput> | Prisma.ActivityCreateWithoutTariqInput[] | Prisma.ActivityUncheckedCreateWithoutTariqInput[]
+  connectOrCreate?: Prisma.ActivityCreateOrConnectWithoutTariqInput | Prisma.ActivityCreateOrConnectWithoutTariqInput[]
+  createMany?: Prisma.ActivityCreateManyTariqInputEnvelope
+  connect?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+}
+
+export type ActivityUpdateManyWithoutTariqNestedInput = {
+  create?: Prisma.XOR<Prisma.ActivityCreateWithoutTariqInput, Prisma.ActivityUncheckedCreateWithoutTariqInput> | Prisma.ActivityCreateWithoutTariqInput[] | Prisma.ActivityUncheckedCreateWithoutTariqInput[]
+  connectOrCreate?: Prisma.ActivityCreateOrConnectWithoutTariqInput | Prisma.ActivityCreateOrConnectWithoutTariqInput[]
+  upsert?: Prisma.ActivityUpsertWithWhereUniqueWithoutTariqInput | Prisma.ActivityUpsertWithWhereUniqueWithoutTariqInput[]
+  createMany?: Prisma.ActivityCreateManyTariqInputEnvelope
+  set?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  disconnect?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  delete?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  connect?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  update?: Prisma.ActivityUpdateWithWhereUniqueWithoutTariqInput | Prisma.ActivityUpdateWithWhereUniqueWithoutTariqInput[]
+  updateMany?: Prisma.ActivityUpdateManyWithWhereWithoutTariqInput | Prisma.ActivityUpdateManyWithWhereWithoutTariqInput[]
+  deleteMany?: Prisma.ActivityScalarWhereInput | Prisma.ActivityScalarWhereInput[]
+}
+
+export type ActivityUncheckedUpdateManyWithoutTariqNestedInput = {
+  create?: Prisma.XOR<Prisma.ActivityCreateWithoutTariqInput, Prisma.ActivityUncheckedCreateWithoutTariqInput> | Prisma.ActivityCreateWithoutTariqInput[] | Prisma.ActivityUncheckedCreateWithoutTariqInput[]
+  connectOrCreate?: Prisma.ActivityCreateOrConnectWithoutTariqInput | Prisma.ActivityCreateOrConnectWithoutTariqInput[]
+  upsert?: Prisma.ActivityUpsertWithWhereUniqueWithoutTariqInput | Prisma.ActivityUpsertWithWhereUniqueWithoutTariqInput[]
+  createMany?: Prisma.ActivityCreateManyTariqInputEnvelope
+  set?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  disconnect?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  delete?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  connect?: Prisma.ActivityWhereUniqueInput | Prisma.ActivityWhereUniqueInput[]
+  update?: Prisma.ActivityUpdateWithWhereUniqueWithoutTariqInput | Prisma.ActivityUpdateWithWhereUniqueWithoutTariqInput[]
+  updateMany?: Prisma.ActivityUpdateManyWithWhereWithoutTariqInput | Prisma.ActivityUpdateManyWithWhereWithoutTariqInput[]
+  deleteMany?: Prisma.ActivityScalarWhereInput | Prisma.ActivityScalarWhereInput[]
 }
 
 export type ActivityCreateNestedManyWithoutLearnerInput = {
@@ -632,6 +776,144 @@ export type ActivityUpdateOneRequiredWithoutAyahTracesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ActivityUpdateToOneWithWhereWithoutAyahTracesInput, Prisma.ActivityUpdateWithoutAyahTracesInput>, Prisma.ActivityUncheckedUpdateWithoutAyahTracesInput>
 }
 
+export type ActivityCreateWithoutRiwayaInput = {
+  id?: string
+  action: $Enums.GoalAction
+  startedAt: Date | string
+  endedAt?: Date | string | null
+  durationSec?: number | null
+  notes?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  learner: Prisma.LearnerCreateNestedOneWithoutActivitiesInput
+  goal?: Prisma.GoalCreateNestedOneWithoutActivitiesInput
+  tariq?: Prisma.TariqCreateNestedOneWithoutActivitiesInput
+  result?: Prisma.ActivityResultCreateNestedOneWithoutActivityInput
+  progress?: Prisma.ProgressRecordCreateNestedManyWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutActivityInput
+}
+
+export type ActivityUncheckedCreateWithoutRiwayaInput = {
+  id?: string
+  learnerId: string
+  goalId?: string | null
+  action: $Enums.GoalAction
+  startedAt: Date | string
+  endedAt?: Date | string | null
+  durationSec?: number | null
+  notes?: string | null
+  tariqId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  result?: Prisma.ActivityResultUncheckedCreateNestedOneWithoutActivityInput
+  progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedCreateNestedManyWithoutActivityInput
+}
+
+export type ActivityCreateOrConnectWithoutRiwayaInput = {
+  where: Prisma.ActivityWhereUniqueInput
+  create: Prisma.XOR<Prisma.ActivityCreateWithoutRiwayaInput, Prisma.ActivityUncheckedCreateWithoutRiwayaInput>
+}
+
+export type ActivityCreateManyRiwayaInputEnvelope = {
+  data: Prisma.ActivityCreateManyRiwayaInput | Prisma.ActivityCreateManyRiwayaInput[]
+  skipDuplicates?: boolean
+}
+
+export type ActivityUpsertWithWhereUniqueWithoutRiwayaInput = {
+  where: Prisma.ActivityWhereUniqueInput
+  update: Prisma.XOR<Prisma.ActivityUpdateWithoutRiwayaInput, Prisma.ActivityUncheckedUpdateWithoutRiwayaInput>
+  create: Prisma.XOR<Prisma.ActivityCreateWithoutRiwayaInput, Prisma.ActivityUncheckedCreateWithoutRiwayaInput>
+}
+
+export type ActivityUpdateWithWhereUniqueWithoutRiwayaInput = {
+  where: Prisma.ActivityWhereUniqueInput
+  data: Prisma.XOR<Prisma.ActivityUpdateWithoutRiwayaInput, Prisma.ActivityUncheckedUpdateWithoutRiwayaInput>
+}
+
+export type ActivityUpdateManyWithWhereWithoutRiwayaInput = {
+  where: Prisma.ActivityScalarWhereInput
+  data: Prisma.XOR<Prisma.ActivityUpdateManyMutationInput, Prisma.ActivityUncheckedUpdateManyWithoutRiwayaInput>
+}
+
+export type ActivityScalarWhereInput = {
+  AND?: Prisma.ActivityScalarWhereInput | Prisma.ActivityScalarWhereInput[]
+  OR?: Prisma.ActivityScalarWhereInput[]
+  NOT?: Prisma.ActivityScalarWhereInput | Prisma.ActivityScalarWhereInput[]
+  id?: Prisma.StringFilter<"Activity"> | string
+  learnerId?: Prisma.StringFilter<"Activity"> | string
+  goalId?: Prisma.StringNullableFilter<"Activity"> | string | null
+  action?: Prisma.EnumGoalActionFilter<"Activity"> | $Enums.GoalAction
+  startedAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
+  endedAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
+  durationSec?: Prisma.IntNullableFilter<"Activity"> | number | null
+  notes?: Prisma.StringNullableFilter<"Activity"> | string | null
+  riwayaId?: Prisma.IntNullableFilter<"Activity"> | number | null
+  tariqId?: Prisma.IntNullableFilter<"Activity"> | number | null
+  createdAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
+}
+
+export type ActivityCreateWithoutTariqInput = {
+  id?: string
+  action: $Enums.GoalAction
+  startedAt: Date | string
+  endedAt?: Date | string | null
+  durationSec?: number | null
+  notes?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  learner: Prisma.LearnerCreateNestedOneWithoutActivitiesInput
+  goal?: Prisma.GoalCreateNestedOneWithoutActivitiesInput
+  riwaya?: Prisma.RiwayaCreateNestedOneWithoutActivitiesInput
+  result?: Prisma.ActivityResultCreateNestedOneWithoutActivityInput
+  progress?: Prisma.ProgressRecordCreateNestedManyWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutActivityInput
+}
+
+export type ActivityUncheckedCreateWithoutTariqInput = {
+  id?: string
+  learnerId: string
+  goalId?: string | null
+  action: $Enums.GoalAction
+  startedAt: Date | string
+  endedAt?: Date | string | null
+  durationSec?: number | null
+  notes?: string | null
+  riwayaId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  result?: Prisma.ActivityResultUncheckedCreateNestedOneWithoutActivityInput
+  progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutActivityInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedCreateNestedManyWithoutActivityInput
+}
+
+export type ActivityCreateOrConnectWithoutTariqInput = {
+  where: Prisma.ActivityWhereUniqueInput
+  create: Prisma.XOR<Prisma.ActivityCreateWithoutTariqInput, Prisma.ActivityUncheckedCreateWithoutTariqInput>
+}
+
+export type ActivityCreateManyTariqInputEnvelope = {
+  data: Prisma.ActivityCreateManyTariqInput | Prisma.ActivityCreateManyTariqInput[]
+  skipDuplicates?: boolean
+}
+
+export type ActivityUpsertWithWhereUniqueWithoutTariqInput = {
+  where: Prisma.ActivityWhereUniqueInput
+  update: Prisma.XOR<Prisma.ActivityUpdateWithoutTariqInput, Prisma.ActivityUncheckedUpdateWithoutTariqInput>
+  create: Prisma.XOR<Prisma.ActivityCreateWithoutTariqInput, Prisma.ActivityUncheckedCreateWithoutTariqInput>
+}
+
+export type ActivityUpdateWithWhereUniqueWithoutTariqInput = {
+  where: Prisma.ActivityWhereUniqueInput
+  data: Prisma.XOR<Prisma.ActivityUpdateWithoutTariqInput, Prisma.ActivityUncheckedUpdateWithoutTariqInput>
+}
+
+export type ActivityUpdateManyWithWhereWithoutTariqInput = {
+  where: Prisma.ActivityScalarWhereInput
+  data: Prisma.XOR<Prisma.ActivityUpdateManyMutationInput, Prisma.ActivityUncheckedUpdateManyWithoutTariqInput>
+}
+
 export type ActivityCreateWithoutLearnerInput = {
   id?: string
   action: $Enums.GoalAction
@@ -642,6 +924,8 @@ export type ActivityCreateWithoutLearnerInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   goal?: Prisma.GoalCreateNestedOneWithoutActivitiesInput
+  riwaya?: Prisma.RiwayaCreateNestedOneWithoutActivitiesInput
+  tariq?: Prisma.TariqCreateNestedOneWithoutActivitiesInput
   result?: Prisma.ActivityResultCreateNestedOneWithoutActivityInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutActivityInput
   ayahTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutActivityInput
@@ -655,6 +939,8 @@ export type ActivityUncheckedCreateWithoutLearnerInput = {
   endedAt?: Date | string | null
   durationSec?: number | null
   notes?: string | null
+  riwayaId?: number | null
+  tariqId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   result?: Prisma.ActivityResultUncheckedCreateNestedOneWithoutActivityInput
@@ -688,22 +974,6 @@ export type ActivityUpdateManyWithWhereWithoutLearnerInput = {
   data: Prisma.XOR<Prisma.ActivityUpdateManyMutationInput, Prisma.ActivityUncheckedUpdateManyWithoutLearnerInput>
 }
 
-export type ActivityScalarWhereInput = {
-  AND?: Prisma.ActivityScalarWhereInput | Prisma.ActivityScalarWhereInput[]
-  OR?: Prisma.ActivityScalarWhereInput[]
-  NOT?: Prisma.ActivityScalarWhereInput | Prisma.ActivityScalarWhereInput[]
-  id?: Prisma.StringFilter<"Activity"> | string
-  learnerId?: Prisma.StringFilter<"Activity"> | string
-  goalId?: Prisma.StringNullableFilter<"Activity"> | string | null
-  action?: Prisma.EnumGoalActionFilter<"Activity"> | $Enums.GoalAction
-  startedAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
-  endedAt?: Prisma.DateTimeNullableFilter<"Activity"> | Date | string | null
-  durationSec?: Prisma.IntNullableFilter<"Activity"> | number | null
-  notes?: Prisma.StringNullableFilter<"Activity"> | string | null
-  createdAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
-  updatedAt?: Prisma.DateTimeFilter<"Activity"> | Date | string
-}
-
 export type ActivityCreateWithoutGoalInput = {
   id?: string
   action: $Enums.GoalAction
@@ -714,6 +984,8 @@ export type ActivityCreateWithoutGoalInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   learner: Prisma.LearnerCreateNestedOneWithoutActivitiesInput
+  riwaya?: Prisma.RiwayaCreateNestedOneWithoutActivitiesInput
+  tariq?: Prisma.TariqCreateNestedOneWithoutActivitiesInput
   result?: Prisma.ActivityResultCreateNestedOneWithoutActivityInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutActivityInput
   ayahTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutActivityInput
@@ -727,6 +999,8 @@ export type ActivityUncheckedCreateWithoutGoalInput = {
   endedAt?: Date | string | null
   durationSec?: number | null
   notes?: string | null
+  riwayaId?: number | null
+  tariqId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   result?: Prisma.ActivityResultUncheckedCreateNestedOneWithoutActivityInput
@@ -771,6 +1045,8 @@ export type ActivityCreateWithoutResultInput = {
   updatedAt?: Date | string
   learner: Prisma.LearnerCreateNestedOneWithoutActivitiesInput
   goal?: Prisma.GoalCreateNestedOneWithoutActivitiesInput
+  riwaya?: Prisma.RiwayaCreateNestedOneWithoutActivitiesInput
+  tariq?: Prisma.TariqCreateNestedOneWithoutActivitiesInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutActivityInput
   ayahTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutActivityInput
 }
@@ -784,6 +1060,8 @@ export type ActivityUncheckedCreateWithoutResultInput = {
   endedAt?: Date | string | null
   durationSec?: number | null
   notes?: string | null
+  riwayaId?: number | null
+  tariqId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutActivityInput
@@ -817,6 +1095,8 @@ export type ActivityUpdateWithoutResultInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   learner?: Prisma.LearnerUpdateOneRequiredWithoutActivitiesNestedInput
   goal?: Prisma.GoalUpdateOneWithoutActivitiesNestedInput
+  riwaya?: Prisma.RiwayaUpdateOneWithoutActivitiesNestedInput
+  tariq?: Prisma.TariqUpdateOneWithoutActivitiesNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutActivityNestedInput
   ayahTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutActivityNestedInput
 }
@@ -830,6 +1110,8 @@ export type ActivityUncheckedUpdateWithoutResultInput = {
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutActivityNestedInput
@@ -847,6 +1129,8 @@ export type ActivityCreateWithoutProgressInput = {
   updatedAt?: Date | string
   learner: Prisma.LearnerCreateNestedOneWithoutActivitiesInput
   goal?: Prisma.GoalCreateNestedOneWithoutActivitiesInput
+  riwaya?: Prisma.RiwayaCreateNestedOneWithoutActivitiesInput
+  tariq?: Prisma.TariqCreateNestedOneWithoutActivitiesInput
   result?: Prisma.ActivityResultCreateNestedOneWithoutActivityInput
   ayahTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutActivityInput
 }
@@ -860,6 +1144,8 @@ export type ActivityUncheckedCreateWithoutProgressInput = {
   endedAt?: Date | string | null
   durationSec?: number | null
   notes?: string | null
+  riwayaId?: number | null
+  tariqId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   result?: Prisma.ActivityResultUncheckedCreateNestedOneWithoutActivityInput
@@ -893,6 +1179,8 @@ export type ActivityUpdateWithoutProgressInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   learner?: Prisma.LearnerUpdateOneRequiredWithoutActivitiesNestedInput
   goal?: Prisma.GoalUpdateOneWithoutActivitiesNestedInput
+  riwaya?: Prisma.RiwayaUpdateOneWithoutActivitiesNestedInput
+  tariq?: Prisma.TariqUpdateOneWithoutActivitiesNestedInput
   result?: Prisma.ActivityResultUpdateOneWithoutActivityNestedInput
   ayahTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutActivityNestedInput
 }
@@ -906,6 +1194,8 @@ export type ActivityUncheckedUpdateWithoutProgressInput = {
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   result?: Prisma.ActivityResultUncheckedUpdateOneWithoutActivityNestedInput
@@ -923,6 +1213,8 @@ export type ActivityCreateWithoutAyahTracesInput = {
   updatedAt?: Date | string
   learner: Prisma.LearnerCreateNestedOneWithoutActivitiesInput
   goal?: Prisma.GoalCreateNestedOneWithoutActivitiesInput
+  riwaya?: Prisma.RiwayaCreateNestedOneWithoutActivitiesInput
+  tariq?: Prisma.TariqCreateNestedOneWithoutActivitiesInput
   result?: Prisma.ActivityResultCreateNestedOneWithoutActivityInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutActivityInput
 }
@@ -936,6 +1228,8 @@ export type ActivityUncheckedCreateWithoutAyahTracesInput = {
   endedAt?: Date | string | null
   durationSec?: number | null
   notes?: string | null
+  riwayaId?: number | null
+  tariqId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   result?: Prisma.ActivityResultUncheckedCreateNestedOneWithoutActivityInput
@@ -969,6 +1263,8 @@ export type ActivityUpdateWithoutAyahTracesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   learner?: Prisma.LearnerUpdateOneRequiredWithoutActivitiesNestedInput
   goal?: Prisma.GoalUpdateOneWithoutActivitiesNestedInput
+  riwaya?: Prisma.RiwayaUpdateOneWithoutActivitiesNestedInput
+  tariq?: Prisma.TariqUpdateOneWithoutActivitiesNestedInput
   result?: Prisma.ActivityResultUpdateOneWithoutActivityNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutActivityNestedInput
 }
@@ -982,10 +1278,136 @@ export type ActivityUncheckedUpdateWithoutAyahTracesInput = {
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   result?: Prisma.ActivityResultUncheckedUpdateOneWithoutActivityNestedInput
   progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutActivityNestedInput
+}
+
+export type ActivityCreateManyRiwayaInput = {
+  id?: string
+  learnerId: string
+  goalId?: string | null
+  action: $Enums.GoalAction
+  startedAt: Date | string
+  endedAt?: Date | string | null
+  durationSec?: number | null
+  notes?: string | null
+  tariqId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type ActivityUpdateWithoutRiwayaInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  action?: Prisma.EnumGoalActionFieldUpdateOperationsInput | $Enums.GoalAction
+  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  learner?: Prisma.LearnerUpdateOneRequiredWithoutActivitiesNestedInput
+  goal?: Prisma.GoalUpdateOneWithoutActivitiesNestedInput
+  tariq?: Prisma.TariqUpdateOneWithoutActivitiesNestedInput
+  result?: Prisma.ActivityResultUpdateOneWithoutActivityNestedInput
+  progress?: Prisma.ProgressRecordUpdateManyWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutActivityNestedInput
+}
+
+export type ActivityUncheckedUpdateWithoutRiwayaInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  learnerId?: Prisma.StringFieldUpdateOperationsInput | string
+  goalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  action?: Prisma.EnumGoalActionFieldUpdateOperationsInput | $Enums.GoalAction
+  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  result?: Prisma.ActivityResultUncheckedUpdateOneWithoutActivityNestedInput
+  progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedUpdateManyWithoutActivityNestedInput
+}
+
+export type ActivityUncheckedUpdateManyWithoutRiwayaInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  learnerId?: Prisma.StringFieldUpdateOperationsInput | string
+  goalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  action?: Prisma.EnumGoalActionFieldUpdateOperationsInput | $Enums.GoalAction
+  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type ActivityCreateManyTariqInput = {
+  id?: string
+  learnerId: string
+  goalId?: string | null
+  action: $Enums.GoalAction
+  startedAt: Date | string
+  endedAt?: Date | string | null
+  durationSec?: number | null
+  notes?: string | null
+  riwayaId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type ActivityUpdateWithoutTariqInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  action?: Prisma.EnumGoalActionFieldUpdateOperationsInput | $Enums.GoalAction
+  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  learner?: Prisma.LearnerUpdateOneRequiredWithoutActivitiesNestedInput
+  goal?: Prisma.GoalUpdateOneWithoutActivitiesNestedInput
+  riwaya?: Prisma.RiwayaUpdateOneWithoutActivitiesNestedInput
+  result?: Prisma.ActivityResultUpdateOneWithoutActivityNestedInput
+  progress?: Prisma.ProgressRecordUpdateManyWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutActivityNestedInput
+}
+
+export type ActivityUncheckedUpdateWithoutTariqInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  learnerId?: Prisma.StringFieldUpdateOperationsInput | string
+  goalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  action?: Prisma.EnumGoalActionFieldUpdateOperationsInput | $Enums.GoalAction
+  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  result?: Prisma.ActivityResultUncheckedUpdateOneWithoutActivityNestedInput
+  progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutActivityNestedInput
+  ayahTraces?: Prisma.ActivityAyahTraceUncheckedUpdateManyWithoutActivityNestedInput
+}
+
+export type ActivityUncheckedUpdateManyWithoutTariqInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  learnerId?: Prisma.StringFieldUpdateOperationsInput | string
+  goalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  action?: Prisma.EnumGoalActionFieldUpdateOperationsInput | $Enums.GoalAction
+  startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ActivityCreateManyLearnerInput = {
@@ -996,6 +1418,8 @@ export type ActivityCreateManyLearnerInput = {
   endedAt?: Date | string | null
   durationSec?: number | null
   notes?: string | null
+  riwayaId?: number | null
+  tariqId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1010,6 +1434,8 @@ export type ActivityUpdateWithoutLearnerInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   goal?: Prisma.GoalUpdateOneWithoutActivitiesNestedInput
+  riwaya?: Prisma.RiwayaUpdateOneWithoutActivitiesNestedInput
+  tariq?: Prisma.TariqUpdateOneWithoutActivitiesNestedInput
   result?: Prisma.ActivityResultUpdateOneWithoutActivityNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutActivityNestedInput
   ayahTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutActivityNestedInput
@@ -1023,6 +1449,8 @@ export type ActivityUncheckedUpdateWithoutLearnerInput = {
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   result?: Prisma.ActivityResultUncheckedUpdateOneWithoutActivityNestedInput
@@ -1038,6 +1466,8 @@ export type ActivityUncheckedUpdateManyWithoutLearnerInput = {
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1050,6 +1480,8 @@ export type ActivityCreateManyGoalInput = {
   endedAt?: Date | string | null
   durationSec?: number | null
   notes?: string | null
+  riwayaId?: number | null
+  tariqId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1064,6 +1496,8 @@ export type ActivityUpdateWithoutGoalInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   learner?: Prisma.LearnerUpdateOneRequiredWithoutActivitiesNestedInput
+  riwaya?: Prisma.RiwayaUpdateOneWithoutActivitiesNestedInput
+  tariq?: Prisma.TariqUpdateOneWithoutActivitiesNestedInput
   result?: Prisma.ActivityResultUpdateOneWithoutActivityNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutActivityNestedInput
   ayahTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutActivityNestedInput
@@ -1077,6 +1511,8 @@ export type ActivityUncheckedUpdateWithoutGoalInput = {
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   result?: Prisma.ActivityResultUncheckedUpdateOneWithoutActivityNestedInput
@@ -1092,6 +1528,8 @@ export type ActivityUncheckedUpdateManyWithoutGoalInput = {
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   durationSec?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1145,10 +1583,14 @@ export type ActivitySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   endedAt?: boolean
   durationSec?: boolean
   notes?: boolean
+  riwayaId?: boolean
+  tariqId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   learner?: boolean | Prisma.LearnerDefaultArgs<ExtArgs>
   goal?: boolean | Prisma.Activity$goalArgs<ExtArgs>
+  riwaya?: boolean | Prisma.Activity$riwayaArgs<ExtArgs>
+  tariq?: boolean | Prisma.Activity$tariqArgs<ExtArgs>
   result?: boolean | Prisma.Activity$resultArgs<ExtArgs>
   progress?: boolean | Prisma.Activity$progressArgs<ExtArgs>
   ayahTraces?: boolean | Prisma.Activity$ayahTracesArgs<ExtArgs>
@@ -1164,10 +1606,14 @@ export type ActivitySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   endedAt?: boolean
   durationSec?: boolean
   notes?: boolean
+  riwayaId?: boolean
+  tariqId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   learner?: boolean | Prisma.LearnerDefaultArgs<ExtArgs>
   goal?: boolean | Prisma.Activity$goalArgs<ExtArgs>
+  riwaya?: boolean | Prisma.Activity$riwayaArgs<ExtArgs>
+  tariq?: boolean | Prisma.Activity$tariqArgs<ExtArgs>
 }, ExtArgs["result"]["activity"]>
 
 export type ActivitySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1179,10 +1625,14 @@ export type ActivitySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   endedAt?: boolean
   durationSec?: boolean
   notes?: boolean
+  riwayaId?: boolean
+  tariqId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   learner?: boolean | Prisma.LearnerDefaultArgs<ExtArgs>
   goal?: boolean | Prisma.Activity$goalArgs<ExtArgs>
+  riwaya?: boolean | Prisma.Activity$riwayaArgs<ExtArgs>
+  tariq?: boolean | Prisma.Activity$tariqArgs<ExtArgs>
 }, ExtArgs["result"]["activity"]>
 
 export type ActivitySelectScalar = {
@@ -1194,14 +1644,18 @@ export type ActivitySelectScalar = {
   endedAt?: boolean
   durationSec?: boolean
   notes?: boolean
+  riwayaId?: boolean
+  tariqId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ActivityOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "learnerId" | "goalId" | "action" | "startedAt" | "endedAt" | "durationSec" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["activity"]>
+export type ActivityOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "learnerId" | "goalId" | "action" | "startedAt" | "endedAt" | "durationSec" | "notes" | "riwayaId" | "tariqId" | "createdAt" | "updatedAt", ExtArgs["result"]["activity"]>
 export type ActivityInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   learner?: boolean | Prisma.LearnerDefaultArgs<ExtArgs>
   goal?: boolean | Prisma.Activity$goalArgs<ExtArgs>
+  riwaya?: boolean | Prisma.Activity$riwayaArgs<ExtArgs>
+  tariq?: boolean | Prisma.Activity$tariqArgs<ExtArgs>
   result?: boolean | Prisma.Activity$resultArgs<ExtArgs>
   progress?: boolean | Prisma.Activity$progressArgs<ExtArgs>
   ayahTraces?: boolean | Prisma.Activity$ayahTracesArgs<ExtArgs>
@@ -1210,10 +1664,14 @@ export type ActivityInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
 export type ActivityIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   learner?: boolean | Prisma.LearnerDefaultArgs<ExtArgs>
   goal?: boolean | Prisma.Activity$goalArgs<ExtArgs>
+  riwaya?: boolean | Prisma.Activity$riwayaArgs<ExtArgs>
+  tariq?: boolean | Prisma.Activity$tariqArgs<ExtArgs>
 }
 export type ActivityIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   learner?: boolean | Prisma.LearnerDefaultArgs<ExtArgs>
   goal?: boolean | Prisma.Activity$goalArgs<ExtArgs>
+  riwaya?: boolean | Prisma.Activity$riwayaArgs<ExtArgs>
+  tariq?: boolean | Prisma.Activity$tariqArgs<ExtArgs>
 }
 
 export type $ActivityPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1221,6 +1679,8 @@ export type $ActivityPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
   objects: {
     learner: Prisma.$LearnerPayload<ExtArgs>
     goal: Prisma.$GoalPayload<ExtArgs> | null
+    riwaya: Prisma.$RiwayaPayload<ExtArgs> | null
+    tariq: Prisma.$TariqPayload<ExtArgs> | null
     result: Prisma.$ActivityResultPayload<ExtArgs> | null
     progress: Prisma.$ProgressRecordPayload<ExtArgs>[]
     ayahTraces: Prisma.$ActivityAyahTracePayload<ExtArgs>[]
@@ -1234,6 +1694,8 @@ export type $ActivityPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     endedAt: Date | null
     durationSec: number | null
     notes: string | null
+    riwayaId: number | null
+    tariqId: number | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["activity"]>
@@ -1632,6 +2094,8 @@ export interface Prisma__ActivityClient<T, Null = never, ExtArgs extends runtime
   readonly [Symbol.toStringTag]: "PrismaPromise"
   learner<T extends Prisma.LearnerDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.LearnerDefaultArgs<ExtArgs>>): Prisma.Prisma__LearnerClient<runtime.Types.Result.GetResult<Prisma.$LearnerPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   goal<T extends Prisma.Activity$goalArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Activity$goalArgs<ExtArgs>>): Prisma.Prisma__GoalClient<runtime.Types.Result.GetResult<Prisma.$GoalPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  riwaya<T extends Prisma.Activity$riwayaArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Activity$riwayaArgs<ExtArgs>>): Prisma.Prisma__RiwayaClient<runtime.Types.Result.GetResult<Prisma.$RiwayaPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  tariq<T extends Prisma.Activity$tariqArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Activity$tariqArgs<ExtArgs>>): Prisma.Prisma__TariqClient<runtime.Types.Result.GetResult<Prisma.$TariqPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   result<T extends Prisma.Activity$resultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Activity$resultArgs<ExtArgs>>): Prisma.Prisma__ActivityResultClient<runtime.Types.Result.GetResult<Prisma.$ActivityResultPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   progress<T extends Prisma.Activity$progressArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Activity$progressArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProgressRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   ayahTraces<T extends Prisma.Activity$ayahTracesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Activity$ayahTracesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActivityAyahTracePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -1672,6 +2136,8 @@ export interface ActivityFieldRefs {
   readonly endedAt: Prisma.FieldRef<"Activity", 'DateTime'>
   readonly durationSec: Prisma.FieldRef<"Activity", 'Int'>
   readonly notes: Prisma.FieldRef<"Activity", 'String'>
+  readonly riwayaId: Prisma.FieldRef<"Activity", 'Int'>
+  readonly tariqId: Prisma.FieldRef<"Activity", 'Int'>
   readonly createdAt: Prisma.FieldRef<"Activity", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Activity", 'DateTime'>
 }
@@ -2091,6 +2557,44 @@ export type Activity$goalArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    */
   include?: Prisma.GoalInclude<ExtArgs> | null
   where?: Prisma.GoalWhereInput
+}
+
+/**
+ * Activity.riwaya
+ */
+export type Activity$riwayaArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Riwaya
+   */
+  select?: Prisma.RiwayaSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Riwaya
+   */
+  omit?: Prisma.RiwayaOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RiwayaInclude<ExtArgs> | null
+  where?: Prisma.RiwayaWhereInput
+}
+
+/**
+ * Activity.tariq
+ */
+export type Activity$tariqArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Tariq
+   */
+  select?: Prisma.TariqSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Tariq
+   */
+  omit?: Prisma.TariqOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TariqInclude<ExtArgs> | null
+  where?: Prisma.TariqWhereInput
 }
 
 /**

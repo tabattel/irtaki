@@ -2392,6 +2392,8 @@ export const GoalScalarFieldEnum = {
   status: 'status',
   notificationEnabled: 'notificationEnabled',
   notificationTime: 'notificationTime',
+  riwayaId: 'riwayaId',
+  tariqId: 'tariqId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -2421,6 +2423,8 @@ export const ActivityScalarFieldEnum = {
   endedAt: 'endedAt',
   durationSec: 'durationSec',
   notes: 'notes',
+  riwayaId: 'riwayaId',
+  tariqId: 'tariqId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
