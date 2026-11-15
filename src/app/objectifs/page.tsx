@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { AccountActiveLearnerSwitcher } from "@/components/layout/account-active-learner-switcher";
+import { BackCloseNav } from "@/components/layout/back-close-nav";
 
 type Learner = {
   id: string;
@@ -427,46 +427,22 @@ export default function ObjectivesPage() {
       dir="rtl"
       className="mx-auto min-h-[60vh] w-full max-w-4xl min-w-0 px-3 py-5 sm:px-5 sm:py-8"
     >
+      <BackCloseNav />
       <header className="mb-6 flex min-w-0 flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="mb-1 text-sm text-[var(--muted)]">إيرتاكي · المتابعة الشخصية</p>
-          <h1 className="text-2xl font-bold sm:text-3xl">الأهداف</h1>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            خطّط للقراءة والحفظ والمراجعة، وتابع تقدمك الفعلي.
-          </p>
-        </div>
+        <div className="min-w-0">        </div>
 
-        <div className="flex flex-wrap gap-2">
+        {authState === "authenticated" && learnerId ? (
           <button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-medium"
+            className={buttonClass()}
             onClick={() => {
-              const requestedReturnTo = new URLSearchParams(
-                window.location.search,
-              ).get("returnTo");
-              const returnTo = requestedReturnTo?.startsWith("/coran/")
-                ? requestedReturnTo
-                : "/coran/10/page/605";
-
-              window.location.assign(returnTo);
+              setFormOpen((current) => !current);
+              setFormError(null);
             }}
           >
-            ↩ العودة إلى المصحف
+            {formOpen ? "إلغاء" : "+ هدف جديد"}
           </button>
-
-          {authState === "authenticated" && learnerId ? (
-            <button
-              type="button"
-              className={buttonClass()}
-              onClick={() => {
-                setFormOpen((current) => !current);
-                setFormError(null);
-              }}
-            >
-              {formOpen ? "إلغاء" : "+ هدف جديد"}
-            </button>
-          ) : null}
-        </div>
+        ) : null}
       </header>
 
       {authState === "loading" ? (
@@ -514,19 +490,7 @@ export default function ObjectivesPage() {
       {authState === "authenticated" ? (
         <div className="space-y-5">
           <section className="min-w-0 rounded-2xl border border-[var(--border)] p-4 sm:p-5">
-            <h2 className="mb-3 text-base font-semibold">المستخدم الحالي</h2>
-            <AccountActiveLearnerSwitcher />
-            {activeLearner ? (
-              <p className="mt-3 text-sm text-[var(--muted)]">
-                الأهداف المعروضة تخص:{" "}
-                <span className="font-semibold text-[var(--foreground)]">
-                  {activeLearner.name?.trim() ||
-                    (activeLearner.childProfileId
-                      ? "حساب طفل"
-                      : "صاحب الحساب الرئيسي")}
-                </span>
-              </p>
-            ) : (
+            {activeLearner ? (null) : (
               <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
                 لا يوجد مستخدم مرتبط بهذا الحساب بعد. أنشئ أو اربط ملف مستخدم
                 من قسم الحساب، ثم عد إلى هذه الصفحة.

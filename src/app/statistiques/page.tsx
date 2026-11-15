@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { BackCloseNav } from "@/components/layout/back-close-nav";
 
 import type {
   StatisticsAction,
@@ -438,48 +439,15 @@ export default function StatisticsPage() {
       className="mx-auto w-full min-w-0 max-w-6xl space-y-5"
       dir="rtl"
     >
+      <BackCloseNav />
       <header className="space-y-2">
-        <p className="text-sm text-[var(--muted)]">المساحة الشخصية</p>
-
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold sm:text-3xl">
               الإحصائيات
-            </h1>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              نظرة شاملة على أنشطة القراءة والتعلم والتقدم في القرآن الكريم.
-            </p>
-          </div>
+            </h1>          </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/coran"
-              aria-label="العودة إلى المصحف"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium transition hover:bg-[var(--surface)]"
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z" />
-                <path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20" />
-                <path d="M12 7v5m-2.5-2.5h5" />
-              </svg>
-              العودة إلى المصحف
-            </Link>
-
-            <Link
-              href="/objectifs"
-              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium transition hover:bg-[var(--surface)]"
-            >
-              الأهداف
-            </Link>
-          </div>
-        </div>
+                  </div>
       </header>
 
       {authState === "loading" ? (
@@ -520,25 +488,7 @@ export default function StatisticsPage() {
       {authState === "authenticated" ? (
         <>
           <section className="grid min-w-0 gap-3 rounded-2xl border border-[var(--border)] p-3 sm:grid-cols-2 sm:p-4">
-            {learners.length > 0 ? (
-              <label className="min-w-0 space-y-1.5 text-sm">
-                <span className="font-medium">المستخدم الحالي</span>
-                <select
-                  value={learnerId ?? ""}
-                  onChange={(event) => selectLearner(event.target.value)}
-                  className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-base"
-                >
-                  {learners.map((learner) => (
-                    <option key={learner.id} value={learner.id}>
-                      {learner.name?.trim() ||
-                        (learner.childProfileId
-                          ? "حساب طفل"
-                          : "الحساب الرئيسي")}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
+            {learners.length > 0 ? (null) : (
               <p className="self-center text-sm text-[var(--muted)]">
                 لا يوجد مستخدم مرتبط بهذا الحساب.
               </p>
@@ -940,24 +890,7 @@ export default function StatisticsPage() {
               </section>
 
               <section className="rounded-2xl border border-[var(--border)] p-4 text-sm text-[var(--muted)]">
-                <p>
-                  تُحسب الجلسات من سجلات النشاط، وتُحسب الآيات من سجلات التتبع.
-                  الآية المميزة تُحتسب مرة واحدة في التغطية، حتى لو ظهرت في عدة جلسات.
-                </p>
-
-                <p className="mt-2">
-                  المدة المعروضة هي المدة المسجلة للجلسات، وليست قياساً مستقلاً لوقت التركيز الفعلي.
-                </p>
-
-                {activeLearner ? (
-                  <p className="mt-2">
-                    المستخدم الحالي:{" "}
-                    {activeLearner.name?.trim() ||
-                      (activeLearner.childProfileId
-                        ? "حساب طفل"
-                        : "الحساب الرئيسي")}
-                  </p>
-                ) : null}
+                {activeLearner ? (null) : null}
               </section>
             </>
           ) : null}

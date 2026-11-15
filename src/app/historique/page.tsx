@@ -552,42 +552,6 @@ export default function HistoryPage() {
   return (
     <section dir="rtl" className="space-y-5">
       <BackCloseNav />
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold">📅 السجل</h1>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            سجل الأنشطة المسجّلة: أرقام الآيات والصفحات والتواريخ وعدد
-            التكرارات، دون عرض النص القرآني.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="rounded-lg border px-3 py-2 text-sm"
-          onClick={() => router.back()}
-        >
-          ↩ العودة
-        </button>
-      </header>
-
-      <label className="block max-w-xl space-y-2">
-        <span className="text-sm font-medium">المتعلم</span>
-        <select
-          className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] p-3"
-          value={learnerId}
-          onChange={(event) => setLearnerId(event.target.value)}
-          disabled={optionsLoading}
-        >
-          {learners.map((learner) => (
-            <option key={learner.id} value={learner.id}>
-              {learner.name?.trim() ||
-                (learner.childProfileId
-                  ? "حساب طفل"
-                  : "الحساب الرئيسي")}
-            </option>
-          ))}
-        </select>
-      </label>
-
       <div
         className="flex flex-wrap gap-2"
         role="tablist"
