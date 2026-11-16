@@ -2,15 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-// Turuq affichés dans Tarteel 2, par riwaya. Un Tariq absent de cette carte
-// reste masqué (nom provisoire). Pour en ouvrir un : ajouter son id ici.
-export const TARIQ_ENABLED: Readonly<Record<number, readonly number[]>> = {
-  10: [101, 102], // حفص : الشاطبية، طيبة النشر
-  2: [21, 22], // ورش : الأزرق، الأصبهاني
-};
-
-const TARIQ_KEY_PREFIX = "irtaki.mushaf.tarteel2.tariq.";
-const WAJH_KEY_PREFIX = "irtaki.mushaf.tarteel2.wajh.";
+import {
+  TARIQ_ENABLED,
+  TARIQ_KEY_PREFIX,
+  WAJH_KEY_PREFIX,
+} from "@/application/recitation/tariq-selection";
 
 type TariqOption = { id: number; name: string };
 type WajhOption = { id: number; name: string; isDefault: boolean };
