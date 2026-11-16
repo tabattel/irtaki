@@ -2,11 +2,18 @@
 
 import { useEffect, useState } from "react";
 
-// Riwayat pour lesquelles le choix du Tariq est ouvert.
-// Hafs (10) seulement pour l'instant ; les autres s'ajouteront ici plus tard.
-export const TARIQ_ENABLED_RIWAYAT: readonly number[] = [10];
+// Turuq affichés dans Tarteel 2, par riwaya. Un Tariq absent de cette carte
+// reste masqué (nom provisoire). Pour en ouvrir un : ajouter son id ici.
+export const TARIQ_ENABLED: Readonly<Record<number, readonly number[]>> = {
+  10: [101, 102], // حفص : الشاطبية، طيبة النشر
+  2: [21], // ورش : الأزرق
+};
+
+const TARIQ_KEY_PREFIX = "irtaki.mushaf.tarteel2.tariq.";
+const WAJH_KEY_PREFIX = "irtaki.mushaf.tarteel2.wajh.";
 
 type TariqOption = { id: number; name: string };
+type WajhOption = { id: number; name: string; isDefault: boolean };
 
 type Props = {
   mode: "tarteel1" | "tarteel2";
@@ -34,6 +41,23 @@ function parseTuruq(payload: unknown): TariqOption[] {
   return result;
 }
 
+function parseWujuh(payload: unknown): WajhOption[] {
+  const data = asRecord(payload)?.data;
+  if (!Array.isArray(data)) return [];
+  const result: WajhOption[] = [];
+  for (const item of data) {
+    const row = asRecord(item);
+    if (row && typeof row.id === "number" && typeof row.name === "string") {
+      result.push({
+        id: row.id,
+        name: row.name,
+        isDefault: row.isDefault === true,
+      });
+    }
+  }
+  return result;
+}
+
 function parseRiwayaName(payload: unknown): string | null {
   const data = asRecord(asRecord(payload)?.data);
   if (!data) return null;
@@ -52,13 +76,15 @@ export function MushafTarteelDetails({
   readPreference,
   writePreference,
 }: Props) {
-  const tariqEnabled = TARIQ_ENABLED_RIWAYAT.includes(riwayaId);
+  const allowedTuruq: readonly number[] = TARIQ_ENABLED[riwayaId] ?? [];
+  const tariqEnabled = allowedTuruq.length > 0;
   const wantsTuruq = mode === "tarteel2" && tariqEnabled;
-  const prefKey = `irtaki.mushaf.tarteel2.tariq.${riwayaId}`;
+  const tariqKey = `${TARIQ_KEY_PREFIX}${riwayaId}`;
 
   const [tariqId, setTariqId] = useState<string | null>(() =>
-    readPreference(prefKey),
+    readPreference(tariqKey),
   );
+  const [wajhChosen, setWajhChosen] = useState<Record<number, string>>({});
   const [riwayaInfo, setRiwayaInfo] = useState<{
     id: number;
     name: string | null;
@@ -66,8 +92,22 @@ export function MushafTarteelDetails({
   const [turuqInfo, setTuruqInfo] = useState<{
     id: number;
     items: TariqOption[];
-    failed: boolean;
   } | null>(null);
+  const [wujuhInfo, setWujuhInfo] = useState<{
+    tariqId: number;
+    items: WajhOption[];
+  } | null>(null);
+
+  // Tariq actif : celui qui est enregistré, ou l'unique Tariq ouvert.
+  const turuqReady =
+    turuqInfo !== null && turuqInfo.id === riwayaId ? turuqInfo : null;
+  const options = (turuqReady?.items ?? []).filter((option) =>
+    allowedTuruq.includes(option.id),
+  );
+  const activeTariq =
+    options.find((option) => String(option.id) === tariqId) ??
+    (options.length === 1 ? options[0] : null);
+  const activeTariqId = activeTariq ? activeTariq.id : null;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -92,28 +132,69 @@ export function MushafTarteelDetails({
         return r.json();
       })
       .then((payload: unknown) =>
-        setTuruqInfo({ id: riwayaId, items: parseTuruq(payload), failed: false }),
+        setTuruqInfo({ id: riwayaId, items: parseTuruq(payload) }),
       )
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setTuruqInfo({ id: riwayaId, items: [], failed: true });
+        setTuruqInfo({ id: riwayaId, items: [] });
       });
     return () => controller.abort();
   }, [wantsTuruq, riwayaId]);
+
+  useEffect(() => {
+    if (!wantsTuruq || activeTariqId === null) return;
+    const controller = new AbortController();
+    fetch(`/api/turuq/${activeTariqId}/wujuh`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(String(r.status));
+        return r.json();
+      })
+      .then((payload: unknown) =>
+        setWujuhInfo({ tariqId: activeTariqId, items: parseWujuh(payload) }),
+      )
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setWujuhInfo({ tariqId: activeTariqId, items: [] });
+      });
+    return () => controller.abort();
+  }, [wantsTuruq, activeTariqId]);
+
+  const wujuhReady =
+    activeTariqId !== null && wujuhInfo?.tariqId === activeTariqId
+      ? wujuhInfo
+      : null;
+  const wujuh = wujuhReady?.items ?? [];
+  const showWajh = wujuh.length >= 2; // 0 ou 1 Wajh : pas de sélecteur
+  const storedWajh =
+    activeTariqId !== null
+      ? (wajhChosen[activeTariqId] ??
+        readPreference(`${WAJH_KEY_PREFIX}${activeTariqId}`))
+      : null;
+  const activeWajh =
+    wujuh.find((item) => String(item.id) === storedWajh) ??
+    wujuh.find((item) => item.isDefault) ??
+    null;
 
   const title = mode === "tarteel1" ? "إعدادات ترتيل ١" : "إعدادات ترتيل ٢";
   const riwayaLabel =
     riwayaInfo?.id === riwayaId && riwayaInfo.name
       ? riwayaInfo.name
       : `الرواية رقم ${riwayaId}`;
-  const turuqReady =
-    turuqInfo !== null && turuqInfo.id === riwayaId ? turuqInfo : null;
-  const options = turuqReady?.items ?? [];
 
-  const choose = (id: number) => {
+  const chooseTariq = (id: number) => {
     const value = String(id);
-    writePreference(prefKey, value);
+    writePreference(tariqKey, value);
     setTariqId(value);
+  };
+
+  const chooseWajh = (id: number) => {
+    if (activeTariqId === null) return;
+    const value = String(id);
+    writePreference(`${WAJH_KEY_PREFIX}${activeTariqId}`, value);
+    setWajhChosen((previous) => ({ ...previous, [activeTariqId]: value }));
   };
 
   return (
@@ -138,42 +219,71 @@ export function MushafTarteelDetails({
       {mode === "tarteel2" && (
         <>
           {tariqEnabled ? (
-            <fieldset className="rounded-lg border p-3">
-              <legend className="px-1 text-sm font-semibold">الطريق</legend>
-              {!turuqReady ? (
-                <div className="mt-2 text-xs text-[var(--muted-foreground)]">
-                  جارٍ التحميل…
-                </div>
-              ) : options.length === 0 ? (
-                <div className="mt-2 text-xs text-[var(--muted-foreground)]">
-                  تعذّر تحميل الطرق.
-                </div>
-              ) : (
-                <div
-                  role="group"
-                  aria-label="اختيار الطريق"
-                  className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2"
-                >
-                  {options.map((option) => {
-                    const active = String(option.id) === tariqId;
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        aria-pressed={active}
-                        className={`rounded-lg border px-3 py-2 text-sm ${
-                          active ? "font-semibold ring-2 ring-current" : ""
-                        }`}
-                        onClick={() => choose(option.id)}
-                      >
-                        {option.name}
-                      </button>
-                    );
-                  })}
-                </div>
+            <>
+              <fieldset className="rounded-lg border p-3">
+                <legend className="px-1 text-sm font-semibold">الطريق</legend>
+                {!turuqReady ? (
+                  <div className="mt-2 text-xs text-[var(--muted-foreground)]">
+                    جارٍ التحميل…
+                  </div>
+                ) : options.length === 0 ? (
+                  <div className="mt-2 text-xs text-[var(--muted-foreground)]">
+                    تعذّر تحميل الطرق.
+                  </div>
+                ) : (
+                  <div
+                    role="group"
+                    aria-label="اختيار الطريق"
+                    className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2"
+                  >
+                    {options.map((option) => {
+                      const active = option.id === activeTariqId;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          aria-pressed={active}
+                          className={`rounded-lg border px-3 py-2 text-sm ${
+                            active ? "font-semibold ring-2 ring-current" : ""
+                          }`}
+                          onClick={() => chooseTariq(option.id)}
+                        >
+                          {option.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </fieldset>
+
+              {showWajh && (
+                <fieldset className="rounded-lg border p-3">
+                  <legend className="px-1 text-sm font-semibold">الوجه</legend>
+                  <div
+                    role="group"
+                    aria-label="اختيار الوجه"
+                    className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3"
+                  >
+                    {wujuh.map((item) => {
+                      const active = item.id === activeWajh?.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          aria-pressed={active}
+                          className={`rounded-lg border px-3 py-2 text-sm ${
+                            active ? "font-semibold ring-2 ring-current" : ""
+                          }`}
+                          onClick={() => chooseWajh(item.id)}
+                        >
+                          {item.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
               )}
-              {/* الوجه : sélecteur ajouté plus tard, quand un Tariq aura au moins 2 Wujuh. */}
-            </fieldset>
+            </>
           ) : (
             <div className="rounded-lg border border-dashed p-3 text-xs text-[var(--muted-foreground)]">
               طرق وأوجه هذه الرواية ستُضاف لاحقًا.
