@@ -72,3 +72,6 @@ ai/**/__pycache__/
 # Fichiers de backup locaux (avec extensions variées)
 *.backup-*
 .backup-*
+
+# Enregistrements de récitations (audio : jamais dans Git)
+/storage/recitations
