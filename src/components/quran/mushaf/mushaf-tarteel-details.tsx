@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 // reste masqué (nom provisoire). Pour en ouvrir un : ajouter son id ici.
 export const TARIQ_ENABLED: Readonly<Record<number, readonly number[]>> = {
   10: [101, 102], // حفص : الشاطبية، طيبة النشر
-  2: [21], // ورش : الأزرق
+  2: [21, 22], // ورش : الأزرق، الأصبهاني
 };
 
 const TARIQ_KEY_PREFIX = "irtaki.mushaf.tarteel2.tariq.";
