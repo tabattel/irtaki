@@ -56,6 +56,7 @@ import {
 import { recordMushafActionJournalEvent } from "./mushaf-action-journal";
 import { MushafTilawaRecorder } from "./mushaf-tilawa-recorder";
 import { MushafTarteelController } from "./mushaf-tarteel-controller";
+import { MushafTarteelDetails } from "./mushaf-tarteel-details";
 import {
   findTarteelLongestSuffixCandidates,
 } from "./mushaf-tarteel-matching";
@@ -7894,6 +7895,17 @@ export function MushafPage({
                       📝 فتح وإضافة ملاحظة للآية المحددة
                     </button>
                   </div>
+                )}
+
+              {moreMenuOpen &&
+                (secondaryMode === "tarteel1" || secondaryMode === "tarteel2") && (
+                  <MushafTarteelDetails
+                    key={`${secondaryMode}-${riwayaId}`}
+                    mode={secondaryMode}
+                    riwayaId={riwayaId}
+                    readPreference={getMushafStorageItem}
+                    writePreference={setMushafStorageItem}
+                  />
                 )}
 
               {moreMenuOpen && secondaryMode === "recitation" && (
