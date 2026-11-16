@@ -26,6 +26,7 @@ model Riwaya {
   reciters  Reciter[]
   activities Activity[]
   goals      Goal[]
+  recitations Recitation[]
 
   @@index([qiraaId])
 }
@@ -38,6 +39,7 @@ model Tariq {
   wujuh    Wajh[]
   activities Activity[]
   goals      Goal[]
+  recitations Recitation[]
 
   @@index([riwayaId])
 }
@@ -52,6 +54,7 @@ model Wajh {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   tariq     Tariq    @relation(fields: [tariqId], references: [id])
+  recitations Recitation[]
 
   @@unique([tariqId, name])
   @@index([tariqId])
@@ -100,6 +103,7 @@ model Ayah {
   audioTracks  AudioTrack[]
 
   activityTraces ActivityAyahTrace[]
+  recitationSegments RecitationSegment[]
 
   @@unique([surahNumber, number])
   @@index([surahNumber])
@@ -242,6 +246,7 @@ model Learner {
   progress     ProgressRecord[]
 
   mushafPreferences LearnerPreference?
+  recitations Recitation[]
 
   @@index([userId])
 }
@@ -332,6 +337,7 @@ model Activity {
   progress ProgressRecord[]
 
   ayahTraces ActivityAyahTrace[]
+  recitations Recitation[]
 
   @@index([learnerId])
   @@index([goalId])
@@ -485,4 +491,92 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+enum RecitationMode {
+  tarteel1
+  tarteel2
+}
+
+enum RecitationStatus {
+  recording
+  uploaded
+  processed
+  failed
+}
+
+enum RecitationGrade {
+  A
+  B
+  C
+}
+
+// Une récitation (la « Tilawa » du plan) : Tariq et Wajh figés au démarrage.
+model Recitation {
+  id              String           @id @default(cuid())
+  clientSessionId String           @unique
+  learnerId       String
+  activityId      String?
+  mode            RecitationMode
+  riwayaId        Int
+  tariqId         Int?
+  wajhId          Int?
+  startedAt       DateTime
+  endedAt         DateTime?
+  durationMs      Int?
+  sampleRate      Int              @default(16000)
+  status          RecitationStatus @default(recording)
+  originalPath    String?
+  originalFormat  String?
+  originalBytes   Int?
+  originalSha256  String?
+  consentTraining Boolean          @default(false)
+  timeline        Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  learner  Learner   @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  activity Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  riwaya   Riwaya    @relation(fields: [riwayaId], references: [id], onDelete: Restrict)
+  tariq    Tariq?    @relation(fields: [tariqId], references: [id], onDelete: Restrict)
+  wajh     Wajh?     @relation(fields: [wajhId], references: [id], onDelete: Restrict)
+  segments RecitationSegment[]
+
+  @@index([learnerId, startedAt])
+  @@index([activityId])
+  @@index([riwayaId, tariqId, wajhId])
+  @@index([status])
+}
+
+// Un segment par Ayah et par répétition. Le TID relie fichier, base et apprenant.
+model RecitationSegment {
+  id                   String           @id @default(cuid())
+  tid                  Int              @unique @default(autoincrement())
+  recitationId         String
+  ayahId               Int
+  repetition           Int              @default(1)
+  startMs              Int
+  endMs                Int
+  filePath             String?
+  transcriptRaw        String?
+  wer                  Float?
+  exactMatch           Boolean?
+  grade                RecitationGrade?
+  substitutions        Int?
+  deletions            Int?
+  insertions           Int?
+  referenceWordCount   Int?
+  hypothesisWordCount  Int?
+  normalizationVersion String?
+  werAlgorithmVersion  String?
+  engineId             String?
+  gradedAt             DateTime?
+  createdAt            DateTime         @default(now())
+
+  recitation Recitation @relation(fields: [recitationId], references: [id], onDelete: Cascade)
+  ayah       Ayah       @relation(fields: [ayahId], references: [id], onDelete: Restrict)
+
+  @@unique([recitationId, ayahId, repetition])
+  @@index([ayahId])
+  @@index([grade])
 }

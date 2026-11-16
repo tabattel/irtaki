@@ -419,7 +419,9 @@ export const ModelName = {
   ActivityResult: 'ActivityResult',
   ProgressRecord: 'ProgressRecord',
   ActivityAyahTrace: 'ActivityAyahTrace',
-  PasswordResetToken: 'PasswordResetToken'
+  PasswordResetToken: 'PasswordResetToken',
+  Recitation: 'Recitation',
+  RecitationSegment: 'RecitationSegment'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -435,7 +437,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "qiraa" | "riwaya" | "tariq" | "wajh" | "mushaf" | "surah" | "ayah" | "reciter" | "audioTrack" | "annotation" | "user" | "account" | "session" | "childProfile" | "learner" | "learnerPreference" | "goal" | "goalTarget" | "activity" | "activityResult" | "progressRecord" | "activityAyahTrace" | "passwordResetToken"
+    modelProps: "qiraa" | "riwaya" | "tariq" | "wajh" | "mushaf" | "surah" | "ayah" | "reciter" | "audioTrack" | "annotation" | "user" | "account" | "session" | "childProfile" | "learner" | "learnerPreference" | "goal" | "goalTarget" | "activity" | "activityResult" | "progressRecord" | "activityAyahTrace" | "passwordResetToken" | "recitation" | "recitationSegment"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2141,6 +2143,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Recitation: {
+      payload: Prisma.$RecitationPayload<ExtArgs>
+      fields: Prisma.RecitationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RecitationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RecitationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationPayload>
+        }
+        findFirst: {
+          args: Prisma.RecitationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RecitationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationPayload>
+        }
+        findMany: {
+          args: Prisma.RecitationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationPayload>[]
+        }
+        create: {
+          args: Prisma.RecitationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationPayload>
+        }
+        createMany: {
+          args: Prisma.RecitationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RecitationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationPayload>[]
+        }
+        delete: {
+          args: Prisma.RecitationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationPayload>
+        }
+        update: {
+          args: Prisma.RecitationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationPayload>
+        }
+        deleteMany: {
+          args: Prisma.RecitationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RecitationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RecitationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationPayload>[]
+        }
+        upsert: {
+          args: Prisma.RecitationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationPayload>
+        }
+        aggregate: {
+          args: Prisma.RecitationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRecitation>
+        }
+        groupBy: {
+          args: Prisma.RecitationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RecitationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RecitationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RecitationCountAggregateOutputType> | number
+        }
+      }
+    }
+    RecitationSegment: {
+      payload: Prisma.$RecitationSegmentPayload<ExtArgs>
+      fields: Prisma.RecitationSegmentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.RecitationSegmentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationSegmentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.RecitationSegmentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationSegmentPayload>
+        }
+        findFirst: {
+          args: Prisma.RecitationSegmentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationSegmentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.RecitationSegmentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationSegmentPayload>
+        }
+        findMany: {
+          args: Prisma.RecitationSegmentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationSegmentPayload>[]
+        }
+        create: {
+          args: Prisma.RecitationSegmentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationSegmentPayload>
+        }
+        createMany: {
+          args: Prisma.RecitationSegmentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.RecitationSegmentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationSegmentPayload>[]
+        }
+        delete: {
+          args: Prisma.RecitationSegmentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationSegmentPayload>
+        }
+        update: {
+          args: Prisma.RecitationSegmentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationSegmentPayload>
+        }
+        deleteMany: {
+          args: Prisma.RecitationSegmentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.RecitationSegmentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.RecitationSegmentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationSegmentPayload>[]
+        }
+        upsert: {
+          args: Prisma.RecitationSegmentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$RecitationSegmentPayload>
+        }
+        aggregate: {
+          args: Prisma.RecitationSegmentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRecitationSegment>
+        }
+        groupBy: {
+          args: Prisma.RecitationSegmentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RecitationSegmentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.RecitationSegmentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.RecitationSegmentCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -2487,6 +2637,61 @@ export const PasswordResetTokenScalarFieldEnum = {
 export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalarFieldEnum)[keyof typeof PasswordResetTokenScalarFieldEnum]
 
 
+export const RecitationScalarFieldEnum = {
+  id: 'id',
+  clientSessionId: 'clientSessionId',
+  learnerId: 'learnerId',
+  activityId: 'activityId',
+  mode: 'mode',
+  riwayaId: 'riwayaId',
+  tariqId: 'tariqId',
+  wajhId: 'wajhId',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt',
+  durationMs: 'durationMs',
+  sampleRate: 'sampleRate',
+  status: 'status',
+  originalPath: 'originalPath',
+  originalFormat: 'originalFormat',
+  originalBytes: 'originalBytes',
+  originalSha256: 'originalSha256',
+  consentTraining: 'consentTraining',
+  timeline: 'timeline',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RecitationScalarFieldEnum = (typeof RecitationScalarFieldEnum)[keyof typeof RecitationScalarFieldEnum]
+
+
+export const RecitationSegmentScalarFieldEnum = {
+  id: 'id',
+  tid: 'tid',
+  recitationId: 'recitationId',
+  ayahId: 'ayahId',
+  repetition: 'repetition',
+  startMs: 'startMs',
+  endMs: 'endMs',
+  filePath: 'filePath',
+  transcriptRaw: 'transcriptRaw',
+  wer: 'wer',
+  exactMatch: 'exactMatch',
+  grade: 'grade',
+  substitutions: 'substitutions',
+  deletions: 'deletions',
+  insertions: 'insertions',
+  referenceWordCount: 'referenceWordCount',
+  hypothesisWordCount: 'hypothesisWordCount',
+  normalizationVersion: 'normalizationVersion',
+  werAlgorithmVersion: 'werAlgorithmVersion',
+  engineId: 'engineId',
+  gradedAt: 'gradedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type RecitationSegmentScalarFieldEnum = (typeof RecitationSegmentScalarFieldEnum)[keyof typeof RecitationSegmentScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -2500,6 +2705,14 @@ export const JsonNullValueInput = {
 } as const
 
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
 export const QueryMode = {
@@ -2779,6 +2992,34 @@ export type ListEnumActivityAyahTraceStatusFieldRefInput<$PrismaModel> = FieldRe
 
 
 /**
+ * Reference to a field of type 'RecitationMode'
+ */
+export type EnumRecitationModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RecitationMode'>
+    
+
+
+/**
+ * Reference to a field of type 'RecitationMode[]'
+ */
+export type ListEnumRecitationModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RecitationMode[]'>
+    
+
+
+/**
+ * Reference to a field of type 'RecitationStatus'
+ */
+export type EnumRecitationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RecitationStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'RecitationStatus[]'
+ */
+export type ListEnumRecitationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RecitationStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'Float'
  */
 export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -2789,6 +3030,20 @@ export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, '
  * Reference to a field of type 'Float[]'
  */
 export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
+    
+
+
+/**
+ * Reference to a field of type 'RecitationGrade'
+ */
+export type EnumRecitationGradeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RecitationGrade'>
+    
+
+
+/**
+ * Reference to a field of type 'RecitationGrade[]'
+ */
+export type ListEnumRecitationGradeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RecitationGrade[]'>
     
 
 /**
@@ -2965,6 +3220,8 @@ export type GlobalOmitConfig = {
   progressRecord?: Prisma.ProgressRecordOmit
   activityAyahTrace?: Prisma.ActivityAyahTraceOmit
   passwordResetToken?: Prisma.PasswordResetTokenOmit
+  recitation?: Prisma.RecitationOmit
+  recitationSegment?: Prisma.RecitationSegmentOmit
 }
 
 /* Types for Logging */

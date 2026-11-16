@@ -218,6 +218,7 @@ export type RiwayaWhereInput = {
   reciters?: Prisma.ReciterListRelationFilter
   activities?: Prisma.ActivityListRelationFilter
   goals?: Prisma.GoalListRelationFilter
+  recitations?: Prisma.RecitationListRelationFilter
 }
 
 export type RiwayaOrderByWithRelationInput = {
@@ -231,6 +232,7 @@ export type RiwayaOrderByWithRelationInput = {
   reciters?: Prisma.ReciterOrderByRelationAggregateInput
   activities?: Prisma.ActivityOrderByRelationAggregateInput
   goals?: Prisma.GoalOrderByRelationAggregateInput
+  recitations?: Prisma.RecitationOrderByRelationAggregateInput
 }
 
 export type RiwayaWhereUniqueInput = Prisma.AtLeast<{
@@ -247,6 +249,7 @@ export type RiwayaWhereUniqueInput = Prisma.AtLeast<{
   reciters?: Prisma.ReciterListRelationFilter
   activities?: Prisma.ActivityListRelationFilter
   goals?: Prisma.GoalListRelationFilter
+  recitations?: Prisma.RecitationListRelationFilter
 }, "id">
 
 export type RiwayaOrderByWithAggregationInput = {
@@ -281,6 +284,7 @@ export type RiwayaCreateInput = {
   reciters?: Prisma.ReciterCreateNestedManyWithoutRiwayaInput
   activities?: Prisma.ActivityCreateNestedManyWithoutRiwayaInput
   goals?: Prisma.GoalCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUncheckedCreateInput = {
@@ -293,6 +297,7 @@ export type RiwayaUncheckedCreateInput = {
   reciters?: Prisma.ReciterUncheckedCreateNestedManyWithoutRiwayaInput
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutRiwayaInput
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUpdateInput = {
@@ -305,6 +310,7 @@ export type RiwayaUpdateInput = {
   reciters?: Prisma.ReciterUpdateManyWithoutRiwayaNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutRiwayaNestedInput
   goals?: Prisma.GoalUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateInput = {
@@ -317,6 +323,7 @@ export type RiwayaUncheckedUpdateInput = {
   reciters?: Prisma.ReciterUncheckedUpdateManyWithoutRiwayaNestedInput
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutRiwayaNestedInput
   goals?: Prisma.GoalUncheckedUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaCreateManyInput = {
@@ -506,6 +513,20 @@ export type RiwayaUpdateOneWithoutActivitiesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.RiwayaUpdateToOneWithWhereWithoutActivitiesInput, Prisma.RiwayaUpdateWithoutActivitiesInput>, Prisma.RiwayaUncheckedUpdateWithoutActivitiesInput>
 }
 
+export type RiwayaCreateNestedOneWithoutRecitationsInput = {
+  create?: Prisma.XOR<Prisma.RiwayaCreateWithoutRecitationsInput, Prisma.RiwayaUncheckedCreateWithoutRecitationsInput>
+  connectOrCreate?: Prisma.RiwayaCreateOrConnectWithoutRecitationsInput
+  connect?: Prisma.RiwayaWhereUniqueInput
+}
+
+export type RiwayaUpdateOneRequiredWithoutRecitationsNestedInput = {
+  create?: Prisma.XOR<Prisma.RiwayaCreateWithoutRecitationsInput, Prisma.RiwayaUncheckedCreateWithoutRecitationsInput>
+  connectOrCreate?: Prisma.RiwayaCreateOrConnectWithoutRecitationsInput
+  upsert?: Prisma.RiwayaUpsertWithoutRecitationsInput
+  connect?: Prisma.RiwayaWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.RiwayaUpdateToOneWithWhereWithoutRecitationsInput, Prisma.RiwayaUpdateWithoutRecitationsInput>, Prisma.RiwayaUncheckedUpdateWithoutRecitationsInput>
+}
+
 export type RiwayaCreateWithoutQiraaInput = {
   id: number
   shortName: string
@@ -515,6 +536,7 @@ export type RiwayaCreateWithoutQiraaInput = {
   reciters?: Prisma.ReciterCreateNestedManyWithoutRiwayaInput
   activities?: Prisma.ActivityCreateNestedManyWithoutRiwayaInput
   goals?: Prisma.GoalCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUncheckedCreateWithoutQiraaInput = {
@@ -526,6 +548,7 @@ export type RiwayaUncheckedCreateWithoutQiraaInput = {
   reciters?: Prisma.ReciterUncheckedCreateNestedManyWithoutRiwayaInput
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutRiwayaInput
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaCreateOrConnectWithoutQiraaInput = {
@@ -573,6 +596,7 @@ export type RiwayaCreateWithoutTariqsInput = {
   reciters?: Prisma.ReciterCreateNestedManyWithoutRiwayaInput
   activities?: Prisma.ActivityCreateNestedManyWithoutRiwayaInput
   goals?: Prisma.GoalCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUncheckedCreateWithoutTariqsInput = {
@@ -584,6 +608,7 @@ export type RiwayaUncheckedCreateWithoutTariqsInput = {
   reciters?: Prisma.ReciterUncheckedCreateNestedManyWithoutRiwayaInput
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutRiwayaInput
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaCreateOrConnectWithoutTariqsInput = {
@@ -611,6 +636,7 @@ export type RiwayaUpdateWithoutTariqsInput = {
   reciters?: Prisma.ReciterUpdateManyWithoutRiwayaNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutRiwayaNestedInput
   goals?: Prisma.GoalUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateWithoutTariqsInput = {
@@ -622,6 +648,7 @@ export type RiwayaUncheckedUpdateWithoutTariqsInput = {
   reciters?: Prisma.ReciterUncheckedUpdateManyWithoutRiwayaNestedInput
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutRiwayaNestedInput
   goals?: Prisma.GoalUncheckedUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaCreateWithoutMushafsInput = {
@@ -633,6 +660,7 @@ export type RiwayaCreateWithoutMushafsInput = {
   reciters?: Prisma.ReciterCreateNestedManyWithoutRiwayaInput
   activities?: Prisma.ActivityCreateNestedManyWithoutRiwayaInput
   goals?: Prisma.GoalCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUncheckedCreateWithoutMushafsInput = {
@@ -644,6 +672,7 @@ export type RiwayaUncheckedCreateWithoutMushafsInput = {
   reciters?: Prisma.ReciterUncheckedCreateNestedManyWithoutRiwayaInput
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutRiwayaInput
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaCreateOrConnectWithoutMushafsInput = {
@@ -671,6 +700,7 @@ export type RiwayaUpdateWithoutMushafsInput = {
   reciters?: Prisma.ReciterUpdateManyWithoutRiwayaNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutRiwayaNestedInput
   goals?: Prisma.GoalUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateWithoutMushafsInput = {
@@ -682,6 +712,7 @@ export type RiwayaUncheckedUpdateWithoutMushafsInput = {
   reciters?: Prisma.ReciterUncheckedUpdateManyWithoutRiwayaNestedInput
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutRiwayaNestedInput
   goals?: Prisma.GoalUncheckedUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaCreateWithoutRecitersInput = {
@@ -693,6 +724,7 @@ export type RiwayaCreateWithoutRecitersInput = {
   tariqs?: Prisma.TariqCreateNestedManyWithoutRiwayaInput
   activities?: Prisma.ActivityCreateNestedManyWithoutRiwayaInput
   goals?: Prisma.GoalCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUncheckedCreateWithoutRecitersInput = {
@@ -704,6 +736,7 @@ export type RiwayaUncheckedCreateWithoutRecitersInput = {
   tariqs?: Prisma.TariqUncheckedCreateNestedManyWithoutRiwayaInput
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutRiwayaInput
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaCreateOrConnectWithoutRecitersInput = {
@@ -731,6 +764,7 @@ export type RiwayaUpdateWithoutRecitersInput = {
   tariqs?: Prisma.TariqUpdateManyWithoutRiwayaNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutRiwayaNestedInput
   goals?: Prisma.GoalUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateWithoutRecitersInput = {
@@ -742,6 +776,7 @@ export type RiwayaUncheckedUpdateWithoutRecitersInput = {
   tariqs?: Prisma.TariqUncheckedUpdateManyWithoutRiwayaNestedInput
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutRiwayaNestedInput
   goals?: Prisma.GoalUncheckedUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaCreateWithoutGoalsInput = {
@@ -753,6 +788,7 @@ export type RiwayaCreateWithoutGoalsInput = {
   tariqs?: Prisma.TariqCreateNestedManyWithoutRiwayaInput
   reciters?: Prisma.ReciterCreateNestedManyWithoutRiwayaInput
   activities?: Prisma.ActivityCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUncheckedCreateWithoutGoalsInput = {
@@ -764,6 +800,7 @@ export type RiwayaUncheckedCreateWithoutGoalsInput = {
   tariqs?: Prisma.TariqUncheckedCreateNestedManyWithoutRiwayaInput
   reciters?: Prisma.ReciterUncheckedCreateNestedManyWithoutRiwayaInput
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaCreateOrConnectWithoutGoalsInput = {
@@ -791,6 +828,7 @@ export type RiwayaUpdateWithoutGoalsInput = {
   tariqs?: Prisma.TariqUpdateManyWithoutRiwayaNestedInput
   reciters?: Prisma.ReciterUpdateManyWithoutRiwayaNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateWithoutGoalsInput = {
@@ -802,6 +840,7 @@ export type RiwayaUncheckedUpdateWithoutGoalsInput = {
   tariqs?: Prisma.TariqUncheckedUpdateManyWithoutRiwayaNestedInput
   reciters?: Prisma.ReciterUncheckedUpdateManyWithoutRiwayaNestedInput
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaCreateWithoutActivitiesInput = {
@@ -813,6 +852,7 @@ export type RiwayaCreateWithoutActivitiesInput = {
   tariqs?: Prisma.TariqCreateNestedManyWithoutRiwayaInput
   reciters?: Prisma.ReciterCreateNestedManyWithoutRiwayaInput
   goals?: Prisma.GoalCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaUncheckedCreateWithoutActivitiesInput = {
@@ -824,6 +864,7 @@ export type RiwayaUncheckedCreateWithoutActivitiesInput = {
   tariqs?: Prisma.TariqUncheckedCreateNestedManyWithoutRiwayaInput
   reciters?: Prisma.ReciterUncheckedCreateNestedManyWithoutRiwayaInput
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutRiwayaInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutRiwayaInput
 }
 
 export type RiwayaCreateOrConnectWithoutActivitiesInput = {
@@ -851,6 +892,7 @@ export type RiwayaUpdateWithoutActivitiesInput = {
   tariqs?: Prisma.TariqUpdateManyWithoutRiwayaNestedInput
   reciters?: Prisma.ReciterUpdateManyWithoutRiwayaNestedInput
   goals?: Prisma.GoalUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateWithoutActivitiesInput = {
@@ -861,6 +903,71 @@ export type RiwayaUncheckedUpdateWithoutActivitiesInput = {
   mushafs?: Prisma.MushafUncheckedUpdateManyWithoutRiwayaNestedInput
   tariqs?: Prisma.TariqUncheckedUpdateManyWithoutRiwayaNestedInput
   reciters?: Prisma.ReciterUncheckedUpdateManyWithoutRiwayaNestedInput
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutRiwayaNestedInput
+}
+
+export type RiwayaCreateWithoutRecitationsInput = {
+  id: number
+  shortName: string
+  fullName: string
+  mushafs?: Prisma.MushafCreateNestedManyWithoutRiwayaInput
+  qiraa: Prisma.QiraaCreateNestedOneWithoutRiwayatInput
+  tariqs?: Prisma.TariqCreateNestedManyWithoutRiwayaInput
+  reciters?: Prisma.ReciterCreateNestedManyWithoutRiwayaInput
+  activities?: Prisma.ActivityCreateNestedManyWithoutRiwayaInput
+  goals?: Prisma.GoalCreateNestedManyWithoutRiwayaInput
+}
+
+export type RiwayaUncheckedCreateWithoutRecitationsInput = {
+  id: number
+  shortName: string
+  fullName: string
+  qiraaId: number
+  mushafs?: Prisma.MushafUncheckedCreateNestedManyWithoutRiwayaInput
+  tariqs?: Prisma.TariqUncheckedCreateNestedManyWithoutRiwayaInput
+  reciters?: Prisma.ReciterUncheckedCreateNestedManyWithoutRiwayaInput
+  activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutRiwayaInput
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutRiwayaInput
+}
+
+export type RiwayaCreateOrConnectWithoutRecitationsInput = {
+  where: Prisma.RiwayaWhereUniqueInput
+  create: Prisma.XOR<Prisma.RiwayaCreateWithoutRecitationsInput, Prisma.RiwayaUncheckedCreateWithoutRecitationsInput>
+}
+
+export type RiwayaUpsertWithoutRecitationsInput = {
+  update: Prisma.XOR<Prisma.RiwayaUpdateWithoutRecitationsInput, Prisma.RiwayaUncheckedUpdateWithoutRecitationsInput>
+  create: Prisma.XOR<Prisma.RiwayaCreateWithoutRecitationsInput, Prisma.RiwayaUncheckedCreateWithoutRecitationsInput>
+  where?: Prisma.RiwayaWhereInput
+}
+
+export type RiwayaUpdateToOneWithWhereWithoutRecitationsInput = {
+  where?: Prisma.RiwayaWhereInput
+  data: Prisma.XOR<Prisma.RiwayaUpdateWithoutRecitationsInput, Prisma.RiwayaUncheckedUpdateWithoutRecitationsInput>
+}
+
+export type RiwayaUpdateWithoutRecitationsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  shortName?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  mushafs?: Prisma.MushafUpdateManyWithoutRiwayaNestedInput
+  qiraa?: Prisma.QiraaUpdateOneRequiredWithoutRiwayatNestedInput
+  tariqs?: Prisma.TariqUpdateManyWithoutRiwayaNestedInput
+  reciters?: Prisma.ReciterUpdateManyWithoutRiwayaNestedInput
+  activities?: Prisma.ActivityUpdateManyWithoutRiwayaNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutRiwayaNestedInput
+}
+
+export type RiwayaUncheckedUpdateWithoutRecitationsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  shortName?: Prisma.StringFieldUpdateOperationsInput | string
+  fullName?: Prisma.StringFieldUpdateOperationsInput | string
+  qiraaId?: Prisma.IntFieldUpdateOperationsInput | number
+  mushafs?: Prisma.MushafUncheckedUpdateManyWithoutRiwayaNestedInput
+  tariqs?: Prisma.TariqUncheckedUpdateManyWithoutRiwayaNestedInput
+  reciters?: Prisma.ReciterUncheckedUpdateManyWithoutRiwayaNestedInput
+  activities?: Prisma.ActivityUncheckedUpdateManyWithoutRiwayaNestedInput
   goals?: Prisma.GoalUncheckedUpdateManyWithoutRiwayaNestedInput
 }
 
@@ -879,6 +986,7 @@ export type RiwayaUpdateWithoutQiraaInput = {
   reciters?: Prisma.ReciterUpdateManyWithoutRiwayaNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutRiwayaNestedInput
   goals?: Prisma.GoalUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateWithoutQiraaInput = {
@@ -890,6 +998,7 @@ export type RiwayaUncheckedUpdateWithoutQiraaInput = {
   reciters?: Prisma.ReciterUncheckedUpdateManyWithoutRiwayaNestedInput
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutRiwayaNestedInput
   goals?: Prisma.GoalUncheckedUpdateManyWithoutRiwayaNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutRiwayaNestedInput
 }
 
 export type RiwayaUncheckedUpdateManyWithoutQiraaInput = {
@@ -909,6 +1018,7 @@ export type RiwayaCountOutputType = {
   reciters: number
   activities: number
   goals: number
+  recitations: number
 }
 
 export type RiwayaCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -917,6 +1027,7 @@ export type RiwayaCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions
   reciters?: boolean | RiwayaCountOutputTypeCountRecitersArgs
   activities?: boolean | RiwayaCountOutputTypeCountActivitiesArgs
   goals?: boolean | RiwayaCountOutputTypeCountGoalsArgs
+  recitations?: boolean | RiwayaCountOutputTypeCountRecitationsArgs
 }
 
 /**
@@ -964,6 +1075,13 @@ export type RiwayaCountOutputTypeCountGoalsArgs<ExtArgs extends runtime.Types.Ex
   where?: Prisma.GoalWhereInput
 }
 
+/**
+ * RiwayaCountOutputType without action
+ */
+export type RiwayaCountOutputTypeCountRecitationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RecitationWhereInput
+}
+
 
 export type RiwayaSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -976,6 +1094,7 @@ export type RiwayaSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   reciters?: boolean | Prisma.Riwaya$recitersArgs<ExtArgs>
   activities?: boolean | Prisma.Riwaya$activitiesArgs<ExtArgs>
   goals?: boolean | Prisma.Riwaya$goalsArgs<ExtArgs>
+  recitations?: boolean | Prisma.Riwaya$recitationsArgs<ExtArgs>
   _count?: boolean | Prisma.RiwayaCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["riwaya"]>
 
@@ -1010,6 +1129,7 @@ export type RiwayaInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   reciters?: boolean | Prisma.Riwaya$recitersArgs<ExtArgs>
   activities?: boolean | Prisma.Riwaya$activitiesArgs<ExtArgs>
   goals?: boolean | Prisma.Riwaya$goalsArgs<ExtArgs>
+  recitations?: boolean | Prisma.Riwaya$recitationsArgs<ExtArgs>
   _count?: boolean | Prisma.RiwayaCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type RiwayaIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1028,6 +1148,7 @@ export type $RiwayaPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     reciters: Prisma.$ReciterPayload<ExtArgs>[]
     activities: Prisma.$ActivityPayload<ExtArgs>[]
     goals: Prisma.$GoalPayload<ExtArgs>[]
+    recitations: Prisma.$RecitationPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -1434,6 +1555,7 @@ export interface Prisma__RiwayaClient<T, Null = never, ExtArgs extends runtime.T
   reciters<T extends Prisma.Riwaya$recitersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Riwaya$recitersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReciterPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   activities<T extends Prisma.Riwaya$activitiesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Riwaya$activitiesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActivityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   goals<T extends Prisma.Riwaya$goalsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Riwaya$goalsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GoalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  recitations<T extends Prisma.Riwaya$recitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Riwaya$recitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RecitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1985,6 +2107,30 @@ export type Riwaya$goalsArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
   take?: number
   skip?: number
   distinct?: Prisma.GoalScalarFieldEnum | Prisma.GoalScalarFieldEnum[]
+}
+
+/**
+ * Riwaya.recitations
+ */
+export type Riwaya$recitationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Recitation
+   */
+  select?: Prisma.RecitationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Recitation
+   */
+  omit?: Prisma.RecitationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RecitationInclude<ExtArgs> | null
+  where?: Prisma.RecitationWhereInput
+  orderBy?: Prisma.RecitationOrderByWithRelationInput | Prisma.RecitationOrderByWithRelationInput[]
+  cursor?: Prisma.RecitationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RecitationScalarFieldEnum | Prisma.RecitationScalarFieldEnum[]
 }
 
 /**

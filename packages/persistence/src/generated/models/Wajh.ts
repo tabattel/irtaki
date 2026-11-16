@@ -241,6 +241,7 @@ export type WajhWhereInput = {
   isActive?: Prisma.BoolFilter<"Wajh"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Wajh"> | Date | string
   tariq?: Prisma.XOR<Prisma.TariqScalarRelationFilter, Prisma.TariqWhereInput>
+  recitations?: Prisma.RecitationListRelationFilter
 }
 
 export type WajhOrderByWithRelationInput = {
@@ -252,6 +253,7 @@ export type WajhOrderByWithRelationInput = {
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   tariq?: Prisma.TariqOrderByWithRelationInput
+  recitations?: Prisma.RecitationOrderByRelationAggregateInput
 }
 
 export type WajhWhereUniqueInput = Prisma.AtLeast<{
@@ -267,6 +269,7 @@ export type WajhWhereUniqueInput = Prisma.AtLeast<{
   isActive?: Prisma.BoolFilter<"Wajh"> | boolean
   createdAt?: Prisma.DateTimeFilter<"Wajh"> | Date | string
   tariq?: Prisma.XOR<Prisma.TariqScalarRelationFilter, Prisma.TariqWhereInput>
+  recitations?: Prisma.RecitationListRelationFilter
 }, "id" | "tariqId_name">
 
 export type WajhOrderByWithAggregationInput = {
@@ -304,6 +307,7 @@ export type WajhCreateInput = {
   isActive?: boolean
   createdAt?: Date | string
   tariq: Prisma.TariqCreateNestedOneWithoutWujuhInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutWajhInput
 }
 
 export type WajhUncheckedCreateInput = {
@@ -314,6 +318,7 @@ export type WajhUncheckedCreateInput = {
   isDefault?: boolean
   isActive?: boolean
   createdAt?: Date | string
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutWajhInput
 }
 
 export type WajhUpdateInput = {
@@ -323,6 +328,7 @@ export type WajhUpdateInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tariq?: Prisma.TariqUpdateOneRequiredWithoutWujuhNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutWajhNestedInput
 }
 
 export type WajhUncheckedUpdateInput = {
@@ -333,6 +339,7 @@ export type WajhUncheckedUpdateInput = {
   isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutWajhNestedInput
 }
 
 export type WajhCreateManyInput = {
@@ -420,6 +427,11 @@ export type WajhSumOrderByAggregateInput = {
   position?: Prisma.SortOrder
 }
 
+export type WajhNullableScalarRelationFilter = {
+  is?: Prisma.WajhWhereInput | null
+  isNot?: Prisma.WajhWhereInput | null
+}
+
 export type WajhCreateNestedManyWithoutTariqInput = {
   create?: Prisma.XOR<Prisma.WajhCreateWithoutTariqInput, Prisma.WajhUncheckedCreateWithoutTariqInput> | Prisma.WajhCreateWithoutTariqInput[] | Prisma.WajhUncheckedCreateWithoutTariqInput[]
   connectOrCreate?: Prisma.WajhCreateOrConnectWithoutTariqInput | Prisma.WajhCreateOrConnectWithoutTariqInput[]
@@ -470,12 +482,29 @@ export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
 }
 
+export type WajhCreateNestedOneWithoutRecitationsInput = {
+  create?: Prisma.XOR<Prisma.WajhCreateWithoutRecitationsInput, Prisma.WajhUncheckedCreateWithoutRecitationsInput>
+  connectOrCreate?: Prisma.WajhCreateOrConnectWithoutRecitationsInput
+  connect?: Prisma.WajhWhereUniqueInput
+}
+
+export type WajhUpdateOneWithoutRecitationsNestedInput = {
+  create?: Prisma.XOR<Prisma.WajhCreateWithoutRecitationsInput, Prisma.WajhUncheckedCreateWithoutRecitationsInput>
+  connectOrCreate?: Prisma.WajhCreateOrConnectWithoutRecitationsInput
+  upsert?: Prisma.WajhUpsertWithoutRecitationsInput
+  disconnect?: Prisma.WajhWhereInput | boolean
+  delete?: Prisma.WajhWhereInput | boolean
+  connect?: Prisma.WajhWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WajhUpdateToOneWithWhereWithoutRecitationsInput, Prisma.WajhUpdateWithoutRecitationsInput>, Prisma.WajhUncheckedUpdateWithoutRecitationsInput>
+}
+
 export type WajhCreateWithoutTariqInput = {
   name: string
   position?: number
   isDefault?: boolean
   isActive?: boolean
   createdAt?: Date | string
+  recitations?: Prisma.RecitationCreateNestedManyWithoutWajhInput
 }
 
 export type WajhUncheckedCreateWithoutTariqInput = {
@@ -485,6 +514,7 @@ export type WajhUncheckedCreateWithoutTariqInput = {
   isDefault?: boolean
   isActive?: boolean
   createdAt?: Date | string
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutWajhInput
 }
 
 export type WajhCreateOrConnectWithoutTariqInput = {
@@ -526,6 +556,60 @@ export type WajhScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Wajh"> | Date | string
 }
 
+export type WajhCreateWithoutRecitationsInput = {
+  name: string
+  position?: number
+  isDefault?: boolean
+  isActive?: boolean
+  createdAt?: Date | string
+  tariq: Prisma.TariqCreateNestedOneWithoutWujuhInput
+}
+
+export type WajhUncheckedCreateWithoutRecitationsInput = {
+  id?: number
+  tariqId: number
+  name: string
+  position?: number
+  isDefault?: boolean
+  isActive?: boolean
+  createdAt?: Date | string
+}
+
+export type WajhCreateOrConnectWithoutRecitationsInput = {
+  where: Prisma.WajhWhereUniqueInput
+  create: Prisma.XOR<Prisma.WajhCreateWithoutRecitationsInput, Prisma.WajhUncheckedCreateWithoutRecitationsInput>
+}
+
+export type WajhUpsertWithoutRecitationsInput = {
+  update: Prisma.XOR<Prisma.WajhUpdateWithoutRecitationsInput, Prisma.WajhUncheckedUpdateWithoutRecitationsInput>
+  create: Prisma.XOR<Prisma.WajhCreateWithoutRecitationsInput, Prisma.WajhUncheckedCreateWithoutRecitationsInput>
+  where?: Prisma.WajhWhereInput
+}
+
+export type WajhUpdateToOneWithWhereWithoutRecitationsInput = {
+  where?: Prisma.WajhWhereInput
+  data: Prisma.XOR<Prisma.WajhUpdateWithoutRecitationsInput, Prisma.WajhUncheckedUpdateWithoutRecitationsInput>
+}
+
+export type WajhUpdateWithoutRecitationsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  tariq?: Prisma.TariqUpdateOneRequiredWithoutWujuhNestedInput
+}
+
+export type WajhUncheckedUpdateWithoutRecitationsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  tariqId?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  position?: Prisma.IntFieldUpdateOperationsInput | number
+  isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 export type WajhCreateManyTariqInput = {
   id?: number
   name: string
@@ -541,6 +625,7 @@ export type WajhUpdateWithoutTariqInput = {
   isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  recitations?: Prisma.RecitationUpdateManyWithoutWajhNestedInput
 }
 
 export type WajhUncheckedUpdateWithoutTariqInput = {
@@ -550,6 +635,7 @@ export type WajhUncheckedUpdateWithoutTariqInput = {
   isDefault?: Prisma.BoolFieldUpdateOperationsInput | boolean
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutWajhNestedInput
 }
 
 export type WajhUncheckedUpdateManyWithoutTariqInput = {
@@ -562,6 +648,35 @@ export type WajhUncheckedUpdateManyWithoutTariqInput = {
 }
 
 
+/**
+ * Count Type WajhCountOutputType
+ */
+
+export type WajhCountOutputType = {
+  recitations: number
+}
+
+export type WajhCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  recitations?: boolean | WajhCountOutputTypeCountRecitationsArgs
+}
+
+/**
+ * WajhCountOutputType without action
+ */
+export type WajhCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WajhCountOutputType
+   */
+  select?: Prisma.WajhCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * WajhCountOutputType without action
+ */
+export type WajhCountOutputTypeCountRecitationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RecitationWhereInput
+}
+
 
 export type WajhSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -572,6 +687,8 @@ export type WajhSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   isActive?: boolean
   createdAt?: boolean
   tariq?: boolean | Prisma.TariqDefaultArgs<ExtArgs>
+  recitations?: boolean | Prisma.Wajh$recitationsArgs<ExtArgs>
+  _count?: boolean | Prisma.WajhCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["wajh"]>
 
 export type WajhSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -609,6 +726,8 @@ export type WajhSelectScalar = {
 export type WajhOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "tariqId" | "name" | "position" | "isDefault" | "isActive" | "createdAt", ExtArgs["result"]["wajh"]>
 export type WajhInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   tariq?: boolean | Prisma.TariqDefaultArgs<ExtArgs>
+  recitations?: boolean | Prisma.Wajh$recitationsArgs<ExtArgs>
+  _count?: boolean | Prisma.WajhCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type WajhIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   tariq?: boolean | Prisma.TariqDefaultArgs<ExtArgs>
@@ -621,6 +740,7 @@ export type $WajhPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   name: "Wajh"
   objects: {
     tariq: Prisma.$TariqPayload<ExtArgs>
+    recitations: Prisma.$RecitationPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -1025,6 +1145,7 @@ readonly fields: WajhFieldRefs;
 export interface Prisma__WajhClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   tariq<T extends Prisma.TariqDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TariqDefaultArgs<ExtArgs>>): Prisma.Prisma__TariqClient<runtime.Types.Result.GetResult<Prisma.$TariqPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  recitations<T extends Prisma.Wajh$recitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Wajh$recitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RecitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1459,6 +1580,30 @@ export type WajhDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Limit how many Wajhs to delete.
    */
   limit?: number
+}
+
+/**
+ * Wajh.recitations
+ */
+export type Wajh$recitationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Recitation
+   */
+  select?: Prisma.RecitationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Recitation
+   */
+  omit?: Prisma.RecitationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RecitationInclude<ExtArgs> | null
+  where?: Prisma.RecitationWhereInput
+  orderBy?: Prisma.RecitationOrderByWithRelationInput | Prisma.RecitationOrderByWithRelationInput[]
+  cursor?: Prisma.RecitationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RecitationScalarFieldEnum | Prisma.RecitationScalarFieldEnum[]
 }
 
 /**

@@ -132,3 +132,13 @@ export type ActivityAyahTrace = Prisma.ActivityAyahTraceModel
  * 
  */
 export type PasswordResetToken = Prisma.PasswordResetTokenModel
+/**
+ * Model Recitation
+ * 
+ */
+export type Recitation = Prisma.RecitationModel
+/**
+ * Model RecitationSegment
+ * 
+ */
+export type RecitationSegment = Prisma.RecitationSegmentModel

@@ -296,6 +296,7 @@ export type AyahWhereInput = {
   annotations?: Prisma.AnnotationListRelationFilter
   audioTracks?: Prisma.AudioTrackListRelationFilter
   activityTraces?: Prisma.ActivityAyahTraceListRelationFilter
+  recitationSegments?: Prisma.RecitationSegmentListRelationFilter
 }
 
 export type AyahOrderByWithRelationInput = {
@@ -314,6 +315,7 @@ export type AyahOrderByWithRelationInput = {
   annotations?: Prisma.AnnotationOrderByRelationAggregateInput
   audioTracks?: Prisma.AudioTrackOrderByRelationAggregateInput
   activityTraces?: Prisma.ActivityAyahTraceOrderByRelationAggregateInput
+  recitationSegments?: Prisma.RecitationSegmentOrderByRelationAggregateInput
 }
 
 export type AyahWhereUniqueInput = Prisma.AtLeast<{
@@ -336,6 +338,7 @@ export type AyahWhereUniqueInput = Prisma.AtLeast<{
   annotations?: Prisma.AnnotationListRelationFilter
   audioTracks?: Prisma.AudioTrackListRelationFilter
   activityTraces?: Prisma.ActivityAyahTraceListRelationFilter
+  recitationSegments?: Prisma.RecitationSegmentListRelationFilter
 }, "id" | "surahNumber_number">
 
 export type AyahOrderByWithAggregationInput = {
@@ -389,6 +392,7 @@ export type AyahCreateInput = {
   annotations?: Prisma.AnnotationCreateNestedManyWithoutAyahInput
   audioTracks?: Prisma.AudioTrackCreateNestedManyWithoutAyahInput
   activityTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutAyahInput
+  recitationSegments?: Prisma.RecitationSegmentCreateNestedManyWithoutAyahInput
 }
 
 export type AyahUncheckedCreateInput = {
@@ -406,6 +410,7 @@ export type AyahUncheckedCreateInput = {
   annotations?: Prisma.AnnotationUncheckedCreateNestedManyWithoutAyahInput
   audioTracks?: Prisma.AudioTrackUncheckedCreateNestedManyWithoutAyahInput
   activityTraces?: Prisma.ActivityAyahTraceUncheckedCreateNestedManyWithoutAyahInput
+  recitationSegments?: Prisma.RecitationSegmentUncheckedCreateNestedManyWithoutAyahInput
 }
 
 export type AyahUpdateInput = {
@@ -423,6 +428,7 @@ export type AyahUpdateInput = {
   annotations?: Prisma.AnnotationUpdateManyWithoutAyahNestedInput
   audioTracks?: Prisma.AudioTrackUpdateManyWithoutAyahNestedInput
   activityTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutAyahNestedInput
+  recitationSegments?: Prisma.RecitationSegmentUpdateManyWithoutAyahNestedInput
 }
 
 export type AyahUncheckedUpdateInput = {
@@ -440,6 +446,7 @@ export type AyahUncheckedUpdateInput = {
   annotations?: Prisma.AnnotationUncheckedUpdateManyWithoutAyahNestedInput
   audioTracks?: Prisma.AudioTrackUncheckedUpdateManyWithoutAyahNestedInput
   activityTraces?: Prisma.ActivityAyahTraceUncheckedUpdateManyWithoutAyahNestedInput
+  recitationSegments?: Prisma.RecitationSegmentUncheckedUpdateManyWithoutAyahNestedInput
 }
 
 export type AyahCreateManyInput = {
@@ -668,6 +675,20 @@ export type AyahUpdateOneRequiredWithoutActivityTracesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.AyahUpdateToOneWithWhereWithoutActivityTracesInput, Prisma.AyahUpdateWithoutActivityTracesInput>, Prisma.AyahUncheckedUpdateWithoutActivityTracesInput>
 }
 
+export type AyahCreateNestedOneWithoutRecitationSegmentsInput = {
+  create?: Prisma.XOR<Prisma.AyahCreateWithoutRecitationSegmentsInput, Prisma.AyahUncheckedCreateWithoutRecitationSegmentsInput>
+  connectOrCreate?: Prisma.AyahCreateOrConnectWithoutRecitationSegmentsInput
+  connect?: Prisma.AyahWhereUniqueInput
+}
+
+export type AyahUpdateOneRequiredWithoutRecitationSegmentsNestedInput = {
+  create?: Prisma.XOR<Prisma.AyahCreateWithoutRecitationSegmentsInput, Prisma.AyahUncheckedCreateWithoutRecitationSegmentsInput>
+  connectOrCreate?: Prisma.AyahCreateOrConnectWithoutRecitationSegmentsInput
+  upsert?: Prisma.AyahUpsertWithoutRecitationSegmentsInput
+  connect?: Prisma.AyahWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AyahUpdateToOneWithWhereWithoutRecitationSegmentsInput, Prisma.AyahUpdateWithoutRecitationSegmentsInput>, Prisma.AyahUncheckedUpdateWithoutRecitationSegmentsInput>
+}
+
 export type AyahCreateWithoutSurahInput = {
   id: number
   number: number
@@ -682,6 +703,7 @@ export type AyahCreateWithoutSurahInput = {
   annotations?: Prisma.AnnotationCreateNestedManyWithoutAyahInput
   audioTracks?: Prisma.AudioTrackCreateNestedManyWithoutAyahInput
   activityTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutAyahInput
+  recitationSegments?: Prisma.RecitationSegmentCreateNestedManyWithoutAyahInput
 }
 
 export type AyahUncheckedCreateWithoutSurahInput = {
@@ -698,6 +720,7 @@ export type AyahUncheckedCreateWithoutSurahInput = {
   annotations?: Prisma.AnnotationUncheckedCreateNestedManyWithoutAyahInput
   audioTracks?: Prisma.AudioTrackUncheckedCreateNestedManyWithoutAyahInput
   activityTraces?: Prisma.ActivityAyahTraceUncheckedCreateNestedManyWithoutAyahInput
+  recitationSegments?: Prisma.RecitationSegmentUncheckedCreateNestedManyWithoutAyahInput
 }
 
 export type AyahCreateOrConnectWithoutSurahInput = {
@@ -757,6 +780,7 @@ export type AyahCreateWithoutAudioTracksInput = {
   surah: Prisma.SurahCreateNestedOneWithoutAyahsInput
   annotations?: Prisma.AnnotationCreateNestedManyWithoutAyahInput
   activityTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutAyahInput
+  recitationSegments?: Prisma.RecitationSegmentCreateNestedManyWithoutAyahInput
 }
 
 export type AyahUncheckedCreateWithoutAudioTracksInput = {
@@ -773,6 +797,7 @@ export type AyahUncheckedCreateWithoutAudioTracksInput = {
   numberInHafs?: Prisma.AyahCreatenumberInHafsInput | number[]
   annotations?: Prisma.AnnotationUncheckedCreateNestedManyWithoutAyahInput
   activityTraces?: Prisma.ActivityAyahTraceUncheckedCreateNestedManyWithoutAyahInput
+  recitationSegments?: Prisma.RecitationSegmentUncheckedCreateNestedManyWithoutAyahInput
 }
 
 export type AyahCreateOrConnectWithoutAudioTracksInput = {
@@ -805,6 +830,7 @@ export type AyahUpdateWithoutAudioTracksInput = {
   surah?: Prisma.SurahUpdateOneRequiredWithoutAyahsNestedInput
   annotations?: Prisma.AnnotationUpdateManyWithoutAyahNestedInput
   activityTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutAyahNestedInput
+  recitationSegments?: Prisma.RecitationSegmentUpdateManyWithoutAyahNestedInput
 }
 
 export type AyahUncheckedUpdateWithoutAudioTracksInput = {
@@ -821,6 +847,7 @@ export type AyahUncheckedUpdateWithoutAudioTracksInput = {
   numberInHafs?: Prisma.AyahUpdatenumberInHafsInput | number[]
   annotations?: Prisma.AnnotationUncheckedUpdateManyWithoutAyahNestedInput
   activityTraces?: Prisma.ActivityAyahTraceUncheckedUpdateManyWithoutAyahNestedInput
+  recitationSegments?: Prisma.RecitationSegmentUncheckedUpdateManyWithoutAyahNestedInput
 }
 
 export type AyahCreateWithoutAnnotationsInput = {
@@ -837,6 +864,7 @@ export type AyahCreateWithoutAnnotationsInput = {
   surah: Prisma.SurahCreateNestedOneWithoutAyahsInput
   audioTracks?: Prisma.AudioTrackCreateNestedManyWithoutAyahInput
   activityTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutAyahInput
+  recitationSegments?: Prisma.RecitationSegmentCreateNestedManyWithoutAyahInput
 }
 
 export type AyahUncheckedCreateWithoutAnnotationsInput = {
@@ -853,6 +881,7 @@ export type AyahUncheckedCreateWithoutAnnotationsInput = {
   numberInHafs?: Prisma.AyahCreatenumberInHafsInput | number[]
   audioTracks?: Prisma.AudioTrackUncheckedCreateNestedManyWithoutAyahInput
   activityTraces?: Prisma.ActivityAyahTraceUncheckedCreateNestedManyWithoutAyahInput
+  recitationSegments?: Prisma.RecitationSegmentUncheckedCreateNestedManyWithoutAyahInput
 }
 
 export type AyahCreateOrConnectWithoutAnnotationsInput = {
@@ -885,6 +914,7 @@ export type AyahUpdateWithoutAnnotationsInput = {
   surah?: Prisma.SurahUpdateOneRequiredWithoutAyahsNestedInput
   audioTracks?: Prisma.AudioTrackUpdateManyWithoutAyahNestedInput
   activityTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutAyahNestedInput
+  recitationSegments?: Prisma.RecitationSegmentUpdateManyWithoutAyahNestedInput
 }
 
 export type AyahUncheckedUpdateWithoutAnnotationsInput = {
@@ -901,6 +931,7 @@ export type AyahUncheckedUpdateWithoutAnnotationsInput = {
   numberInHafs?: Prisma.AyahUpdatenumberInHafsInput | number[]
   audioTracks?: Prisma.AudioTrackUncheckedUpdateManyWithoutAyahNestedInput
   activityTraces?: Prisma.ActivityAyahTraceUncheckedUpdateManyWithoutAyahNestedInput
+  recitationSegments?: Prisma.RecitationSegmentUncheckedUpdateManyWithoutAyahNestedInput
 }
 
 export type AyahCreateWithoutActivityTracesInput = {
@@ -917,6 +948,7 @@ export type AyahCreateWithoutActivityTracesInput = {
   surah: Prisma.SurahCreateNestedOneWithoutAyahsInput
   annotations?: Prisma.AnnotationCreateNestedManyWithoutAyahInput
   audioTracks?: Prisma.AudioTrackCreateNestedManyWithoutAyahInput
+  recitationSegments?: Prisma.RecitationSegmentCreateNestedManyWithoutAyahInput
 }
 
 export type AyahUncheckedCreateWithoutActivityTracesInput = {
@@ -933,6 +965,7 @@ export type AyahUncheckedCreateWithoutActivityTracesInput = {
   numberInHafs?: Prisma.AyahCreatenumberInHafsInput | number[]
   annotations?: Prisma.AnnotationUncheckedCreateNestedManyWithoutAyahInput
   audioTracks?: Prisma.AudioTrackUncheckedCreateNestedManyWithoutAyahInput
+  recitationSegments?: Prisma.RecitationSegmentUncheckedCreateNestedManyWithoutAyahInput
 }
 
 export type AyahCreateOrConnectWithoutActivityTracesInput = {
@@ -965,6 +998,7 @@ export type AyahUpdateWithoutActivityTracesInput = {
   surah?: Prisma.SurahUpdateOneRequiredWithoutAyahsNestedInput
   annotations?: Prisma.AnnotationUpdateManyWithoutAyahNestedInput
   audioTracks?: Prisma.AudioTrackUpdateManyWithoutAyahNestedInput
+  recitationSegments?: Prisma.RecitationSegmentUpdateManyWithoutAyahNestedInput
 }
 
 export type AyahUncheckedUpdateWithoutActivityTracesInput = {
@@ -981,6 +1015,91 @@ export type AyahUncheckedUpdateWithoutActivityTracesInput = {
   numberInHafs?: Prisma.AyahUpdatenumberInHafsInput | number[]
   annotations?: Prisma.AnnotationUncheckedUpdateManyWithoutAyahNestedInput
   audioTracks?: Prisma.AudioTrackUncheckedUpdateManyWithoutAyahNestedInput
+  recitationSegments?: Prisma.RecitationSegmentUncheckedUpdateManyWithoutAyahNestedInput
+}
+
+export type AyahCreateWithoutRecitationSegmentsInput = {
+  id: number
+  number: number
+  text: string
+  pageNumber: number
+  juz: number
+  hizb: number
+  manzil: number
+  ruku: number
+  marker: string
+  numberInHafs?: Prisma.AyahCreatenumberInHafsInput | number[]
+  surah: Prisma.SurahCreateNestedOneWithoutAyahsInput
+  annotations?: Prisma.AnnotationCreateNestedManyWithoutAyahInput
+  audioTracks?: Prisma.AudioTrackCreateNestedManyWithoutAyahInput
+  activityTraces?: Prisma.ActivityAyahTraceCreateNestedManyWithoutAyahInput
+}
+
+export type AyahUncheckedCreateWithoutRecitationSegmentsInput = {
+  id: number
+  number: number
+  surahNumber: number
+  text: string
+  pageNumber: number
+  juz: number
+  hizb: number
+  manzil: number
+  ruku: number
+  marker: string
+  numberInHafs?: Prisma.AyahCreatenumberInHafsInput | number[]
+  annotations?: Prisma.AnnotationUncheckedCreateNestedManyWithoutAyahInput
+  audioTracks?: Prisma.AudioTrackUncheckedCreateNestedManyWithoutAyahInput
+  activityTraces?: Prisma.ActivityAyahTraceUncheckedCreateNestedManyWithoutAyahInput
+}
+
+export type AyahCreateOrConnectWithoutRecitationSegmentsInput = {
+  where: Prisma.AyahWhereUniqueInput
+  create: Prisma.XOR<Prisma.AyahCreateWithoutRecitationSegmentsInput, Prisma.AyahUncheckedCreateWithoutRecitationSegmentsInput>
+}
+
+export type AyahUpsertWithoutRecitationSegmentsInput = {
+  update: Prisma.XOR<Prisma.AyahUpdateWithoutRecitationSegmentsInput, Prisma.AyahUncheckedUpdateWithoutRecitationSegmentsInput>
+  create: Prisma.XOR<Prisma.AyahCreateWithoutRecitationSegmentsInput, Prisma.AyahUncheckedCreateWithoutRecitationSegmentsInput>
+  where?: Prisma.AyahWhereInput
+}
+
+export type AyahUpdateToOneWithWhereWithoutRecitationSegmentsInput = {
+  where?: Prisma.AyahWhereInput
+  data: Prisma.XOR<Prisma.AyahUpdateWithoutRecitationSegmentsInput, Prisma.AyahUncheckedUpdateWithoutRecitationSegmentsInput>
+}
+
+export type AyahUpdateWithoutRecitationSegmentsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  number?: Prisma.IntFieldUpdateOperationsInput | number
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  pageNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  juz?: Prisma.IntFieldUpdateOperationsInput | number
+  hizb?: Prisma.IntFieldUpdateOperationsInput | number
+  manzil?: Prisma.IntFieldUpdateOperationsInput | number
+  ruku?: Prisma.IntFieldUpdateOperationsInput | number
+  marker?: Prisma.StringFieldUpdateOperationsInput | string
+  numberInHafs?: Prisma.AyahUpdatenumberInHafsInput | number[]
+  surah?: Prisma.SurahUpdateOneRequiredWithoutAyahsNestedInput
+  annotations?: Prisma.AnnotationUpdateManyWithoutAyahNestedInput
+  audioTracks?: Prisma.AudioTrackUpdateManyWithoutAyahNestedInput
+  activityTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutAyahNestedInput
+}
+
+export type AyahUncheckedUpdateWithoutRecitationSegmentsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  number?: Prisma.IntFieldUpdateOperationsInput | number
+  surahNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  text?: Prisma.StringFieldUpdateOperationsInput | string
+  pageNumber?: Prisma.IntFieldUpdateOperationsInput | number
+  juz?: Prisma.IntFieldUpdateOperationsInput | number
+  hizb?: Prisma.IntFieldUpdateOperationsInput | number
+  manzil?: Prisma.IntFieldUpdateOperationsInput | number
+  ruku?: Prisma.IntFieldUpdateOperationsInput | number
+  marker?: Prisma.StringFieldUpdateOperationsInput | string
+  numberInHafs?: Prisma.AyahUpdatenumberInHafsInput | number[]
+  annotations?: Prisma.AnnotationUncheckedUpdateManyWithoutAyahNestedInput
+  audioTracks?: Prisma.AudioTrackUncheckedUpdateManyWithoutAyahNestedInput
+  activityTraces?: Prisma.ActivityAyahTraceUncheckedUpdateManyWithoutAyahNestedInput
 }
 
 export type AyahCreateManySurahInput = {
@@ -1010,6 +1129,7 @@ export type AyahUpdateWithoutSurahInput = {
   annotations?: Prisma.AnnotationUpdateManyWithoutAyahNestedInput
   audioTracks?: Prisma.AudioTrackUpdateManyWithoutAyahNestedInput
   activityTraces?: Prisma.ActivityAyahTraceUpdateManyWithoutAyahNestedInput
+  recitationSegments?: Prisma.RecitationSegmentUpdateManyWithoutAyahNestedInput
 }
 
 export type AyahUncheckedUpdateWithoutSurahInput = {
@@ -1026,6 +1146,7 @@ export type AyahUncheckedUpdateWithoutSurahInput = {
   annotations?: Prisma.AnnotationUncheckedUpdateManyWithoutAyahNestedInput
   audioTracks?: Prisma.AudioTrackUncheckedUpdateManyWithoutAyahNestedInput
   activityTraces?: Prisma.ActivityAyahTraceUncheckedUpdateManyWithoutAyahNestedInput
+  recitationSegments?: Prisma.RecitationSegmentUncheckedUpdateManyWithoutAyahNestedInput
 }
 
 export type AyahUncheckedUpdateManyWithoutSurahInput = {
@@ -1050,12 +1171,14 @@ export type AyahCountOutputType = {
   annotations: number
   audioTracks: number
   activityTraces: number
+  recitationSegments: number
 }
 
 export type AyahCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   annotations?: boolean | AyahCountOutputTypeCountAnnotationsArgs
   audioTracks?: boolean | AyahCountOutputTypeCountAudioTracksArgs
   activityTraces?: boolean | AyahCountOutputTypeCountActivityTracesArgs
+  recitationSegments?: boolean | AyahCountOutputTypeCountRecitationSegmentsArgs
 }
 
 /**
@@ -1089,6 +1212,13 @@ export type AyahCountOutputTypeCountActivityTracesArgs<ExtArgs extends runtime.T
   where?: Prisma.ActivityAyahTraceWhereInput
 }
 
+/**
+ * AyahCountOutputType without action
+ */
+export type AyahCountOutputTypeCountRecitationSegmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RecitationSegmentWhereInput
+}
+
 
 export type AyahSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1106,6 +1236,7 @@ export type AyahSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   annotations?: boolean | Prisma.Ayah$annotationsArgs<ExtArgs>
   audioTracks?: boolean | Prisma.Ayah$audioTracksArgs<ExtArgs>
   activityTraces?: boolean | Prisma.Ayah$activityTracesArgs<ExtArgs>
+  recitationSegments?: boolean | Prisma.Ayah$recitationSegmentsArgs<ExtArgs>
   _count?: boolean | Prisma.AyahCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["ayah"]>
 
@@ -1159,6 +1290,7 @@ export type AyahInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   annotations?: boolean | Prisma.Ayah$annotationsArgs<ExtArgs>
   audioTracks?: boolean | Prisma.Ayah$audioTracksArgs<ExtArgs>
   activityTraces?: boolean | Prisma.Ayah$activityTracesArgs<ExtArgs>
+  recitationSegments?: boolean | Prisma.Ayah$recitationSegmentsArgs<ExtArgs>
   _count?: boolean | Prisma.AyahCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AyahIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1175,6 +1307,7 @@ export type $AyahPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     annotations: Prisma.$AnnotationPayload<ExtArgs>[]
     audioTracks: Prisma.$AudioTrackPayload<ExtArgs>[]
     activityTraces: Prisma.$ActivityAyahTracePayload<ExtArgs>[]
+    recitationSegments: Prisma.$RecitationSegmentPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -1586,6 +1719,7 @@ export interface Prisma__AyahClient<T, Null = never, ExtArgs extends runtime.Typ
   annotations<T extends Prisma.Ayah$annotationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Ayah$annotationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AnnotationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   audioTracks<T extends Prisma.Ayah$audioTracksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Ayah$audioTracksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AudioTrackPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   activityTraces<T extends Prisma.Ayah$activityTracesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Ayah$activityTracesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActivityAyahTracePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  recitationSegments<T extends Prisma.Ayah$recitationSegmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Ayah$recitationSegmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RecitationSegmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2096,6 +2230,30 @@ export type Ayah$activityTracesArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.ActivityAyahTraceScalarFieldEnum | Prisma.ActivityAyahTraceScalarFieldEnum[]
+}
+
+/**
+ * Ayah.recitationSegments
+ */
+export type Ayah$recitationSegmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RecitationSegment
+   */
+  select?: Prisma.RecitationSegmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the RecitationSegment
+   */
+  omit?: Prisma.RecitationSegmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RecitationSegmentInclude<ExtArgs> | null
+  where?: Prisma.RecitationSegmentWhereInput
+  orderBy?: Prisma.RecitationSegmentOrderByWithRelationInput | Prisma.RecitationSegmentOrderByWithRelationInput[]
+  cursor?: Prisma.RecitationSegmentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RecitationSegmentScalarFieldEnum | Prisma.RecitationSegmentScalarFieldEnum[]
 }
 
 /**

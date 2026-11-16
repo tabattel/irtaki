@@ -146,3 +146,30 @@ export const ActivityResultStatus = {
 } as const
 
 export type ActivityResultStatus = (typeof ActivityResultStatus)[keyof typeof ActivityResultStatus]
+
+
+export const RecitationMode = {
+  tarteel1: 'tarteel1',
+  tarteel2: 'tarteel2'
+} as const
+
+export type RecitationMode = (typeof RecitationMode)[keyof typeof RecitationMode]
+
+
+export const RecitationStatus = {
+  recording: 'recording',
+  uploaded: 'uploaded',
+  processed: 'processed',
+  failed: 'failed'
+} as const
+
+export type RecitationStatus = (typeof RecitationStatus)[keyof typeof RecitationStatus]
+
+
+export const RecitationGrade = {
+  A: 'A',
+  B: 'B',
+  C: 'C'
+} as const
+
+export type RecitationGrade = (typeof RecitationGrade)[keyof typeof RecitationGrade]

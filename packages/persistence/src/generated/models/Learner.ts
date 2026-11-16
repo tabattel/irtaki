@@ -196,6 +196,7 @@ export type LearnerWhereInput = {
   activities?: Prisma.ActivityListRelationFilter
   progress?: Prisma.ProgressRecordListRelationFilter
   mushafPreferences?: Prisma.XOR<Prisma.LearnerPreferenceNullableScalarRelationFilter, Prisma.LearnerPreferenceWhereInput> | null
+  recitations?: Prisma.RecitationListRelationFilter
 }
 
 export type LearnerOrderByWithRelationInput = {
@@ -211,6 +212,7 @@ export type LearnerOrderByWithRelationInput = {
   activities?: Prisma.ActivityOrderByRelationAggregateInput
   progress?: Prisma.ProgressRecordOrderByRelationAggregateInput
   mushafPreferences?: Prisma.LearnerPreferenceOrderByWithRelationInput
+  recitations?: Prisma.RecitationOrderByRelationAggregateInput
 }
 
 export type LearnerWhereUniqueInput = Prisma.AtLeast<{
@@ -229,6 +231,7 @@ export type LearnerWhereUniqueInput = Prisma.AtLeast<{
   activities?: Prisma.ActivityListRelationFilter
   progress?: Prisma.ProgressRecordListRelationFilter
   mushafPreferences?: Prisma.XOR<Prisma.LearnerPreferenceNullableScalarRelationFilter, Prisma.LearnerPreferenceWhereInput> | null
+  recitations?: Prisma.RecitationListRelationFilter
 }, "id" | "childProfileId">
 
 export type LearnerOrderByWithAggregationInput = {
@@ -266,6 +269,7 @@ export type LearnerCreateInput = {
   activities?: Prisma.ActivityCreateNestedManyWithoutLearnerInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutLearnerInput
   mushafPreferences?: Prisma.LearnerPreferenceCreateNestedOneWithoutLearnerInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerUncheckedCreateInput = {
@@ -279,6 +283,7 @@ export type LearnerUncheckedCreateInput = {
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutLearnerInput
   progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutLearnerInput
   mushafPreferences?: Prisma.LearnerPreferenceUncheckedCreateNestedOneWithoutLearnerInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerUpdateInput = {
@@ -292,6 +297,7 @@ export type LearnerUpdateInput = {
   activities?: Prisma.ActivityUpdateManyWithoutLearnerNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutLearnerNestedInput
   mushafPreferences?: Prisma.LearnerPreferenceUpdateOneWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerUncheckedUpdateInput = {
@@ -305,6 +311,7 @@ export type LearnerUncheckedUpdateInput = {
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutLearnerNestedInput
   progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutLearnerNestedInput
   mushafPreferences?: Prisma.LearnerPreferenceUncheckedUpdateOneWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerCreateManyInput = {
@@ -509,6 +516,20 @@ export type LearnerUpdateOneRequiredWithoutProgressNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.LearnerUpdateToOneWithWhereWithoutProgressInput, Prisma.LearnerUpdateWithoutProgressInput>, Prisma.LearnerUncheckedUpdateWithoutProgressInput>
 }
 
+export type LearnerCreateNestedOneWithoutRecitationsInput = {
+  create?: Prisma.XOR<Prisma.LearnerCreateWithoutRecitationsInput, Prisma.LearnerUncheckedCreateWithoutRecitationsInput>
+  connectOrCreate?: Prisma.LearnerCreateOrConnectWithoutRecitationsInput
+  connect?: Prisma.LearnerWhereUniqueInput
+}
+
+export type LearnerUpdateOneRequiredWithoutRecitationsNestedInput = {
+  create?: Prisma.XOR<Prisma.LearnerCreateWithoutRecitationsInput, Prisma.LearnerUncheckedCreateWithoutRecitationsInput>
+  connectOrCreate?: Prisma.LearnerCreateOrConnectWithoutRecitationsInput
+  upsert?: Prisma.LearnerUpsertWithoutRecitationsInput
+  connect?: Prisma.LearnerWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.LearnerUpdateToOneWithWhereWithoutRecitationsInput, Prisma.LearnerUpdateWithoutRecitationsInput>, Prisma.LearnerUncheckedUpdateWithoutRecitationsInput>
+}
+
 export type LearnerCreateWithoutUserInput = {
   id?: string
   name?: string | null
@@ -519,6 +540,7 @@ export type LearnerCreateWithoutUserInput = {
   activities?: Prisma.ActivityCreateNestedManyWithoutLearnerInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutLearnerInput
   mushafPreferences?: Prisma.LearnerPreferenceCreateNestedOneWithoutLearnerInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerUncheckedCreateWithoutUserInput = {
@@ -531,6 +553,7 @@ export type LearnerUncheckedCreateWithoutUserInput = {
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutLearnerInput
   progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutLearnerInput
   mushafPreferences?: Prisma.LearnerPreferenceUncheckedCreateNestedOneWithoutLearnerInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerCreateOrConnectWithoutUserInput = {
@@ -581,6 +604,7 @@ export type LearnerCreateWithoutChildProfileInput = {
   activities?: Prisma.ActivityCreateNestedManyWithoutLearnerInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutLearnerInput
   mushafPreferences?: Prisma.LearnerPreferenceCreateNestedOneWithoutLearnerInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerUncheckedCreateWithoutChildProfileInput = {
@@ -593,6 +617,7 @@ export type LearnerUncheckedCreateWithoutChildProfileInput = {
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutLearnerInput
   progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutLearnerInput
   mushafPreferences?: Prisma.LearnerPreferenceUncheckedCreateNestedOneWithoutLearnerInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerCreateOrConnectWithoutChildProfileInput = {
@@ -621,6 +646,7 @@ export type LearnerUpdateWithoutChildProfileInput = {
   activities?: Prisma.ActivityUpdateManyWithoutLearnerNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutLearnerNestedInput
   mushafPreferences?: Prisma.LearnerPreferenceUpdateOneWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerUncheckedUpdateWithoutChildProfileInput = {
@@ -633,6 +659,7 @@ export type LearnerUncheckedUpdateWithoutChildProfileInput = {
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutLearnerNestedInput
   progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutLearnerNestedInput
   mushafPreferences?: Prisma.LearnerPreferenceUncheckedUpdateOneWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerCreateWithoutMushafPreferencesInput = {
@@ -645,6 +672,7 @@ export type LearnerCreateWithoutMushafPreferencesInput = {
   goals?: Prisma.GoalCreateNestedManyWithoutLearnerInput
   activities?: Prisma.ActivityCreateNestedManyWithoutLearnerInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutLearnerInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerUncheckedCreateWithoutMushafPreferencesInput = {
@@ -657,6 +685,7 @@ export type LearnerUncheckedCreateWithoutMushafPreferencesInput = {
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutLearnerInput
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutLearnerInput
   progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutLearnerInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerCreateOrConnectWithoutMushafPreferencesInput = {
@@ -685,6 +714,7 @@ export type LearnerUpdateWithoutMushafPreferencesInput = {
   goals?: Prisma.GoalUpdateManyWithoutLearnerNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutLearnerNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerUncheckedUpdateWithoutMushafPreferencesInput = {
@@ -697,6 +727,7 @@ export type LearnerUncheckedUpdateWithoutMushafPreferencesInput = {
   goals?: Prisma.GoalUncheckedUpdateManyWithoutLearnerNestedInput
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutLearnerNestedInput
   progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerCreateWithoutGoalsInput = {
@@ -709,6 +740,7 @@ export type LearnerCreateWithoutGoalsInput = {
   activities?: Prisma.ActivityCreateNestedManyWithoutLearnerInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutLearnerInput
   mushafPreferences?: Prisma.LearnerPreferenceCreateNestedOneWithoutLearnerInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerUncheckedCreateWithoutGoalsInput = {
@@ -721,6 +753,7 @@ export type LearnerUncheckedCreateWithoutGoalsInput = {
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutLearnerInput
   progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutLearnerInput
   mushafPreferences?: Prisma.LearnerPreferenceUncheckedCreateNestedOneWithoutLearnerInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerCreateOrConnectWithoutGoalsInput = {
@@ -749,6 +782,7 @@ export type LearnerUpdateWithoutGoalsInput = {
   activities?: Prisma.ActivityUpdateManyWithoutLearnerNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutLearnerNestedInput
   mushafPreferences?: Prisma.LearnerPreferenceUpdateOneWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerUncheckedUpdateWithoutGoalsInput = {
@@ -761,6 +795,7 @@ export type LearnerUncheckedUpdateWithoutGoalsInput = {
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutLearnerNestedInput
   progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutLearnerNestedInput
   mushafPreferences?: Prisma.LearnerPreferenceUncheckedUpdateOneWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerCreateWithoutActivitiesInput = {
@@ -773,6 +808,7 @@ export type LearnerCreateWithoutActivitiesInput = {
   goals?: Prisma.GoalCreateNestedManyWithoutLearnerInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutLearnerInput
   mushafPreferences?: Prisma.LearnerPreferenceCreateNestedOneWithoutLearnerInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerUncheckedCreateWithoutActivitiesInput = {
@@ -785,6 +821,7 @@ export type LearnerUncheckedCreateWithoutActivitiesInput = {
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutLearnerInput
   progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutLearnerInput
   mushafPreferences?: Prisma.LearnerPreferenceUncheckedCreateNestedOneWithoutLearnerInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerCreateOrConnectWithoutActivitiesInput = {
@@ -813,6 +850,7 @@ export type LearnerUpdateWithoutActivitiesInput = {
   goals?: Prisma.GoalUpdateManyWithoutLearnerNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutLearnerNestedInput
   mushafPreferences?: Prisma.LearnerPreferenceUpdateOneWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerUncheckedUpdateWithoutActivitiesInput = {
@@ -825,6 +863,7 @@ export type LearnerUncheckedUpdateWithoutActivitiesInput = {
   goals?: Prisma.GoalUncheckedUpdateManyWithoutLearnerNestedInput
   progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutLearnerNestedInput
   mushafPreferences?: Prisma.LearnerPreferenceUncheckedUpdateOneWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerCreateWithoutProgressInput = {
@@ -837,6 +876,7 @@ export type LearnerCreateWithoutProgressInput = {
   goals?: Prisma.GoalCreateNestedManyWithoutLearnerInput
   activities?: Prisma.ActivityCreateNestedManyWithoutLearnerInput
   mushafPreferences?: Prisma.LearnerPreferenceCreateNestedOneWithoutLearnerInput
+  recitations?: Prisma.RecitationCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerUncheckedCreateWithoutProgressInput = {
@@ -849,6 +889,7 @@ export type LearnerUncheckedCreateWithoutProgressInput = {
   goals?: Prisma.GoalUncheckedCreateNestedManyWithoutLearnerInput
   activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutLearnerInput
   mushafPreferences?: Prisma.LearnerPreferenceUncheckedCreateNestedOneWithoutLearnerInput
+  recitations?: Prisma.RecitationUncheckedCreateNestedManyWithoutLearnerInput
 }
 
 export type LearnerCreateOrConnectWithoutProgressInput = {
@@ -877,6 +918,7 @@ export type LearnerUpdateWithoutProgressInput = {
   goals?: Prisma.GoalUpdateManyWithoutLearnerNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutLearnerNestedInput
   mushafPreferences?: Prisma.LearnerPreferenceUpdateOneWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerUncheckedUpdateWithoutProgressInput = {
@@ -888,6 +930,75 @@ export type LearnerUncheckedUpdateWithoutProgressInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   goals?: Prisma.GoalUncheckedUpdateManyWithoutLearnerNestedInput
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutLearnerNestedInput
+  mushafPreferences?: Prisma.LearnerPreferenceUncheckedUpdateOneWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutLearnerNestedInput
+}
+
+export type LearnerCreateWithoutRecitationsInput = {
+  id?: string
+  name?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  user: Prisma.UserCreateNestedOneWithoutLearnersInput
+  childProfile?: Prisma.ChildProfileCreateNestedOneWithoutLearnerInput
+  goals?: Prisma.GoalCreateNestedManyWithoutLearnerInput
+  activities?: Prisma.ActivityCreateNestedManyWithoutLearnerInput
+  progress?: Prisma.ProgressRecordCreateNestedManyWithoutLearnerInput
+  mushafPreferences?: Prisma.LearnerPreferenceCreateNestedOneWithoutLearnerInput
+}
+
+export type LearnerUncheckedCreateWithoutRecitationsInput = {
+  id?: string
+  userId: string
+  childProfileId?: string | null
+  name?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  goals?: Prisma.GoalUncheckedCreateNestedManyWithoutLearnerInput
+  activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutLearnerInput
+  progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutLearnerInput
+  mushafPreferences?: Prisma.LearnerPreferenceUncheckedCreateNestedOneWithoutLearnerInput
+}
+
+export type LearnerCreateOrConnectWithoutRecitationsInput = {
+  where: Prisma.LearnerWhereUniqueInput
+  create: Prisma.XOR<Prisma.LearnerCreateWithoutRecitationsInput, Prisma.LearnerUncheckedCreateWithoutRecitationsInput>
+}
+
+export type LearnerUpsertWithoutRecitationsInput = {
+  update: Prisma.XOR<Prisma.LearnerUpdateWithoutRecitationsInput, Prisma.LearnerUncheckedUpdateWithoutRecitationsInput>
+  create: Prisma.XOR<Prisma.LearnerCreateWithoutRecitationsInput, Prisma.LearnerUncheckedCreateWithoutRecitationsInput>
+  where?: Prisma.LearnerWhereInput
+}
+
+export type LearnerUpdateToOneWithWhereWithoutRecitationsInput = {
+  where?: Prisma.LearnerWhereInput
+  data: Prisma.XOR<Prisma.LearnerUpdateWithoutRecitationsInput, Prisma.LearnerUncheckedUpdateWithoutRecitationsInput>
+}
+
+export type LearnerUpdateWithoutRecitationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user?: Prisma.UserUpdateOneRequiredWithoutLearnersNestedInput
+  childProfile?: Prisma.ChildProfileUpdateOneWithoutLearnerNestedInput
+  goals?: Prisma.GoalUpdateManyWithoutLearnerNestedInput
+  activities?: Prisma.ActivityUpdateManyWithoutLearnerNestedInput
+  progress?: Prisma.ProgressRecordUpdateManyWithoutLearnerNestedInput
+  mushafPreferences?: Prisma.LearnerPreferenceUpdateOneWithoutLearnerNestedInput
+}
+
+export type LearnerUncheckedUpdateWithoutRecitationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  childProfileId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  goals?: Prisma.GoalUncheckedUpdateManyWithoutLearnerNestedInput
+  activities?: Prisma.ActivityUncheckedUpdateManyWithoutLearnerNestedInput
+  progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutLearnerNestedInput
   mushafPreferences?: Prisma.LearnerPreferenceUncheckedUpdateOneWithoutLearnerNestedInput
 }
 
@@ -909,6 +1020,7 @@ export type LearnerUpdateWithoutUserInput = {
   activities?: Prisma.ActivityUpdateManyWithoutLearnerNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutLearnerNestedInput
   mushafPreferences?: Prisma.LearnerPreferenceUpdateOneWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerUncheckedUpdateWithoutUserInput = {
@@ -921,6 +1033,7 @@ export type LearnerUncheckedUpdateWithoutUserInput = {
   activities?: Prisma.ActivityUncheckedUpdateManyWithoutLearnerNestedInput
   progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutLearnerNestedInput
   mushafPreferences?: Prisma.LearnerPreferenceUncheckedUpdateOneWithoutLearnerNestedInput
+  recitations?: Prisma.RecitationUncheckedUpdateManyWithoutLearnerNestedInput
 }
 
 export type LearnerUncheckedUpdateManyWithoutUserInput = {
@@ -940,12 +1053,14 @@ export type LearnerCountOutputType = {
   goals: number
   activities: number
   progress: number
+  recitations: number
 }
 
 export type LearnerCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   goals?: boolean | LearnerCountOutputTypeCountGoalsArgs
   activities?: boolean | LearnerCountOutputTypeCountActivitiesArgs
   progress?: boolean | LearnerCountOutputTypeCountProgressArgs
+  recitations?: boolean | LearnerCountOutputTypeCountRecitationsArgs
 }
 
 /**
@@ -979,6 +1094,13 @@ export type LearnerCountOutputTypeCountProgressArgs<ExtArgs extends runtime.Type
   where?: Prisma.ProgressRecordWhereInput
 }
 
+/**
+ * LearnerCountOutputType without action
+ */
+export type LearnerCountOutputTypeCountRecitationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RecitationWhereInput
+}
+
 
 export type LearnerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -993,6 +1115,7 @@ export type LearnerSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   activities?: boolean | Prisma.Learner$activitiesArgs<ExtArgs>
   progress?: boolean | Prisma.Learner$progressArgs<ExtArgs>
   mushafPreferences?: boolean | Prisma.Learner$mushafPreferencesArgs<ExtArgs>
+  recitations?: boolean | Prisma.Learner$recitationsArgs<ExtArgs>
   _count?: boolean | Prisma.LearnerCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["learner"]>
 
@@ -1035,6 +1158,7 @@ export type LearnerInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   activities?: boolean | Prisma.Learner$activitiesArgs<ExtArgs>
   progress?: boolean | Prisma.Learner$progressArgs<ExtArgs>
   mushafPreferences?: boolean | Prisma.Learner$mushafPreferencesArgs<ExtArgs>
+  recitations?: boolean | Prisma.Learner$recitationsArgs<ExtArgs>
   _count?: boolean | Prisma.LearnerCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type LearnerIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1055,6 +1179,7 @@ export type $LearnerPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     activities: Prisma.$ActivityPayload<ExtArgs>[]
     progress: Prisma.$ProgressRecordPayload<ExtArgs>[]
     mushafPreferences: Prisma.$LearnerPreferencePayload<ExtArgs> | null
+    recitations: Prisma.$RecitationPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1463,6 +1588,7 @@ export interface Prisma__LearnerClient<T, Null = never, ExtArgs extends runtime.
   activities<T extends Prisma.Learner$activitiesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Learner$activitiesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActivityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   progress<T extends Prisma.Learner$progressArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Learner$progressArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProgressRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   mushafPreferences<T extends Prisma.Learner$mushafPreferencesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Learner$mushafPreferencesArgs<ExtArgs>>): Prisma.Prisma__LearnerPreferenceClient<runtime.Types.Result.GetResult<Prisma.$LearnerPreferencePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  recitations<T extends Prisma.Learner$recitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Learner$recitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RecitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2006,6 +2132,30 @@ export type Learner$mushafPreferencesArgs<ExtArgs extends runtime.Types.Extensio
    */
   include?: Prisma.LearnerPreferenceInclude<ExtArgs> | null
   where?: Prisma.LearnerPreferenceWhereInput
+}
+
+/**
+ * Learner.recitations
+ */
+export type Learner$recitationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Recitation
+   */
+  select?: Prisma.RecitationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Recitation
+   */
+  omit?: Prisma.RecitationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RecitationInclude<ExtArgs> | null
+  where?: Prisma.RecitationWhereInput
+  orderBy?: Prisma.RecitationOrderByWithRelationInput | Prisma.RecitationOrderByWithRelationInput[]
+  cursor?: Prisma.RecitationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RecitationScalarFieldEnum | Prisma.RecitationScalarFieldEnum[]
 }
 
 /**

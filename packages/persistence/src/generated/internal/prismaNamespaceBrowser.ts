@@ -73,7 +73,9 @@ export const ModelName = {
   ActivityResult: 'ActivityResult',
   ProgressRecord: 'ProgressRecord',
   ActivityAyahTrace: 'ActivityAyahTrace',
-  PasswordResetToken: 'PasswordResetToken'
+  PasswordResetToken: 'PasswordResetToken',
+  Recitation: 'Recitation',
+  RecitationSegment: 'RecitationSegment'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -399,6 +401,61 @@ export const PasswordResetTokenScalarFieldEnum = {
 export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalarFieldEnum)[keyof typeof PasswordResetTokenScalarFieldEnum]
 
 
+export const RecitationScalarFieldEnum = {
+  id: 'id',
+  clientSessionId: 'clientSessionId',
+  learnerId: 'learnerId',
+  activityId: 'activityId',
+  mode: 'mode',
+  riwayaId: 'riwayaId',
+  tariqId: 'tariqId',
+  wajhId: 'wajhId',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt',
+  durationMs: 'durationMs',
+  sampleRate: 'sampleRate',
+  status: 'status',
+  originalPath: 'originalPath',
+  originalFormat: 'originalFormat',
+  originalBytes: 'originalBytes',
+  originalSha256: 'originalSha256',
+  consentTraining: 'consentTraining',
+  timeline: 'timeline',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RecitationScalarFieldEnum = (typeof RecitationScalarFieldEnum)[keyof typeof RecitationScalarFieldEnum]
+
+
+export const RecitationSegmentScalarFieldEnum = {
+  id: 'id',
+  tid: 'tid',
+  recitationId: 'recitationId',
+  ayahId: 'ayahId',
+  repetition: 'repetition',
+  startMs: 'startMs',
+  endMs: 'endMs',
+  filePath: 'filePath',
+  transcriptRaw: 'transcriptRaw',
+  wer: 'wer',
+  exactMatch: 'exactMatch',
+  grade: 'grade',
+  substitutions: 'substitutions',
+  deletions: 'deletions',
+  insertions: 'insertions',
+  referenceWordCount: 'referenceWordCount',
+  hypothesisWordCount: 'hypothesisWordCount',
+  normalizationVersion: 'normalizationVersion',
+  werAlgorithmVersion: 'werAlgorithmVersion',
+  engineId: 'engineId',
+  gradedAt: 'gradedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type RecitationSegmentScalarFieldEnum = (typeof RecitationSegmentScalarFieldEnum)[keyof typeof RecitationSegmentScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -412,6 +469,14 @@ export const JsonNullValueInput = {
 } as const
 
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
 export const QueryMode = {
