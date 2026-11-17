@@ -509,6 +509,7 @@ enum RecitationGrade {
   A
   B
   C
+  D
 }
 
 // Une récitation (la « Tilawa » du plan) : Tariq et Wajh figés au démarrage.

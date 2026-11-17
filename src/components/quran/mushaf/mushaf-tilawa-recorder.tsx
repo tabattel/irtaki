@@ -37,10 +37,17 @@ type RecorderStatus =
   | "playing"
   | "playback-paused";
 
-type StoredRecording = {
+export type StoredRecording = {
   id: string;
   learnerId: string;
+  mushafId?: number;
+  mode?: "tarteel1" | "tarteel2";
+  riwayaId?: number;
+  tariqId?: number | null;
+  wajhId?: number | null;
   ayahs: AyahReference[];
+  rangeStart?: AyahReference;
+  rangeEnd?: AyahReference;
   createdAt: string;
   durationMs: number;
   mimeType: string;
@@ -112,6 +119,56 @@ async function saveRecording(recording: StoredRecording): Promise<void> {
   }
 }
 
+export type SaveTarteelRecordingInput = {
+  learnerId: string;
+  mushafId?: number;
+  mode?: "tarteel1" | "tarteel2";
+  riwayaId?: number;
+  tariqId?: number | null;
+  wajhId?: number | null;
+  ayahs: AyahReference[];
+  durationMs: number;
+  blob: Blob;
+};
+
+// Sauvegarde Tarteel dans la même bibliothèque locale que Tilawa.
+export async function saveTarteelRecordingLocally(
+  input: SaveTarteelRecordingInput,
+): Promise<string> {
+  if (!input.learnerId.trim()) {
+    throw new Error("LEARNER_REQUIRED");
+  }
+  if (input.ayahs.length === 0) {
+    throw new Error("RECITATION_RANGE_REQUIRED");
+  }
+  if (
+    !Number.isFinite(input.durationMs) ||
+    input.durationMs <= 0 ||
+    input.blob.size === 0
+  ) {
+    throw new Error("INVALID_TARTEEL_RECORDING");
+  }
+
+  const recording: StoredRecording = {
+    id: createId(),
+    learnerId: input.learnerId,
+    mushafId: input.mushafId,
+    mode: input.mode ?? "tarteel1",
+    riwayaId: input.riwayaId,
+    tariqId: input.tariqId ?? null,
+    wajhId: input.wajhId ?? null,
+    ayahs: input.ayahs,
+    createdAt: new Date().toISOString(),
+    durationMs: Math.round(input.durationMs),
+    mimeType: input.blob.type || "audio/wav",
+    sizeBytes: input.blob.size,
+    blob: input.blob,
+  };
+
+  await saveRecording(recording);
+  return recording.id;
+}
+
 async function listRecordings(learnerId: string): Promise<StoredRecording[]> {
   const database = await openDatabase();
 
@@ -157,6 +214,52 @@ async function deleteRecording(
   } finally {
     database.close();
   }
+}
+
+export async function updateTarteelRecordingRangeLocally(
+  id: string,
+  learnerId: string,
+  rangeStart: AyahReference,
+  rangeEnd: AyahReference,
+): Promise<void> {
+  const database = await openDatabase();
+
+  try {
+    const transaction = database.transaction(STORE_NAME, "readwrite");
+    const done = transactionResult(transaction);
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.get(id);
+    let failure: Error | null = null;
+
+    request.onsuccess = () => {
+      const existing = request.result as StoredRecording | undefined;
+      if (!existing || existing.learnerId !== learnerId) {
+        failure = new Error("RECORDING_NOT_FOUND");
+        transaction.abort();
+        return;
+      }
+
+      store.put({ ...existing, rangeStart, rangeEnd });
+    };
+
+    await done.catch(() => {});
+    if (failure) throw failure;
+  } finally {
+    database.close();
+  }
+}
+
+export async function listTarteelRecordingsLocally(
+  learnerId: string,
+): Promise<StoredRecording[]> {
+  return listRecordings(learnerId);
+}
+
+export async function deleteTarteelRecordingLocally(
+  id: string,
+  learnerId: string,
+): Promise<boolean> {
+  return deleteRecording(id, learnerId);
 }
 
 function activeLearnerId(): string | null {

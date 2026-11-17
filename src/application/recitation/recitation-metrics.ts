@@ -9,11 +9,13 @@
 export const NORMALIZATION_VERSION = "recitation-match-v1";
 export const WER_ALGORITHM_VERSION = "word-edit-distance-ts-v1";
 
-// Seuils provisoires, à calibrer : A < 5 %, B de 5 à 20 %, C > 20 %.
+// Seuils de classement serveur : A jusqu'à 5 %, B jusqu'à 10 %,
+// C jusqu'à 20 %. Au-delà de 20 %, le segment n'est pas stocké.
 export const GRADE_A_MAX_PERCENT = 5;
-export const GRADE_B_MAX_PERCENT = 20;
+export const GRADE_B_MAX_PERCENT = 10;
+export const GRADE_C_MAX_PERCENT = 20;
 
-export type RecitationGrade = "A" | "B" | "C";
+export type RecitationGrade = "A" | "B" | "C" | "D";
 
 export type WerResult = {
   substitutions: number;
@@ -129,9 +131,18 @@ export function gradeFromWerPercent(werPercent: number): RecitationGrade {
   if (!Number.isFinite(werPercent) || werPercent < 0) {
     throw new Error("WER percent must be a non-negative number");
   }
-  if (werPercent < GRADE_A_MAX_PERCENT) return "A";
+  if (werPercent <= GRADE_A_MAX_PERCENT) return "A";
   if (werPercent <= GRADE_B_MAX_PERCENT) return "B";
-  return "C";
+  if (werPercent <= GRADE_C_MAX_PERCENT) return "C";
+  return "D";
+}
+
+export function isEligibleForServerStorage(werPercent: number): boolean {
+  return (
+    Number.isFinite(werPercent) &&
+    werPercent >= 0 &&
+    werPercent < 100
+  );
 }
 
 export function compareRecitation(

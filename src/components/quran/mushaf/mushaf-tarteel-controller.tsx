@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { saveTarteelRecordingLocally } from "./mushaf-tilawa-recorder";
 import { createPortal } from "react-dom";
 import {
   MushafTarteelTalkButton,
@@ -11,7 +12,28 @@ import { MushafTarteelRecognitionCapture } from "./mushaf-tarteel-recognition-ca
 import { MushafTarteelRecognitionClient } from "./mushaf-tarteel-recognition-client";
 
 import { ErrorAlert } from "@/components/ui/error-alert";
+import {
+  MushafTarteel2StartDialog,
+  type Tarteel2Selection,
+} from "./mushaf-tarteel2-start-dialog";
+import {
+  TARIQ_KEY_PREFIX,
+  WAJH_KEY_PREFIX,
+} from "@/application/recitation/tariq-selection";
 type TarteelMode = "tarteel1" | "tarteel2";
+type DetectedAyah = {
+  id: number;
+  surahNumber: number;
+  ayahNumber: number;
+  surahName: string;
+  text: string;
+};
+type EditableRange = {
+  startSurah: number;
+  startAyah: number;
+  endSurah: number;
+  endAyah: number;
+};
 type ControllerStatus =
   | "idle"
   | "requesting"
@@ -29,6 +51,9 @@ type LifecycleDetail = {
   track: MediaStreamTrack;
   mode: TarteelMode;
   action: LifecycleAction;
+  riwayaId?: number;
+  tariqId?: number | null;
+  wajhId?: number | null;
 };
 
 type StatusDetail = {
@@ -66,8 +91,12 @@ type PcmDetail = {
 
 type Props = {
   mode: TarteelMode | null;
+  mushafId: number;
   ayahsHidden: boolean;
   onToggleAyahsHidden: () => void;
+  riwayaId: number;
+  readPreference: (key: string) => string | null;
+  writePreference: (key: string, value: string) => void;
 };
 
 function createSessionId(): string {
@@ -154,8 +183,12 @@ const INITIAL_LEVELS = Array.from({ length: 24 }, () => 0.04);
 
 export function MushafTarteelController({
   mode,
+  mushafId,
   ayahsHidden,
   onToggleAyahsHidden,
+  riwayaId,
+  readPreference,
+  writePreference,
 }: Props) {
   const streamRef = useRef<MediaStream | null>(null);
   const trackRef = useRef<MediaStreamTrack | null>(null);
@@ -167,12 +200,133 @@ export function MushafTarteelController({
   const mountedRef = useRef(false);
   const modeRef = useRef(mode);
   const lastResultSequenceRef = useRef(-1);
+  const confirmedTranscriptRef = useRef<string[]>([]);
+  const latestTranscriptRef = useRef("");
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<BlobPart[]>([]);
+  const recordingStartedAtRef = useRef<number | null>(null);
+  const recordedDurationRef = useRef(0);
+  const [pendingAudio, setPendingAudio] = useState<{
+    blob: Blob;
+    durationMs: number;
+    transcript: string;
+    clientSessionId: string;
+  } | null>(null);
+  const [canonicalAyahs, setCanonicalAyahs] = useState<
+    Array<{ id: number; number: number; surahNumber: number; text: string }>
+  >([]);
+  const detectedAyahsRef = useRef<DetectedAyah[]>([]);
+  const [detectedAyahs, setDetectedAyahs] = useState<DetectedAyah[]>([]);
+  const [editableRange, setEditableRange] = useState<EditableRange | null>(null);
+  const [savingTarteelAudio, setSavingTarteelAudio] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [surahNames, setSurahNames] = useState<Record<number, string>>({});
+  const savedLocalRecordingIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!pendingAudio || canonicalAyahs.length > 0) return;
+
+    const controller = new AbortController();
+    fetch("/api/ayahs/catalog", {
+      signal: controller.signal,
+      cache: "force-cache",
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("QURAN_CATALOG_LOAD_FAILED");
+        return (await response.json()) as unknown;
+      })
+      .then((payload) => {
+        if (
+          typeof payload !== "object" ||
+          payload === null ||
+          !("data" in payload) ||
+          !Array.isArray(payload.data)
+        ) {
+          throw new Error("INVALID_QURAN_CATALOG");
+        }
+
+        const rows = payload.data.flatMap((value) => {
+          if (typeof value !== "object" || value === null) return [];
+          const row = value as Record<string, unknown>;
+          if (
+            typeof row.id !== "number" ||
+            typeof row.number !== "number" ||
+            typeof row.surahNumber !== "number" ||
+            typeof row.text !== "string"
+          ) {
+            return [];
+          }
+          return [{
+            id: row.id,
+            number: row.number,
+            surahNumber: row.surahNumber,
+            text: row.text,
+          }];
+        });
+
+        if (rows.length === 0) throw new Error("EMPTY_QURAN_CATALOG");
+        setCanonicalAyahs(rows);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setSaveError("تعذر تحميل نص القرآن لتصحيح نطاق الآيات");
+      });
+
+    return () => controller.abort();
+  }, [pendingAudio, canonicalAyahs.length]);
+
 
   const [status, setStatus] = useState<ControllerStatus>("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [transcript, setTranscript] = useState("");
   const [transcriptHidden, setTranscriptHidden] = useState(false);
   const [levels, setLevels] = useState<number[]>(INITIAL_LEVELS);
+  const [showTarteel2Dialog, setShowTarteel2Dialog] = useState(false);
+  const [dialogPortalRoot, setDialogPortalRoot] = useState<HTMLElement | null>(null);
+  const tarteel2SelectionRef = useRef<Tarteel2Selection | null>(null);
+
+  useEffect(() => {
+    setDialogPortalRoot(document.body);
+  }, []);
+
+  useEffect(() => {
+    function handleDetectedAyahs(event: Event) {
+      const detail = (
+        event as CustomEvent<{
+          sessionId: string;
+          mode: TarteelMode;
+          ayahs: DetectedAyah[];
+        }>
+      ).detail;
+
+      if (
+        !detail ||
+        detail.sessionId !== sessionIdRef.current ||
+        detail.mode !== sessionModeRef.current ||
+        !Array.isArray(detail.ayahs)
+      ) return;
+
+      const next = new Map(detectedAyahsRef.current.map((ayah) => [ayah.id, ayah]));
+      for (const ayah of detail.ayahs) {
+        if (
+          Number.isInteger(ayah?.id) &&
+          Number.isInteger(ayah?.surahNumber) &&
+          Number.isInteger(ayah?.ayahNumber) &&
+          typeof ayah?.surahName === "string" &&
+          typeof ayah?.text === "string" &&
+          ayah.text.trim().length > 0
+        ) next.set(ayah.id, ayah);
+      }
+
+      detectedAyahsRef.current = [...next.values()].sort(
+        (a, b) => a.surahNumber - b.surahNumber || a.ayahNumber - b.ayahNumber,
+      );
+    }
+
+    window.addEventListener("irtaki:tarteel-detected-ayahs", handleDetectedAyahs);
+    return () =>
+      window.removeEventListener("irtaki:tarteel-detected-ayahs", handleDetectedAyahs);
+  }, []);
 
   // Slot portail : barre Tarteel inline avec Tarteel X et ⋮
   const [inlineSlot, setInlineSlot] = useState<HTMLElement | null>(null);
@@ -202,7 +356,9 @@ export function MushafTarteelController({
         ? "loading"
         : status === "recording"
           ? "listening"
-          : "idle";
+          : status === "paused"
+            ? "paused"
+            : "idle";
 
   const audioLevel =
     levels.length > 0
@@ -234,6 +390,13 @@ export function MushafTarteelController({
 
     if (status !== "stopping") {
       setStatus("stopping");
+
+      if (recordingStartedAtRef.current !== null) {
+        recordedDurationRef.current += Date.now() - recordingStartedAtRef.current;
+        recordingStartedAtRef.current = null;
+      }
+      const recorder = mediaRecorderRef.current;
+      if (recorder && recorder.state !== "inactive") recorder.stop();
 
       if (track) {
         dispatchLifecycle({
@@ -310,16 +473,85 @@ export function MushafTarteelController({
 
       streamRef.current = stream;
       trackRef.current = track;
+      recordedChunksRef.current = [];
+      savedLocalRecordingIdRef.current = null;
+      confirmedTranscriptRef.current = [];
+      latestTranscriptRef.current = "";
+      lastResultSequenceRef.current = -1;
+      recordedDurationRef.current = 0;
+      detectedAyahsRef.current = [];
+      setDetectedAyahs([]);
+      setEditableRange(null);
+      setSaveError(null);
+      recordingStartedAtRef.current = Date.now();
+      setPendingAudio(null);
+
+      try {
+        const mimeType = [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/mp4",
+        ].find((type) => MediaRecorder.isTypeSupported(type));
+        const recorder = mimeType
+          ? new MediaRecorder(stream, { mimeType })
+          : new MediaRecorder(stream);
+
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) recordedChunksRef.current.push(event.data);
+        };
+        recorder.onstop = () => {
+          const blob = new Blob(recordedChunksRef.current, {
+            type: recorder.mimeType || "audio/webm",
+          });
+          mediaRecorderRef.current = null;
+          if (blob.size > 0) {
+            const ayahs = detectedAyahsRef.current;
+            setDetectedAyahs(ayahs);
+            setEditableRange({
+              startSurah: ayahs[0]?.surahNumber ?? 1,
+              startAyah: ayahs[0]?.ayahNumber ?? 1,
+              endSurah: ayahs[ayahs.length - 1]?.surahNumber ?? 1,
+              endAyah: ayahs[ayahs.length - 1]?.ayahNumber ?? 1,
+            });
+            setPendingAudio({
+              blob,
+              durationMs: recordedDurationRef.current,
+              transcript:
+                confirmedTranscriptRef.current.length > 0
+                  ? confirmedTranscriptRef.current.join(" ")
+                  : latestTranscriptRef.current,
+              clientSessionId: sessionId,
+            });
+          }
+        };
+        recorder.start(250);
+        mediaRecorderRef.current = recorder;
+      } catch {
+        recordingStartedAtRef.current = null;
+        setMessage("تعذر تسجيل الصوت على هذا المتصفح");
+      }
       sessionIdRef.current = sessionId;
       sessionModeRef.current = selectedMode;
 
       setStatus("connecting");
+
+      const selection =
+        selectedMode === "tarteel2"
+          ? tarteel2SelectionRef.current
+          : null;
 
       dispatchLifecycle({
         sessionId,
         track,
         mode: selectedMode,
         action: "start",
+        ...(selection
+          ? {
+              riwayaId: selection.riwayaId,
+              tariqId: selection.tariqId,
+              wajhId: selection.wajhId,
+            }
+          : {}),
       });
     } catch (error) {
       // Une ancienne tentative ne doit pas modifier l'état d'une nouvelle.
@@ -344,6 +576,11 @@ export function MushafTarteelController({
 
   const toggleRecording = useCallback(() => {
     if (status === "idle" || status === "stopped" || status === "error") {
+      if (mode === "tarteel2") {
+        setShowTarteel2Dialog(true);
+        return;
+      }
+
       void startSession();
       return;
     }
@@ -355,6 +592,13 @@ export function MushafTarteelController({
     if (!sessionId || !sessionMode || !track) return;
 
     if (status === "recording") {
+      if (recordingStartedAtRef.current !== null) {
+        recordedDurationRef.current += Date.now() - recordingStartedAtRef.current;
+        recordingStartedAtRef.current = null;
+      }
+      if (mediaRecorderRef.current?.state === "recording") {
+        mediaRecorderRef.current.pause();
+      }
       setStatus("paused");
       dispatchLifecycle({
         sessionId,
@@ -366,6 +610,10 @@ export function MushafTarteelController({
     }
 
     if (status === "paused") {
+      if (mediaRecorderRef.current?.state === "paused") {
+        mediaRecorderRef.current.resume();
+        recordingStartedAtRef.current = Date.now();
+      }
       setStatus("connecting");
       dispatchLifecycle({
         sessionId,
@@ -374,7 +622,7 @@ export function MushafTarteelController({
         action: "resume",
       });
     }
-  }, [startSession, status]);
+  }, [mode, startSession, status]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -444,6 +692,7 @@ export function MushafTarteelController({
 
       // Afficher immédiatement les hypothèses, même provisoires.
       setTranscript(detail.text);
+      latestTranscriptRef.current = detail.text.trim();
 
       // Ignorer les résultats invalides ou reçus dans le désordre.
       if (
@@ -454,6 +703,9 @@ export function MushafTarteelController({
       }
 
       lastResultSequenceRef.current = detail.sequence;
+      if (detail.final && detail.text.trim()) {
+        confirmedTranscriptRef.current.push(detail.text.trim());
+      }
 
       // Transmettre chaque hypothèse valide au suivi mot par mot.
       window.dispatchEvent(
@@ -542,6 +794,11 @@ export function MushafTarteelController({
   useEffect(() => {
     modeRef.current = mode;
 
+    if (mode !== "tarteel2") {
+      setShowTarteel2Dialog(false);
+      tarteel2SelectionRef.current = null;
+    }
+
     if (
       startInProgressRef.current &&
       startModeRef.current !== mode
@@ -558,6 +815,222 @@ export function MushafTarteelController({
       stopSession();
     }
   }, [mode, stopSession]);
+
+  async function confirmSaveTarteelAudio() {
+    if (!pendingAudio || !editableRange || savingTarteelAudio) return;
+
+    const startPosition =
+      editableRange.startSurah * 1000 + editableRange.startAyah;
+    const endPosition =
+      editableRange.endSurah * 1000 + editableRange.endAyah;
+
+    if (
+      editableRange.startSurah < 1 ||
+      editableRange.startSurah > 114 ||
+      editableRange.endSurah < 1 ||
+      editableRange.endSurah > 114 ||
+      editableRange.startAyah < 1 ||
+      editableRange.endAyah < 1 ||
+      startPosition > endPosition
+    ) {
+      setSaveError("تحقق من نطاق السورة والآية");
+      return;
+    }
+
+    const selected = canonicalAyahs.filter((ayah) => {
+      const position = ayah.surahNumber * 1000 + ayah.number;
+      return position >= startPosition && position <= endPosition;
+    });
+    const ayahIds = [...new Set(selected.map((ayah) => ayah.id))];
+
+    if (selected.length === 0) {
+      setSaveError("لا توجد آيات مكتشفة داخل هذا النطاق");
+      return;
+    }
+
+    let learnerId: string | null = null;
+    try {
+      learnerId = window.localStorage.getItem("irtaki.activeLearnerId");
+    } catch {
+      // Le profil actif peut être indisponible sur cet appareil.
+    }
+    if (!learnerId) {
+      setSaveError("اختر المتعلم الحالي أولاً");
+      return;
+    }
+
+    setSavingTarteelAudio(true);
+    setSaveError(null);
+    setPendingAudio(null);
+    setEditableRange(null);
+    try {
+      if (!savedLocalRecordingIdRef.current) {
+        savedLocalRecordingIdRef.current = await saveTarteelRecordingLocally({
+          learnerId,
+          mushafId,
+          mode: mode ?? "tarteel1",
+          riwayaId,
+          tariqId: tarteel2SelectionRef.current?.tariqId ?? null,
+          wajhId: tarteel2SelectionRef.current?.wajhId ?? null,
+          ayahs: selected.map((ayah) => ({
+          surahNumber: ayah.surahNumber,
+          ayahNumber: ayah.number,
+          surahName:
+            detectedAyahs.find((detected) => detected.id === ayah.id)?.surahName ??
+            `سورة ${ayah.surahNumber}`,
+        })),
+          durationMs: pendingAudio.durationMs,
+          blob: pendingAudio.blob,
+        });
+      }
+
+      let serverNotice = "";
+      const transcript = pendingAudio.transcript.trim();
+
+      if (!transcript) {
+        serverNotice = "";
+      } else {
+        const form = new FormData();
+        const audioFile = new File(
+          [pendingAudio.blob],
+          "tarteel-recording",
+          { type: pendingAudio.blob.type || "audio/webm" },
+        );
+        form.set("audio", audioFile);
+        form.set("learnerId", learnerId);
+        form.set("mushafId", String(mushafId));
+        form.set("mode", mode ?? "tarteel1");
+        form.set("riwayaId", String(riwayaId));
+        form.set("durationMs", String(pendingAudio.durationMs));
+        form.set("transcript", transcript);
+        form.set("clientSessionId", pendingAudio.clientSessionId);
+        form.set(
+          "ayahs",
+          JSON.stringify(selected.map((ayah) => ({ id: ayah.id }))),
+        );
+
+        const tariqId = tarteel2SelectionRef.current?.tariqId;
+        const wajhId = tarteel2SelectionRef.current?.wajhId;
+        if (tariqId !== null && tariqId !== undefined) {
+          form.set("tariqId", String(tariqId));
+        }
+        if (wajhId !== null && wajhId !== undefined) {
+          form.set("wajhId", String(wajhId));
+        }
+
+        const uploadResponse = await fetch("/api/recitations", {
+          method: "POST",
+          body: form,
+        });
+        const uploadResult = (await uploadResponse.json().catch(() => null)) as
+          | {
+              stored?: unknown;
+              werPercent?: unknown;
+              grade?: unknown;
+              error?: unknown;
+              diagnosticCode?: unknown;
+            }
+          | null;
+
+        if (!uploadResponse.ok) {
+          const code =
+            typeof uploadResult?.error === "string"
+              ? uploadResult.error
+              : String(uploadResponse.status);
+          const diagnostic =
+            typeof uploadResult?.diagnosticCode === "string"
+              ? ` · ${uploadResult.diagnosticCode}`
+              : "";
+          setMessage(
+            `تعذر رفع التسجيل (${code}${diagnostic})؛ بقي محفوظاً على الجهاز.`,
+          );
+          return;
+        }
+
+        if (uploadResult?.stored === true) {
+          const wer =
+            typeof uploadResult.werPercent === "number"
+              ? ` · WER ${uploadResult.werPercent.toFixed(1)}٪`
+              : "";
+          const grade =
+            typeof uploadResult.grade === "string"
+              ? ` · ${uploadResult.grade}`
+              : "";
+          serverNotice = "";
+        } else {
+          serverNotice = "";
+        }
+      }
+
+      if (ayahIds.length === 0) {
+        setMessage("تم حفظ الصوت محلياً، لكن لا توجد آيات مؤكدة لإضافتها إلى سجل التعلم");
+        return;
+      }
+
+      const activityResponse = await fetch("/api/learning/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          intent: "complete",
+          learnerId,
+          action: mode ?? "tarteel1",
+          riwayaId,
+          ayahIds,
+        }),
+      });
+
+      if (!activityResponse.ok) {
+        setMessage("تم حفظ الصوت محلياً، لكن تعذر تحديث سجل التعلم.");
+        return;
+      }
+
+      savedLocalRecordingIdRef.current = null;
+      setPendingAudio(null);
+      setDetectedAyahs([]);
+      detectedAyahsRef.current = [];
+      setEditableRange(null);
+      setMessage(serverNotice);
+    } catch (error) {
+      console.error("[TARTEEL] save workflow failed:", error);
+      const reason = error instanceof Error ? error.message : String(error);
+      setMessage(`تعذر الحفظ: ${reason.slice(0, 180)}`);
+    } finally {
+      setSavingTarteelAudio(false);
+    }
+  }
+
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/surahs", { signal: controller.signal, cache: "force-cache" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("SURAH_NAMES_LOAD_FAILED");
+        return (await response.json()) as unknown;
+      })
+      .then((payload) => {
+        if (
+          typeof payload !== "object" ||
+          payload === null ||
+          !("data" in payload) ||
+          !Array.isArray(payload.data)
+        ) return;
+
+        const names: Record<number, string> = {};
+        for (const value of payload.data) {
+          if (typeof value !== "object" || value === null) continue;
+          const row = value as Record<string, unknown>;
+          if (typeof row.number === "number" && typeof row.name === "string") {
+            names[row.number] = row.name;
+          }
+        }
+        setSurahNames(names);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      });
+
+    return () => controller.abort();
+  }, []);
 
   const visible = mode !== null;
   const lastWords = getLastFiveWords(transcript);
@@ -603,6 +1076,166 @@ export function MushafTarteelController({
       <MushafTarteelRecognitionCapture />
       <MushafTarteelRecognitionClient />
 
+      {showTarteel2Dialog &&
+        mode === "tarteel2" &&
+        dialogPortalRoot &&
+        createPortal(
+          <MushafTarteel2StartDialog
+            riwayaId={riwayaId}
+            readPreference={readPreference}
+            onCancel={() => setShowTarteel2Dialog(false)}
+            onConfirm={(selection) => {
+              tarteel2SelectionRef.current = selection;
+
+              if (selection.tariqId !== null) {
+                writePreference(
+                  `${TARIQ_KEY_PREFIX}${selection.riwayaId}`,
+                  String(selection.tariqId),
+                );
+
+                if (selection.wajhId !== null) {
+                  writePreference(
+                    `${WAJH_KEY_PREFIX}${selection.tariqId}`,
+                    String(selection.wajhId),
+                  );
+                }
+              }
+
+              setShowTarteel2Dialog(false);
+              void startSession();
+            }}
+          />,
+          dialogPortalRoot,
+        )}
+
+      {pendingAudio && editableRange && dialogPortalRoot &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="tarteel-save-title"
+              className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-[var(--background)] p-5 shadow-xl"
+              dir="rtl"
+            >
+              <h2 id="tarteel-save-title" className="text-lg font-bold">
+                تأكيد حفظ تسجيل الترتيل
+              </h2>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                راجع نطاق التلاوة المكتشف وعدّله قبل الحفظ على جهاز المتعلم.
+              </p>
+              <div className="mt-4 space-y-4">
+                <fieldset className="rounded-lg border p-3">
+                  <legend className="px-1 font-semibold">البداية</legend>
+                  <label className="block text-sm">
+                    أول آية — {surahNames[editableRange.startSurah] ?? ""}
+
+                    <input
+                      type="number"
+                      min={1}
+                      max={canonicalAyahs
+                        .filter((item) => item.surahNumber === editableRange.startSurah)
+                        .reduce((maximum, item) => Math.max(maximum, item.number), 1)}
+                      className="mt-1 w-full rounded-lg border bg-transparent p-2"
+                      value={editableRange.startAyah}
+                      disabled={canonicalAyahs.length === 0}
+                      onChange={(event) => {
+                        const ayah = Number(event.target.value);
+                        setEditableRange((range) =>
+                          range ? { ...range, startAyah: ayah } : range,
+                        );
+                      }}
+                    />
+
+                  </label>
+
+                  <p className="mt-2 text-sm">
+                    {(
+                      canonicalAyahs.find((ayah) =>
+                        ayah.surahNumber === editableRange.startSurah &&
+                        ayah.number === editableRange.startAyah
+                      )?.text ??
+                      detectedAyahs.find((ayah) =>
+                        ayah.surahNumber === editableRange.startSurah &&
+                        ayah.ayahNumber === editableRange.startAyah
+                      )?.text
+                    )?.split(/\s+/u).slice(0, 5).join(" ") ?? "لا يوجد نص لهذه الآية"}
+                  </p>
+
+                </fieldset>
+
+                <fieldset className="rounded-lg border p-3">
+                  <legend className="px-1 font-semibold">النهاية</legend>
+                  <label className="block text-sm">
+                    آخر آية — {surahNames[editableRange.endSurah] ?? ""}
+
+                    <input
+                      type="number"
+                      min={1}
+                      max={canonicalAyahs
+                        .filter((item) => item.surahNumber === editableRange.endSurah)
+                        .reduce((maximum, item) => Math.max(maximum, item.number), 1)}
+                      className="mt-1 w-full rounded-lg border bg-transparent p-2"
+                      value={editableRange.endAyah}
+                      disabled={canonicalAyahs.length === 0}
+                      onChange={(event) => {
+                        const ayah = Number(event.target.value);
+                        setEditableRange((range) =>
+                          range ? { ...range, endAyah: ayah } : range,
+                        );
+                      }}
+                    />
+
+                  </label>
+
+                  <p className="mt-2 text-sm">
+                    {(
+                      canonicalAyahs.find((ayah) =>
+                        ayah.surahNumber === editableRange.endSurah &&
+                        ayah.number === editableRange.endAyah
+                      )?.text ??
+                      detectedAyahs.find((ayah) =>
+                        ayah.surahNumber === editableRange.endSurah &&
+                        ayah.ayahNumber === editableRange.endAyah
+                      )?.text
+                    )?.split(/\s+/u).slice(-5).join(" ") ?? "لا يوجد نص لهذه الآية"}
+                  </p>
+
+                </fieldset>
+              </div>
+              <p className="mt-3 text-xs text-[var(--muted)]">
+                عدد الآيات في النطاق: {Math.max(0, editableRange.endAyah - editableRange.startAyah + 1)}
+              </p>
+              {saveError && (
+                <p role="alert" className="mt-3 text-sm text-rose-600">{saveError}</p>
+              )}
+              <div className="mt-5 flex gap-2">
+                <button
+                  type="button"
+                  className="min-h-10 flex-1 rounded-lg border px-3"
+                  disabled={savingTarteelAudio}
+                  onClick={() => {
+                    setPendingAudio(null);
+                    setEditableRange(null);
+                    setSaveError(null);
+                  }}
+                >
+                  حذف التسجيل
+                </button>
+                <button
+                  type="button"
+                  className="min-h-10 flex-1 rounded-lg bg-[var(--foreground)] px-3 text-[var(--background)]"
+                  disabled={savingTarteelAudio || canonicalAyahs.length === 0}
+                  onClick={() => void confirmSaveTarteelAudio()}
+                >
+                  {savingTarteelAudio ? "جارٍ الحفظ..." : "تأكيد الحفظ"}
+                </button>
+              </div>
+            </section>
+          </div>,
+          dialogPortalRoot,
+        )}
+
       {inlineSlot
         ? createPortal(
             <div
@@ -644,7 +1277,7 @@ export function MushafTarteelController({
           <MushafTarteelTalkButton
             state={talkState}
             audioLevel={audioLevel}
-            onStart={startSession}
+            onToggle={toggleRecording}
             onStop={stopSession}
             compact
           />

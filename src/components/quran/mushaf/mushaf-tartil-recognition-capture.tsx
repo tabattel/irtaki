@@ -47,6 +47,10 @@ type RecognitionRuntime = {
   source: MediaStreamAudioSourceNode;
   node: AudioWorkletNode;
   silentGain: GainNode;
+  analyser: AnalyserNode;
+  analyserData: Uint8Array<ArrayBuffer>;
+  animationFrameId: number | null;
+  lastLevelPublishAt: number;
   acknowledgements: Map<string, () => void>;
   onTrackEnded: () => void;
 };
@@ -75,7 +79,62 @@ export function MushafTartilRecognitionCapture() {
       );
     }
 
+    function publishAudioLevel(runtime: RecognitionRuntime, level: number) {
+      window.dispatchEvent(
+        new CustomEvent("irtaki:tartil-audio-level", {
+          detail: {
+            sessionId: runtime.sessionId,
+            level,
+          },
+        }),
+      );
+    }
+
+    function stopLevelMonitor(runtime: RecognitionRuntime) {
+      if (runtime.animationFrameId !== null) {
+        window.cancelAnimationFrame(runtime.animationFrameId);
+        runtime.animationFrameId = null;
+      }
+
+      publishAudioLevel(runtime, 0);
+    }
+
+    function startLevelMonitor(runtime: RecognitionRuntime) {
+      if (runtime.animationFrameId !== null) return;
+
+      const measure = (now: number) => {
+        if (
+          active !== runtime ||
+          runtime.context.state !== "running"
+        ) {
+          runtime.animationFrameId = null;
+          return;
+        }
+
+        runtime.analyser.getByteTimeDomainData(runtime.analyserData);
+
+        let sum = 0;
+        for (let index = 0; index < runtime.analyserData.length; index += 1) {
+          const sample = (runtime.analyserData[index] - 128) / 128;
+          sum += sample * sample;
+        }
+
+        const rms = Math.sqrt(sum / runtime.analyserData.length);
+
+        if (now - runtime.lastLevelPublishAt >= 50) {
+          runtime.lastLevelPublishAt = now;
+          publishAudioLevel(runtime, Math.min(1, rms * 8));
+        }
+
+        runtime.animationFrameId = window.requestAnimationFrame(measure);
+      };
+
+      runtime.animationFrameId = window.requestAnimationFrame(measure);
+    }
+
     function disposeRuntime(runtime: RecognitionRuntime): Promise<void> {
+      stopLevelMonitor(runtime);
+
       runtime.track.removeEventListener(
         "ended",
         runtime.onTrackEnded,
@@ -94,6 +153,10 @@ export function MushafTartilRecognitionCapture() {
 
       try {
         runtime.silentGain.disconnect();
+      } catch {}
+
+      try {
+        runtime.analyser.disconnect();
       } catch {}
 
       if (runtime.context.state !== "closed") {
@@ -179,6 +242,10 @@ export function MushafTartilRecognitionCapture() {
         const silentGain = context.createGain();
         silentGain.gain.value = 0;
 
+        const analyser = context.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.65;
+
         const onTrackEnded = () => {
           queue = queue
             .then(async () => {
@@ -209,6 +276,10 @@ export function MushafTartilRecognitionCapture() {
           source,
           node,
           silentGain,
+          analyser,
+          analyserData: new Uint8Array(new ArrayBuffer(analyser.fftSize)),
+          animationFrameId: null,
+          lastLevelPublishAt: 0,
           acknowledgements: new Map(),
           onTrackEnded,
         };
@@ -253,6 +324,7 @@ export function MushafTartilRecognitionCapture() {
         );
 
         source.connect(node);
+        source.connect(analyser);
         node.connect(silentGain);
         silentGain.connect(context.destination);
 
@@ -263,6 +335,7 @@ export function MushafTartilRecognitionCapture() {
         }
 
         publishStatus(detail.sessionId, "capturing");
+        startLevelMonitor(runtime);
       } catch (error) {
         if (runtime && active === runtime) {
           active = null;
@@ -289,6 +362,7 @@ export function MushafTartilRecognitionCapture() {
 
       if (detail.action === "pause") {
         await sendCommand(runtime, "pause", "paused");
+        stopLevelMonitor(runtime);
         publishStatus(runtime.sessionId, "paused");
         return;
       }
@@ -300,6 +374,7 @@ export function MushafTartilRecognitionCapture() {
 
         await sendCommand(runtime, "resume", "resumed");
         publishStatus(runtime.sessionId, "capturing");
+        startLevelMonitor(runtime);
         return;
       }
 

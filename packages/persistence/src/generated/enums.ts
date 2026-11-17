@@ -169,7 +169,8 @@ export type RecitationStatus = (typeof RecitationStatus)[keyof typeof Recitation
 export const RecitationGrade = {
   A: 'A',
   B: 'B',
-  C: 'C'
+  C: 'C',
+  D: 'D'
 } as const
 
 export type RecitationGrade = (typeof RecitationGrade)[keyof typeof RecitationGrade]

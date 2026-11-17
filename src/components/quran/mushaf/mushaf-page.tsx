@@ -56,6 +56,7 @@ import {
 import { recordMushafActionJournalEvent } from "./mushaf-action-journal";
 import { MushafTilawaRecorder } from "./mushaf-tilawa-recorder";
 import { MushafTarteelController } from "./mushaf-tarteel-controller";
+import { createTarteelTracker, type TarteelTracker } from "./mushaf-tarteel-tracker";
 import { MushafTarteelDetails } from "./mushaf-tarteel-details";
 import {
   findTarteelLongestSuffixCandidates,
@@ -914,6 +915,9 @@ export function MushafPage({
   >([]);
   const tarteelLiveSessionRef = useRef<string | null>(null);
   const tarteelLastProcessedSequenceRef = useRef(-1);
+  const tarteelLastProcessedTextRef = useRef("");
+  const tarteelTrackerRef = useRef<TarteelTracker | null>(null);
+  const tarteelTrackerTargetsRef = useRef<unknown>(null);
   const tarteelPendingNavigationKeyRef = useRef<string | null>(null);
   const tarteelHighlightTimerRef = useRef<number | null>(null);
 
@@ -1115,18 +1119,128 @@ export function MushafPage({
       if (tarteelLiveSessionRef.current !== detail.sessionId) {
         tarteelLiveSessionRef.current = detail.sessionId;
         tarteelLastProcessedSequenceRef.current = -1;
+        tarteelLastProcessedTextRef.current = "";
         tarteelCursorRef.current = 0;
         tarteelPendingNavigationKeyRef.current = null;
       }
 
-      // Protection supplémentaire contre les résultats répétés ou désordonnés.
-      if (
-        detail.sequence <= tarteelLastProcessedSequenceRef.current
-      ) {
+      // Ignorer les résultats en retard et les doublons exacts.
+      // Une correction textuelle dans la même séquence doit être rematchée.
+      const previousSequence = tarteelLastProcessedSequenceRef.current;
+      const isOlderResult = detail.sequence < previousSequence;
+      const isRepeatedResult =
+        detail.sequence === previousSequence &&
+        detail.text === tarteelLastProcessedTextRef.current;
+
+      if (isOlderResult || isRepeatedResult) {
         return;
       }
 
       tarteelLastProcessedSequenceRef.current = detail.sequence;
+      tarteelLastProcessedTextRef.current = detail.text;
+
+      // ── Suivi local par alignement (mushaf-tarteel-tracker.ts) ──
+      // Curseur verrouillé : toute la transcription est alignée sur les mots autour
+      // du curseur. Un mot faux (même le dernier) ne bloque plus rien et tous les
+      // mots justes sont colorés, pas seulement le dernier. Sans résultat, la
+      // recherche globale ci-dessous reste le repli.
+      if (tarteelTrackerTargetsRef.current !== globalTargets) {
+        tarteelTrackerRef.current = createTarteelTracker(globalTargets);
+        tarteelTrackerTargetsRef.current = globalTargets;
+      }
+      const trackerCursor = tarteelCursorRef.current;
+      const tracked = tarteelTrackerRef.current?.track(trackerCursor, detail.text);
+
+      if (tracked && tracked.endIndex !== null && tracked.matches.length > 0) {
+        const trackedEnd = globalTargets[tracked.endIndex];
+        const [trackedSurah, trackedAyahNumber] = (trackedEnd?.key ?? "")
+          .split(":")
+          .map(Number);
+        const trackedAyah = globalAyahs.find(
+          (ayah) =>
+            ayah.surahNumber === trackedSurah &&
+            ayah.number === trackedAyahNumber,
+        );
+        const progressed = tracked.endIndex >= trackerCursor;
+        const changesPage =
+          trackedAyah !== undefined && trackedAyah.pageNumber !== pageNumber;
+        // Changement de page : seulement vers l'avant et sur au moins 3 mots.
+        const allowed =
+          trackedAyah !== undefined &&
+          (!changesPage || (progressed && tracked.matches.length >= 3));
+
+        console.info("[TARTEEL-TRACK]", {
+          seq: detail.sequence,
+          cursor: trackerCursor,
+          matches: tracked.matches.length,
+          end: trackedEnd?.key ?? null,
+          progressed,
+          allowed,
+          nextCursor: tracked.nextCursor,
+        });
+
+        if (allowed && trackedEnd && trackedAyah) {
+          const trackedKeys = tracked.matches.map((match) => match.key);
+
+          setTarteelCorrectWordsByMode((previous) => {
+            const current = previous[detail.mode];
+            let next: Set<string> | null = null;
+            for (const key of trackedKeys) {
+              if (current.has(key)) continue;
+              if (!next) next = new Set(current);
+              next.add(key);
+            }
+            return next ? { ...previous, [detail.mode]: next } : previous;
+          });
+
+          if (progressed) {
+            tarteelCursorRef.current = tracked.nextCursor;
+
+            if (changesPage) {
+              tarteelPendingNavigationKeyRef.current = trackedEnd.key;
+              router.push(
+                `/coran/${riwayaId}/page/${trackedAyah.pageNumber}?ayah=${trackedAyah.id}`,
+              );
+              return;
+            }
+
+            setSelectedAyahId(trackedAyah.id);
+
+            const freshKeys = tracked.matches
+              .filter((match) => match.index >= trackerCursor)
+              .map((match) => match.key);
+            setTarteelRecentWordsByMode((previous) => ({
+              ...previous,
+              [detail.mode]: new Set(freshKeys),
+            }));
+
+            const trackedElement = Array.from(
+              document.querySelectorAll<HTMLElement>("[data-word-key]"),
+            ).find((element) => element.dataset.wordKey === trackedEnd.key);
+
+            trackedElement?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+              inline: "nearest",
+            });
+
+            if (tarteelHighlightTimerRef.current !== null) {
+              window.clearTimeout(tarteelHighlightTimerRef.current);
+            }
+
+            tarteelHighlightTimerRef.current = window.setTimeout(() => {
+              setTarteelRecentWordsByMode((previous) => ({
+                ...previous,
+                [detail.mode]: new Set(),
+              }));
+              tarteelHighlightTimerRef.current = null;
+            }, 900);
+
+            return;
+          }
+        }
+      }
+
 
       // Recherche du plus long suffixe reconnu dans les 604 pages.
       // Limiter la longueur du texte analysé : au-delà de 30 mots,
@@ -1235,6 +1349,47 @@ export function MushafPage({
 
       if (!targetAyah) {
         return;
+      }
+
+      // Transmettre uniquement les ayahs issues d'un résultat final :
+      // les transcriptions provisoires peuvent encore être corrigées.
+      if (candidate.matches.length > 0) {
+        const detectedAyahs = candidate.matches
+          .map((match) => {
+            const target = globalTargets[match.targetIndex];
+            if (!target) return null;
+
+            const [surahNumber, ayahNumber] = target.key
+              .split(":")
+              .map(Number);
+            const ayah = globalAyahs.find(
+              (item) =>
+                item.surahNumber === surahNumber &&
+                item.number === ayahNumber,
+            );
+            if (!ayah) return null;
+
+            return {
+              id: ayah.id,
+              surahNumber: ayah.surahNumber,
+              ayahNumber: ayah.number,
+              surahName:
+                surahs.find((item) => item.number === ayah.surahNumber)?.name ??
+                `سورة ${ayah.surahNumber}`,
+              text: ayah.text,
+            };
+          })
+          .filter((ayah): ayah is NonNullable<typeof ayah> => ayah !== null);
+
+        window.dispatchEvent(
+          new CustomEvent("irtaki:tarteel-detected-ayahs", {
+            detail: {
+              sessionId: detail.sessionId,
+              mode: detail.mode,
+              ayahs: detectedAyahs,
+            },
+          }),
+        );
       }
 
       // Avancer seulement après une correspondance globale unique.
@@ -7293,8 +7448,12 @@ export function MushafPage({
                   <MushafTarteelController
                     key={secondaryMode}
                     mode={secondaryMode}
+                    mushafId={mushafId}
                     ayahsHidden={listeningAyahsHidden}
                     onToggleAyahsHidden={toggleGlobalTextVisibility}
+                    riwayaId={riwayaId}
+                    readPreference={getMushafStorageItem}
+                    writePreference={setMushafStorageItem}
                   />
                 </div>
               )}
@@ -7902,6 +8061,7 @@ export function MushafPage({
                   <MushafTarteelDetails
                     key={`${secondaryMode}-${riwayaId}`}
                     mode={secondaryMode}
+                    mushafId={mushafId}
                     riwayaId={riwayaId}
                     readPreference={getMushafStorageItem}
                     writePreference={setMushafStorageItem}

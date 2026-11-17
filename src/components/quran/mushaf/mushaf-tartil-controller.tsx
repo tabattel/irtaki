@@ -6,6 +6,10 @@ import { searchQuran } from "@/lib/api/search";
 
 import { MushafTartilRecognitionCapture } from "./mushaf-tartil-recognition-capture";
 import { MushafTartilRecognitionClient } from "./mushaf-tartil-recognition-client";
+import {
+  MushafTarteelTalkButton,
+  type TarteelTalkState,
+} from "./mushaf-tarteel-talk-button";
 
 type TartilAyahReference = {
   surahNumber: number;
@@ -245,6 +249,7 @@ export function MushafTartilController({
   const mountedRef = useRef(false);
 
   const [status, setStatus] = useState<ControllerStatus>("idle");
+  const [audioLevel, setAudioLevel] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [segments, setSegments] = useState<RecognitionResult[]>([]);
   const [transcript, setTranscript] = useState("");
@@ -390,6 +395,25 @@ export function MushafTartilController({
   useEffect(() => {
     mountedRef.current = true;
 
+    function handleAudioLevel(event: Event) {
+      const detail = (
+        event as CustomEvent<{ sessionId: string; level: number }>
+      ).detail;
+
+      if (
+        !detail ||
+        detail.sessionId !== displaySessionIdRef.current
+      ) {
+        return;
+      }
+
+      setAudioLevel(
+        Number.isFinite(detail.level)
+          ? Math.min(1, Math.max(0, detail.level))
+          : 0,
+      );
+    }
+
     function handleStatus(event: Event) {
       const detail = (
         event as CustomEvent<RecognitionStatusDetail>
@@ -408,6 +432,7 @@ export function MushafTartilController({
       }
 
       if (detail.status === "paused") {
+        setAudioLevel(0);
         setStatus("paused");
         return;
       }
@@ -415,12 +440,14 @@ export function MushafTartilController({
       if (detail.status === "stopped") {
         sessionRef.current = null;
         releaseStream();
+        setAudioLevel(0);
         setStatus("stopped");
         return;
       }
 
       sessionRef.current = null;
       releaseStream();
+      setAudioLevel(0);
       setStatus("error");
       setMessage(detail.message ?? "تعذر تشغيل التعرف الصوتي");
     }
@@ -897,6 +924,10 @@ export function MushafTartilController({
     }
 
     window.addEventListener(
+      "irtaki:tartil-audio-level",
+      handleAudioLevel,
+    );
+    window.addEventListener(
       "irtaki:tartil-recognition-status",
       handleStatus,
     );
@@ -912,6 +943,10 @@ export function MushafTartilController({
     return () => {
       mountedRef.current = false;
 
+      window.removeEventListener(
+        "irtaki:tartil-audio-level",
+        handleAudioLevel,
+      );
       window.removeEventListener(
         "irtaki:tartil-recognition-status",
         handleStatus,
@@ -954,64 +989,52 @@ export function MushafTartilController({
     error: "تعذر تشغيل التعرف",
   };
 
+  const talkState: TarteelTalkState =
+    status === "error"
+      ? "error"
+      : status === "requesting" ||
+          status === "pausing" ||
+          status === "resuming" ||
+          status === "stopping"
+        ? "loading"
+        : status === "capturing"
+          ? "listening"
+          : status === "paused"
+            ? "paused"
+            : "idle";
+
+  function toggleTalk() {
+    if (
+      status === "idle" ||
+      status === "stopped" ||
+      status === "error"
+    ) {
+      void startRecognition();
+      return;
+    }
+
+    if (status === "capturing") {
+      pauseRecognition();
+      return;
+    }
+
+    if (status === "paused") {
+      resumeRecognition();
+    }
+  }
+
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <MushafTartilRecognitionCapture />
       <MushafTartilRecognitionClient />
 
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        {(status === "idle" ||
-          status === "stopped" ||
-          status === "error") && (
-          <button
-            type="button"
-            className="min-h-10 rounded-lg border px-3 py-2 text-sm"
-            onClick={() => void startRecognition()}
-          >
-            🎙️ بدء التعرف
-          </button>
-        )}
-
-        {status === "requesting" && (
-          <button
-            type="button"
-            disabled
-            className="min-h-10 rounded-lg border px-3 py-2 text-sm opacity-60"
-          >
-            جاري تفعيل الميكروفون...
-          </button>
-        )}
-
-        {status === "capturing" && (
-          <button
-            type="button"
-            className="min-h-10 rounded-lg border px-3 py-2 text-sm"
-            onClick={pauseRecognition}
-          >
-            ⏸ إيقاف مؤقت
-          </button>
-        )}
-
-        {status === "paused" && (
-          <button
-            type="button"
-            className="min-h-10 rounded-lg border px-3 py-2 text-sm"
-            onClick={resumeRecognition}
-          >
-            ▶ متابعة
-          </button>
-        )}
-
-        {activeSession && (
-          <button
-            type="button"
-            className="min-h-10 rounded-lg border border-rose-500 px-3 py-2 text-sm"
-            onClick={stopRecognition}
-            disabled={status === "stopping"}
-          >
-            ■ إنهاء
-          </button>
-        )}
+        <MushafTarteelTalkButton
+          state={talkState}
+          audioLevel={audioLevel}
+          onToggle={toggleTalk}
+          onStop={stopRecognition}
+        />
 
         <span
           className="text-xs text-[var(--muted)]"
