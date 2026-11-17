@@ -5,11 +5,13 @@ import {
   GoalRepository,
   LearnerRepository,
   ProgressRecordRepository,
+  WajhRepository,
 } from "@irtaki/persistence";
 
 import { createLearningActivityRepository } from "./adapters/activity-repository";
 import { createLearningActivityResultRepository } from "./adapters/activity-result-repository";
 import { createLearningGoalRepository } from "./adapters/goal-repository";
+import { createLearningWajhRepository } from "./adapters/wajh-repository";
 import { createLearningLearnerRepository } from "./adapters/learner-repository";
 import { createLearningProgressRecordRepository } from "./adapters/progress-record-repository";
 
@@ -29,6 +31,7 @@ export function createLearningEngine() {
   );
 
   const goalRepository = createLearningGoalRepository(new GoalRepository());
+  const wajhRepository = createLearningWajhRepository(new WajhRepository());
 
   const activityRepository = createLearningActivityRepository(
     new ActivityRepository(),
@@ -67,6 +70,7 @@ export function createLearningEngine() {
       createGoal(userId, input, {
         learnerRepository,
         goalRepository,
+        wajhRepository,
       }),
 
     startActivity: (

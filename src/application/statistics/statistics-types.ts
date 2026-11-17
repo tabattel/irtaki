@@ -72,6 +72,12 @@ export type StatisticsAyahTraceRecord = {
   pageNumber: number;
   juz: number;
   rubNumber: number;
+  riwayaId: number | null;
+  tariqId: number | null;
+  wajhId: number | null;
+  riwayaName: string | null;
+  tariqName: string | null;
+  wajhName: string | null;
 };
 
 export type StatisticsBreakdownItem = {
@@ -98,6 +104,21 @@ export type StatisticsTimelineItem = {
   durationSec: number;
   traceCount: number;
   uniqueAyahCount: number;
+};
+
+export type StatisticsAxis =
+  | "combination"
+  | "riwaya"
+  | "tariq"
+  | "wajh";
+
+export type StatisticsAxisBreakdownItem = {
+  key: string;
+  label: string;
+  traceCount: number;
+  uniqueAyahCount: number;
+  validatedUniqueAyahCount: number;
+  byAction: Partial<Record<StatisticsAction, number>>;
 };
 
 export type StatisticsResult = {
@@ -130,5 +151,11 @@ export type StatisticsResult = {
     byJuz: StatisticsBreakdownItem[];
     byHizb: StatisticsBreakdownItem[];
     byPage: StatisticsBreakdownItem[];
+  };
+  byAxis: {
+    byRiwaya: StatisticsAxisBreakdownItem[];
+    byTariq: StatisticsAxisBreakdownItem[];
+    byWajh: StatisticsAxisBreakdownItem[];
+    byCombination: StatisticsAxisBreakdownItem[];
   };
 };

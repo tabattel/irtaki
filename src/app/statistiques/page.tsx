@@ -176,6 +176,29 @@ export default function StatisticsPage() {
   const [quranDimension, setQuranDimension] =
     useState<QuranDimension>("byHizb");
 
+  const [filterRiwayaId, setFilterRiwayaId] = useState<number | null>(null);
+  const [filterTariqId, setFilterTariqId] = useState<number | null>(null);
+  const [filterWajhId, setFilterWajhId] = useState<number | null>(null);
+  const [riwayaOptions, setRiwayaOptions] = useState<
+    {
+      id: number;
+      shortName: string;
+      fullName: string;
+      turuqCount?: number;
+    }[]
+  >([]);
+  const [riwayaFilterQuery, setRiwayaFilterQuery] = useState("");
+  const [riwayaFilterOpen, setRiwayaFilterOpen] = useState(false);
+  const [tariqOptions, setTariqOptions] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [wajhOptions, setWajhOptions] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [axisTab, setAxisTab] = useState<
+    "combination" | "riwaya" | "tariq" | "wajh"
+  >("combination");
+
 
 
   // Authentification et synchronisation du profil actuel.
@@ -300,6 +323,72 @@ export default function StatisticsPage() {
     };
   }, []);
 
+  // Chargement des listes pour les filtres (رواية / طريق / وجه).
+  useEffect(() => {
+    void fetch("/api/riwayat")
+      .then((r) => r.json())
+      .then((p) => {
+        if (Array.isArray(p?.data)) {
+          setRiwayaOptions(
+            p.data.map(
+              (r: {
+                id: number;
+                shortName: string;
+                fullName: string;
+                turuqCount?: number;
+              }) => ({
+                id: r.id,
+                shortName: r.shortName,
+                fullName: r.fullName,
+                turuqCount: r.turuqCount,
+              }),
+            ),
+          );
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (filterRiwayaId === null) {
+      setTariqOptions([]);
+      return;
+    }
+    void fetch(`/api/turuq?riwayaId=${filterRiwayaId}`)
+      .then((r) => r.json())
+      .then((p) => {
+        if (Array.isArray(p?.data)) {
+          setTariqOptions(
+            p.data.map((t: { id: number; name: string }) => ({
+              id: t.id,
+              name: t.name,
+            })),
+          );
+        }
+      })
+      .catch(() => undefined);
+  }, [filterRiwayaId]);
+
+  useEffect(() => {
+    if (filterTariqId === null) {
+      setWajhOptions([]);
+      return;
+    }
+    void fetch(`/api/turuq/${filterTariqId}/wujuh`)
+      .then((r) => r.json())
+      .then((p) => {
+        if (Array.isArray(p?.data)) {
+          setWajhOptions(
+            p.data.map((w: { id: number; name: string }) => ({
+              id: w.id,
+              name: w.name,
+            })),
+          );
+        }
+      })
+      .catch(() => undefined);
+  }, [filterTariqId]);
+
   // Chargement des statistiques du profil actuel.
   useEffect(() => {
     if (authState !== "authenticated" || !learnerId || !from || !to) {
@@ -315,6 +404,9 @@ export default function StatisticsPage() {
       timeZone,
       groupBy,
     });
+    if (filterRiwayaId !== null) params.set("riwayaId", String(filterRiwayaId));
+    if (filterTariqId !== null) params.set("tariqId", String(filterTariqId));
+    if (filterWajhId !== null) params.set("wajhId", String(filterWajhId));
 
     async function loadStatistics() {
       setStats(null);
@@ -371,7 +463,7 @@ export default function StatisticsPage() {
     void loadStatistics();
 
     return () => controller.abort();
-  }, [authState, learnerId, from, to, timeZone, groupBy]);
+  }, [authState, learnerId, from, to, timeZone, groupBy, filterRiwayaId, filterTariqId, filterWajhId]);
 
   const activeLearner =
     learners.find((item) => item.id === learnerId) ?? null;
@@ -407,6 +499,19 @@ export default function StatisticsPage() {
 
   const selectedTimeline =
     stats?.timeline.find((item) => item.key === selectedTimelineKey) ?? null;
+
+  const axisItems = useMemo(() => {
+    if (!stats?.byAxis) return [];
+    switch (axisTab) {
+      case "combination": return stats.byAxis.byCombination;
+      case "riwaya": return stats.byAxis.byRiwaya;
+      case "tariq": return stats.byAxis.byTariq;
+      case "wajh": return stats.byAxis.byWajh;
+      default: return [];
+    }
+  }, [stats, axisTab]);
+
+  const axisMax = Math.max(1, ...axisItems.map((i) => i.traceCount));
 
   const quranItems = stats?.quran[quranDimension] ?? [];
 
@@ -545,6 +650,174 @@ export default function StatisticsPage() {
               <span className="me-auto text-xs text-[var(--muted)]">
                 {timeZone}
               </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:col-span-2 sm:grid-cols-3">
+              <label className="min-w-0 space-y-1.5 text-sm">
+                <span className="font-medium">الرواية</span>
+                <div className="relative">
+                  <input
+                    id="filter-riwaya"
+                    type="text"
+                    autoComplete="off"
+                    dir="rtl"
+                    placeholder="ابحث أو اختر رواية..."
+                    className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 text-sm placeholder:text-[var(--muted)]"
+                    value={riwayaFilterQuery}
+                    onFocus={() => setRiwayaFilterOpen(true)}
+                    onBlur={() =>
+                      window.setTimeout(() => setRiwayaFilterOpen(false), 150)
+                    }
+                    onChange={(event) => {
+                      const v = event.target.value;
+                      setRiwayaFilterQuery(v);
+                      setRiwayaFilterOpen(true);
+                      if (v.trim() === "" && filterRiwayaId !== null) {
+                        setFilterRiwayaId(null);
+                        setFilterTariqId(null);
+                        setFilterWajhId(null);
+                      }
+                    }}
+                  />
+                  {riwayaFilterOpen ? (() => {
+                    const q = riwayaFilterQuery.trim().toLowerCase();
+                    const base = q
+                      ? riwayaOptions.filter(
+                          (r) =>
+                            r.shortName.toLowerCase().includes(q) ||
+                            r.fullName.toLowerCase().includes(q),
+                        )
+                      : riwayaOptions;
+                    const hasCountInfo = riwayaOptions.some(
+                      (r) => typeof r.turuqCount === "number",
+                    );
+                    const available = hasCountInfo
+                      ? base.filter((r) => (r.turuqCount ?? 0) > 0)
+                      : base;
+                    const unavailable = hasCountInfo
+                      ? base.filter((r) => (r.turuqCount ?? 0) === 0)
+                      : [];
+
+                    const selectRiwaya = (r: {
+                      id: number;
+                      shortName: string;
+                      fullName: string;
+                    }) => {
+                      if (r.id !== filterRiwayaId) {
+                        setFilterTariqId(null);
+                        setFilterWajhId(null);
+                      }
+                      setFilterRiwayaId(r.id);
+                      setRiwayaFilterQuery(
+                        `${r.shortName} — ${r.fullName}`,
+                      );
+                      setRiwayaFilterOpen(false);
+                    };
+
+                    return (
+                      <ul
+                        role="listbox"
+                        className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--background)] shadow-lg"
+                      >
+                        <li
+                          role="option"
+                          aria-selected={filterRiwayaId === null}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setFilterRiwayaId(null);
+                            setRiwayaFilterQuery("");
+                            setFilterTariqId(null);
+                            setFilterWajhId(null);
+                            setRiwayaFilterOpen(false);
+                          }}
+                          className="cursor-pointer px-3 py-2 text-sm text-[var(--muted)] hover:bg-[var(--surface)]"
+                        >
+                          الكل
+                        </li>
+
+                        {available.length > 0 ? (
+                          <li className="px-3 pb-1 pt-2 text-xs font-semibold text-[var(--muted)]">
+                            متوفرة
+                          </li>
+                        ) : null}
+                        {available.map((r) => (
+                          <li
+                            key={r.id}
+                            role="option"
+                            aria-selected={filterRiwayaId === r.id}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => selectRiwaya(r)}
+                            className="cursor-pointer px-3 py-2 text-sm font-bold text-[var(--foreground)] hover:bg-[var(--surface)]"
+                          >
+                            {r.shortName} — {r.fullName}
+                          </li>
+                        ))}
+
+                        {unavailable.length > 0 ? (
+                          <li className="px-3 pb-1 pt-2 text-xs font-semibold text-[var(--muted)]">
+                            غير متوفرة
+                          </li>
+                        ) : null}
+                        {unavailable.map((r) => (
+                          <li
+                            key={r.id}
+                            role="option"
+                            aria-selected={filterRiwayaId === r.id}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => selectRiwaya(r)}
+                            className="cursor-pointer px-3 py-2 text-sm text-[var(--muted)] hover:bg-[var(--surface)]"
+                          >
+                            {r.shortName} — {r.fullName}
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  })() : null}
+                </div>
+              </label>
+
+              <label className="min-w-0 space-y-1.5 text-sm">
+                <span className="font-medium">الطريق</span>
+                <select
+                  id="filter-tariq"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 text-sm"
+                  value={filterTariqId ?? ""}
+                  disabled={filterRiwayaId === null || tariqOptions.length === 0}
+                  onChange={(event) => {
+                    const v = event.target.value;
+                    setFilterTariqId(v ? Number(v) : null);
+                    setFilterWajhId(null);
+                  }}
+                >
+                  <option value="">الكل</option>
+                  {tariqOptions.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="min-w-0 space-y-1.5 text-sm">
+                <span className="font-medium">الوجه</span>
+                <select
+                  id="filter-wajh"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2 text-sm"
+                  value={filterWajhId ?? ""}
+                  disabled={filterTariqId === null || wajhOptions.length === 0}
+                  onChange={(event) => {
+                    const v = event.target.value;
+                    setFilterWajhId(v ? Number(v) : null);
+                  }}
+                >
+                  <option value="">الكل</option>
+                  {wajhOptions.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
           </section>
 
@@ -880,6 +1153,77 @@ export default function StatisticsPage() {
                           </p>
                         </div>
 
+                        <span className="text-xs font-semibold tabular-nums">
+                          {formatNumber(item.traceCount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="min-w-0 rounded-2xl border border-[var(--border)] p-4 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="font-bold">
+                      التوزيع حسب الرواية / الطريق / الوجه
+                    </h2>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      عدد سجلات الآيات لكل مجموعة، والأسهم المكتملة أو الجزئية.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {([
+                      ["combination", "الكل"],
+                      ["riwaya", "بالرواية"],
+                      ["tariq", "بالطريق"],
+                      ["wajh", "بالوجه"],
+                    ] as const).map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-pressed={axisTab === id}
+                        onClick={() => setAxisTab(id)}
+                        className={`min-h-9 rounded-lg border px-3 text-xs font-medium ${
+                          axisTab === id
+                            ? "border-[var(--foreground)] bg-[var(--surface)]"
+                            : "border-[var(--border)]"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {axisItems.length === 0 ? (
+                  <p className="mt-5 text-sm text-[var(--muted)]">
+                    لا توجد سجلات قرآنية في هذه الفترة.
+                  </p>
+                ) : (
+                  <div className="mt-5 max-h-96 space-y-3 overflow-y-auto pe-1">
+                    {axisItems.map((item) => (
+                      <div
+                        key={item.key}
+                        className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">
+                            {item.label}
+                          </p>
+                          <div className="mt-1 h-3 overflow-hidden rounded-full bg-[var(--surface)]">
+                            <div
+                              className="h-full rounded-full bg-teal-600"
+                              style={{
+                                width: `${(item.traceCount / axisMax) * 100}%`,
+                              }}
+                            />
+                          </div>
+                          <p className="mt-1 text-[10px] text-[var(--muted)]">
+                            {formatNumber(item.uniqueAyahCount)} آية مميزة ·{" "}
+                            {formatNumber(item.validatedUniqueAyahCount)} مكتملة أو جزئية
+                          </p>
+                        </div>
                         <span className="text-xs font-semibold tabular-nums">
                           {formatNumber(item.traceCount)}
                         </span>

@@ -16,29 +16,29 @@ model Qiraa {
 }
 
 model Riwaya {
-  id        Int       @id
-  shortName String
-  fullName  String
-  qiraaId   Int
-  mushafs   Mushaf[]
-  qiraa     Qiraa     @relation(fields: [qiraaId], references: [id])
-  tariqs    Tariq[]
-  reciters  Reciter[]
-  activities Activity[]
-  goals      Goal[]
+  id          Int          @id
+  shortName   String
+  fullName    String
+  qiraaId     Int
+  mushafs     Mushaf[]
+  qiraa       Qiraa        @relation(fields: [qiraaId], references: [id])
+  tariqs      Tariq[]
+  reciters    Reciter[]
+  activities  Activity[]
+  goals       Goal[]
   recitations Recitation[]
 
   @@index([qiraaId])
 }
 
 model Tariq {
-  id       Int    @id
-  name     String
-  riwayaId Int
-  riwaya   Riwaya @relation(fields: [riwayaId], references: [id])
-  wujuh    Wajh[]
-  activities Activity[]
-  goals      Goal[]
+  id          Int          @id
+  name        String
+  riwayaId    Int
+  riwaya      Riwaya       @relation(fields: [riwayaId], references: [id])
+  wujuh       Wajh[]
+  activities  Activity[]
+  goals       Goal[]
   recitations Recitation[]
 
   @@index([riwayaId])
@@ -46,15 +46,17 @@ model Tariq {
 
 // Variante de récitation (wajh) propre à un Tariq : zéro, un ou plusieurs par Tariq.
 model Wajh {
-  id        Int      @id @default(autoincrement())
-  tariqId   Int
-  name      String
-  position  Int      @default(0)
-  isDefault Boolean  @default(false)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  tariq     Tariq    @relation(fields: [tariqId], references: [id])
+  id          Int          @id @default(autoincrement())
+  tariqId     Int
+  name        String
+  position    Int          @default(0)
+  isDefault   Boolean      @default(false)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  tariq       Tariq        @relation(fields: [tariqId], references: [id])
+  activities  Activity[]
   recitations Recitation[]
+  goals       Goal[]
 
   @@unique([tariqId, name])
   @@index([tariqId])
@@ -102,7 +104,7 @@ model Ayah {
   annotations  Annotation[]
   audioTracks  AudioTrack[]
 
-  activityTraces ActivityAyahTrace[]
+  activityTraces     ActivityAyahTrace[]
   recitationSegments RecitationSegment[]
 
   @@unique([surahNumber, number])
@@ -161,18 +163,18 @@ model Annotation {
 }
 
 model User {
-  id              String         @id @default(cuid())
-  email           String         @unique
-  name            String?
-  emailVerifiedAt DateTime?
-  image           String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  accounts        Account[]
-  childProfiles   ChildProfile[]
-  sessions        Session[]
-  annotations     Annotation[]
-  learners        Learner[]
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  name                String?
+  emailVerifiedAt     DateTime?
+  image               String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  accounts            Account[]
+  childProfiles       ChildProfile[]
+  sessions            Session[]
+  annotations         Annotation[]
+  learners            Learner[]
   passwordResetTokens PasswordResetToken[]
 }
 
@@ -246,7 +248,7 @@ model Learner {
   progress     ProgressRecord[]
 
   mushafPreferences LearnerPreference?
-  recitations Recitation[]
+  recitations       Recitation[]
 
   @@index([userId])
 }
@@ -279,15 +281,17 @@ model Goal {
   status              GoalStatus      @default(active)
   notificationEnabled Boolean         @default(false)
   notificationTime    String?
-  riwayaId           Int?
-  tariqId            Int?
+  riwayaId            Int?
+  tariqId             Int?
+  wajhId              Int?
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
   learner    Learner          @relation(fields: [learnerId], references: [id], onDelete: Cascade)
   parentGoal Goal?            @relation("GoalHierarchy", fields: [parentGoalId], references: [id], onDelete: SetNull)
-  riwaya    Riwaya?          @relation(fields: [riwayaId], references: [id], onDelete: SetNull)
-  tariq     Tariq?           @relation(fields: [tariqId], references: [id], onDelete: SetNull)
+  riwaya     Riwaya?          @relation(fields: [riwayaId], references: [id], onDelete: SetNull)
+  tariq      Tariq?           @relation(fields: [tariqId], references: [id], onDelete: SetNull)
+  wajh       Wajh?            @relation(fields: [wajhId], references: [id], onDelete: SetNull)
   subGoals   Goal[]           @relation("GoalHierarchy")
   target     GoalTarget?
   activities Activity[]
@@ -296,6 +300,7 @@ model Goal {
   @@index([learnerId])
   @@index([riwayaId])
   @@index([tariqId])
+  @@index([wajhId])
   @@index([parentGoalId])
   @@index([status])
   @@index([startDate, endDate])
@@ -324,8 +329,9 @@ model Activity {
   endedAt     DateTime?
   durationSec Int?
   notes       String?
-  riwayaId   Int?
-  tariqId    Int?
+  riwayaId    Int?
+  tariqId     Int?
+  wajhId      Int?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -333,16 +339,18 @@ model Activity {
   goal     Goal?            @relation(fields: [goalId], references: [id], onDelete: SetNull)
   riwaya   Riwaya?          @relation(fields: [riwayaId], references: [id], onDelete: SetNull)
   tariq    Tariq?           @relation(fields: [tariqId], references: [id], onDelete: SetNull)
+  wajh     Wajh?            @relation(fields: [wajhId], references: [id], onDelete: SetNull)
   result   ActivityResult?
   progress ProgressRecord[]
 
-  ayahTraces ActivityAyahTrace[]
+  ayahTraces  ActivityAyahTrace[]
   recitations Recitation[]
 
   @@index([learnerId])
   @@index([goalId])
   @@index([riwayaId])
   @@index([tariqId])
+  @@index([wajhId])
   @@index([startedAt])
 }
 
@@ -350,7 +358,7 @@ model ActivityResult {
   id         String               @id @default(cuid())
   activityId String               @unique
   status     ActivityResultStatus
-  quantity   Decimal      @db.Decimal(10, 4)
+  quantity   Decimal              @db.Decimal(10, 4)
   unit       ProgressUnit
   createdAt  DateTime             @default(now())
   updatedAt  DateTime             @updatedAt
@@ -386,16 +394,16 @@ enum ActivityAyahTraceStatus {
 }
 
 model ActivityAyahTrace {
-  id         String                  @id @default(cuid())
-  activityId String
-  ayahId     Int
-  status     ActivityAyahTraceStatus @default(started)
-  recordedAt DateTime?
-  lineNumbers Int[] @default([])
-  pageLineCount Int?
+  id               String                  @id @default(cuid())
+  activityId       String
+  ayahId           Int
+  status           ActivityAyahTraceStatus @default(started)
+  recordedAt       DateTime?
+  lineNumbers      Int[]                   @default([])
+  pageLineCount    Int?
   mushafPageNumber Int?
-  createdAt  DateTime                @default(now())
-  updatedAt  DateTime                @updatedAt
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
 
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   ayah     Ayah     @relation(fields: [ayahId], references: [id], onDelete: Cascade)
@@ -480,12 +488,12 @@ enum ActivityResultStatus {
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -536,11 +544,11 @@ model Recitation {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
-  learner  Learner   @relation(fields: [learnerId], references: [id], onDelete: Cascade)
-  activity Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull)
-  riwaya   Riwaya    @relation(fields: [riwayaId], references: [id], onDelete: Restrict)
-  tariq    Tariq?    @relation(fields: [tariqId], references: [id], onDelete: Restrict)
-  wajh     Wajh?     @relation(fields: [wajhId], references: [id], onDelete: Restrict)
+  learner  Learner             @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  activity Activity?           @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  riwaya   Riwaya              @relation(fields: [riwayaId], references: [id], onDelete: Restrict)
+  tariq    Tariq?              @relation(fields: [tariqId], references: [id], onDelete: Restrict)
+  wajh     Wajh?               @relation(fields: [wajhId], references: [id], onDelete: Restrict)
   segments RecitationSegment[]
 
   @@index([learnerId, startedAt])

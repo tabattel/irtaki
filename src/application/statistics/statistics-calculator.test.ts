@@ -56,6 +56,12 @@ const traces: StatisticsAyahTraceRecord[] = [
     pageNumber: 1,
     juz: 1,
     rubNumber: 1,
+    riwayaId: null,
+    tariqId: null,
+    wajhId: null,
+    riwayaName: null,
+    tariqName: null,
+    wajhName: null,
   },
   {
     id: "trace-2",
@@ -72,6 +78,12 @@ const traces: StatisticsAyahTraceRecord[] = [
     pageNumber: 1,
     juz: 1,
     rubNumber: 3,
+    riwayaId: null,
+    tariqId: null,
+    wajhId: null,
+    riwayaName: null,
+    tariqName: null,
+    wajhName: null,
   },
   {
     id: "trace-3",
@@ -88,6 +100,12 @@ const traces: StatisticsAyahTraceRecord[] = [
     pageNumber: 1,
     juz: 1,
     rubNumber: 5,
+    riwayaId: null,
+    tariqId: null,
+    wajhId: null,
+    riwayaName: null,
+    tariqName: null,
+    wajhName: null,
   },
 ];
 

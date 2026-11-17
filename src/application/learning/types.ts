@@ -69,6 +69,12 @@ export type LearningGoal = {
   startDate: Date;
   endDate: Date | null;
   status: LearningGoalStatus;
+  riwayaId?: number | null;
+  tariqId?: number | null;
+  wajhId?: number | null;
+  riwaya?: { id: number; shortName: string; fullName: string } | null;
+  tariq?: { id: number; name: string } | null;
+  wajh?: { id: number; name: string } | null;
 };
 
 export type LearningProgressRecord = {

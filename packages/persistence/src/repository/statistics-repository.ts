@@ -5,6 +5,7 @@ export class StatisticsRepository {
     learnerId: string,
     startAt: Date,
     endAt: Date,
+    filters?: { riwayaId?: number; tariqId?: number; wajhId?: number },
   ) {
     return prisma.activity.findMany({
       where: {
@@ -13,6 +14,9 @@ export class StatisticsRepository {
           gte: startAt,
           lt: endAt,
         },
+        ...(filters?.riwayaId !== undefined ? { riwayaId: filters.riwayaId } : {}),
+        ...(filters?.tariqId !== undefined ? { tariqId: filters.tariqId } : {}),
+        ...(filters?.wajhId !== undefined ? { wajhId: filters.wajhId } : {}),
       },
       select: {
         id: true,
@@ -41,12 +45,16 @@ export class StatisticsRepository {
     learnerId: string,
     startAt: Date,
     endAt: Date,
+    filters?: { riwayaId?: number; tariqId?: number; wajhId?: number },
   ) {
     return prisma.activityAyahTrace.findMany({
       where: {
         activity: {
           is: {
             learnerId,
+            ...(filters?.riwayaId !== undefined ? { riwayaId: filters.riwayaId } : {}),
+            ...(filters?.tariqId !== undefined ? { tariqId: filters.tariqId } : {}),
+            ...(filters?.wajhId !== undefined ? { wajhId: filters.wajhId } : {}),
           },
         },
         OR: [
@@ -112,6 +120,12 @@ export class StatisticsRepository {
             action: true,
             startedAt: true,
             endedAt: true,
+            riwayaId: true,
+            tariqId: true,
+            wajhId: true,
+            riwaya: { select: { id: true, shortName: true, fullName: true } },
+            tariq: { select: { id: true, name: true } },
+            wajh: { select: { id: true, name: true } },
             result: {
               select: {
                 createdAt: true,

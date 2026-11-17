@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@irtaki/persistence";
 
 import { getAuthenticatedUserFromRequest } from "@/auth/http/get-authenticated-user";
 import { createLearningEngine } from "@/application/learning/learning-engine";
@@ -235,6 +236,49 @@ export async function POST(request: Request) {
           ? body.tariqId
           : undefined;
 
+      const wajhId =
+        typeof body.wajhId === "number" &&
+        Number.isInteger(body.wajhId) &&
+        body.wajhId > 0
+          ? body.wajhId
+          : undefined;
+
+      if (body.wajhId != null && wajhId === undefined) {
+        return NextResponse.json({ error: "INVALID_WAJH_ID" }, { status: 400 });
+      }
+
+      if (wajhId !== undefined) {
+        const selectedWajh = await prisma.wajh.findUnique({
+          where: { id: wajhId },
+          select: { tariqId: true },
+        });
+        if (
+          !selectedWajh ||
+          tariqId === undefined ||
+          selectedWajh.tariqId !== tariqId
+        ) {
+          return NextResponse.json(
+            { error: "INVALID_WAJH_TARIQ" },
+            { status: 400 },
+          );
+        }
+      }
+
+      if (wajhId !== undefined) {
+        if (tariqId === undefined) {
+          return NextResponse.json({ error: "TARIQ_REQUIRED_FOR_WAJH" }, { status: 400 });
+        }
+
+        const matchingWajh = await prisma.wajh.findFirst({
+          where: { id: wajhId, tariqId },
+          select: { id: true },
+        });
+
+        if (!matchingWajh) {
+          return NextResponse.json({ error: "WAJH_TARIQ_MISMATCH" }, { status: 400 });
+        }
+      }
+
       const created = await engine.startActivity(user.id, {
         learnerId: body.learnerId,
         action: body.action as TaskAction,
@@ -242,6 +286,7 @@ export async function POST(request: Request) {
         ...(selectedGoal ? { goalId: selectedGoal.id } : {}),
         ...(riwayaId !== undefined ? { riwayaId } : {}),
         ...(tariqId !== undefined ? { tariqId } : {}),
+        ...(wajhId !== undefined ? { wajhId } : {}),
       });
 
       const activityId = (created as { id?: unknown } | null)?.id;

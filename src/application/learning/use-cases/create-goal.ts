@@ -31,6 +31,9 @@ export type CreateGoalInput = {
   status?: LearningGoalStatus;
   notificationEnabled?: boolean;
   notificationTime?: string;
+  riwayaId?: number;
+  tariqId?: number;
+  wajhId?: number;
 };
 
 export type CreateGoalDependencies = {
@@ -41,6 +44,11 @@ export type CreateGoalDependencies = {
   goalRepository: {
     create(input: CreateGoalInput): Promise<unknown>;
     findById(id: string, learnerId: string): Promise<unknown | null>;
+  };
+  wajhRepository?: {
+    findById(
+      id: number,
+    ): Promise<{ id: number; tariqId: number } | null>;
   };
 };
 
@@ -183,6 +191,19 @@ export async function createGoal(
   validateDates(input.startDate, input.endDate);
   validateNotificationTime(input.notificationEnabled, input.notificationTime);
   validateGoalTarget(input.target);
+
+  if (input.wajhId !== undefined) {
+    if (input.tariqId === undefined) {
+      throw new Error("Goal wajhId requires tariqId");
+    }
+    if (dependencies.wajhRepository === undefined) {
+      throw new Error("Goal wajhRepository is not configured");
+    }
+    const wajh = await dependencies.wajhRepository.findById(input.wajhId);
+    if (wajh === null || wajh.tariqId !== input.tariqId) {
+      throw new Error("Goal wajh does not belong to tariq");
+    }
+  }
 
   const learner = await dependencies.learnerRepository.findById(
     input.learnerId,

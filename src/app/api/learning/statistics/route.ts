@@ -48,6 +48,26 @@ export async function GET(request: Request) {
   const to = url.searchParams.get("to");
   const timeZone = url.searchParams.get("timeZone");
   const requestedGroupBy = url.searchParams.get("groupBy") ?? "day";
+  const requestedRiwayaId = url.searchParams.get("riwayaId");
+  const requestedTariqId = url.searchParams.get("tariqId");
+  const requestedWajhId = url.searchParams.get("wajhId");
+
+  function parsePositiveInt(value: string | null): number | undefined | null {
+    if (value === null) return undefined;
+    const n = Number(value);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  }
+
+  const riwayaId = parsePositiveInt(requestedRiwayaId);
+  const tariqId = parsePositiveInt(requestedTariqId);
+  const wajhId = parsePositiveInt(requestedWajhId);
+
+  if (riwayaId === null || tariqId === null || wajhId === null) {
+    return Response.json(
+      { error: "INVALID_STATISTICS_PARAMETERS" },
+      { status: 400 },
+    );
+  }
 
   if (
     !learnerId ||
@@ -87,6 +107,9 @@ export async function GET(request: Request) {
       to,
       timeZone,
       groupBy: requestedGroupBy as StatisticsGroupBy,
+      riwayaId: riwayaId ?? undefined,
+      tariqId: tariqId ?? undefined,
+      wajhId: wajhId ?? undefined,
     });
 
     return Response.json(result, {

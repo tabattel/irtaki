@@ -180,6 +180,37 @@ export async function POST(request: Request) {
     return Response.json({ error: "INVALID_REQUEST" }, { status: 400 });
   }
 
+  const riwayaId =
+    typeof body.riwayaId === "number" &&
+    Number.isInteger(body.riwayaId) &&
+    body.riwayaId > 0
+      ? body.riwayaId
+      : undefined;
+
+  const tariqId =
+    typeof body.tariqId === "number" &&
+    Number.isInteger(body.tariqId) &&
+    body.tariqId > 0
+      ? body.tariqId
+      : undefined;
+
+  const wajhId =
+    typeof body.wajhId === "number" &&
+    Number.isInteger(body.wajhId) &&
+    body.wajhId > 0
+      ? body.wajhId
+      : undefined;
+
+  if (body.riwayaId != null && riwayaId === undefined) {
+    return Response.json({ error: "INVALID_RIWAYA_ID" }, { status: 400 });
+  }
+  if (body.tariqId != null && tariqId === undefined) {
+    return Response.json({ error: "INVALID_TARIQ_ID" }, { status: 400 });
+  }
+  if (body.wajhId != null && wajhId === undefined) {
+    return Response.json({ error: "INVALID_WAJH_ID" }, { status: 400 });
+  }
+
   const input = {
     learnerId: body.learnerId,
     parentGoalId:
@@ -207,6 +238,9 @@ export async function POST(request: Request) {
       typeof body.notificationTime === "string"
         ? body.notificationTime
         : undefined,
+    riwayaId,
+    tariqId,
+    wajhId,
   } as GoalInput;
 
   try {

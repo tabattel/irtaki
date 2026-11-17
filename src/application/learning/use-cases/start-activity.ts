@@ -11,6 +11,7 @@ export type StartActivityInput = {
   notes?: string;
   riwayaId?: number;
   tariqId?: number;
+  wajhId?: number;
 };
 
 type GoalRecord = LearningGoal & {

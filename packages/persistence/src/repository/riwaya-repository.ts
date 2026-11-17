@@ -1,6 +1,13 @@
 import { prisma } from "../client/prisma";
 
 export class RiwayaRepository {
+  async findAllWithTuruqCount() {
+    return prisma.riwaya.findMany({
+      include: { _count: { select: { tariqs: true } } },
+      orderBy: { id: "asc" },
+    });
+  }
+
   async findAll() {
     return prisma.riwaya.findMany({
       orderBy: { id: "asc" },

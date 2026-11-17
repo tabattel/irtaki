@@ -40,6 +40,9 @@ export class GoalRepository {
       "draft" | "active" | "paused" | "completed" | "cancelled" | "archived";
     notificationEnabled?: boolean;
     notificationTime?: string;
+    riwayaId?: number;
+    tariqId?: number;
+    wajhId?: number;
     target?: {
       scope:
         | "quran"
@@ -74,6 +77,9 @@ export class GoalRepository {
         status: input.status,
         notificationEnabled: input.notificationEnabled,
         notificationTime: input.notificationTime,
+        riwayaId: input.riwayaId,
+        tariqId: input.tariqId,
+        wajhId: input.wajhId,
         target:
           input.target === undefined
             ? undefined
@@ -102,6 +108,9 @@ export class GoalRepository {
       },
       include: {
         target: true,
+        riwaya: { select: { id: true, shortName: true, fullName: true } },
+        tariq: { select: { id: true, name: true } },
+        wajh: { select: { id: true, name: true } },
       },
     });
   }
@@ -116,6 +125,9 @@ export class GoalRepository {
       orderBy: [{ startDate: "asc" }, { createdAt: "asc" }],
       include: {
         target: true,
+        riwaya: { select: { id: true, shortName: true, fullName: true } },
+        tariq: { select: { id: true, name: true } },
+        wajh: { select: { id: true, name: true } },
       },
     });
   }
@@ -131,6 +143,9 @@ export class GoalRepository {
       orderBy: [{ startDate: "asc" }, { createdAt: "asc" }],
       include: {
         target: true,
+        riwaya: { select: { id: true, shortName: true, fullName: true } },
+        tariq: { select: { id: true, name: true } },
+        wajh: { select: { id: true, name: true } },
       },
     });
   }
@@ -145,6 +160,9 @@ export class GoalRepository {
       orderBy: [{ startDate: "asc" }, { createdAt: "asc" }],
       include: {
         target: true,
+        riwaya: { select: { id: true, shortName: true, fullName: true } },
+        tariq: { select: { id: true, name: true } },
+        wajh: { select: { id: true, name: true } },
       },
     });
   }

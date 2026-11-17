@@ -70,6 +70,12 @@ describe("statistics service", () => {
           action: "read",
           startedAt: new Date("2026-10-01T08:00:00.000Z"),
           endedAt: new Date("2026-10-01T08:02:00.000Z"),
+        riwayaId: null,
+        tariqId: null,
+        wajhId: null,
+        riwaya: null,
+        tariq: null,
+        wajh: null,
           result: {
             createdAt: new Date("2026-10-01T08:02:00.000Z"),
           },

@@ -27,6 +27,12 @@ type LearningGoal = {
   startDate: string;
   endDate?: string | null;
   progress?: GoalProgress;
+  riwayaId?: number | null;
+  tariqId?: number | null;
+  wajhId?: number | null;
+  riwaya?: { id: number; shortName: string; fullName: string } | null;
+  tariq?: { id: number; name: string } | null;
+  wajh?: { id: number; name: string } | null;
 };
 
 type GoalForm = {
@@ -164,11 +170,17 @@ export default function ObjectivesPage() {
   const [pageError, setPageError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [riwayaId, setRiwayaId] = useState<number | null>(null);
+  const [riwayaQuery, setRiwayaQuery] = useState("");
+  const [riwayaOpen, setRiwayaOpen] = useState(false);
   const [tariqId, setTariqId] = useState<number | null>(null);
   const [riwayaList, setRiwayaList] = useState<
-    { id: number; shortName: string; fullName: string }[]
+    { id: number; shortName: string; fullName: string; turuqCount?: number }[]
   >([]);
   const [tariqList, setTariqList] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [wajhId, setWajhId] = useState<number | null>(null);
+  const [wajhList, setWajhList] = useState<
     { id: number; name: string }[]
   >([]);
   const [reminderEnabled, setReminderEnabled] = useState(false);
@@ -208,6 +220,20 @@ export default function ObjectivesPage() {
       })
       .catch(() => undefined);
   }, [riwayaId]);
+
+  useEffect(() => {
+    if (tariqId === null) {
+      setWajhList([]);
+      setWajhId(null);
+      return;
+    }
+    void fetch(`/api/turuq/${tariqId}/wujuh`)
+      .then((r) => r.json())
+      .then((p) => {
+        if (Array.isArray(p?.data)) setWajhList(p.data);
+      })
+      .catch(() => undefined);
+  }, [tariqId]);
 
   useEffect(() => {
     let alive = true;
@@ -409,7 +435,8 @@ export default function ObjectivesPage() {
           title: form.title.trim(),
           description: form.description.trim() || undefined,
           riwayaId: riwayaId ?? undefined,
-        tariqId: tariqId ?? undefined,
+          tariqId: tariqId ?? undefined,
+          wajhId: wajhId ?? undefined,
         notificationEnabled: reminderEnabled,
         notificationTime: reminderEnabled ? reminderTime : undefined,
         action: form.action,
@@ -698,34 +725,7 @@ export default function ObjectivesPage() {
                   </div>
                 </div>
 
-                {formError ? (
-                  <p className="text-sm leading-6 text-red-600 dark:text-red-400" role="alert">
-                    {formError}
-                  </p>
-                ) : null}
-
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="submit"
-                    className={buttonClass()}
-                    disabled={saving}
-                  >
-                    {saving ? "جارٍ الحفظ..." : "حفظ الهدف"}
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-medium"
-                    disabled={saving}
-                    onClick={() => {
-                      setFormOpen(false);
-                      setFormError(null);
-                    }}
-                  >
-                    إلغاء
-                  </button>
-                </div>
-              
-                <div className="space-y-4 border-t border-[var(--border)] pt-4">
+                <div className="space-y-4">
                   <h3 className="text-sm font-semibold">
                     تفاصيل إضافية (اختيارية)
                   </h3>
@@ -738,23 +738,129 @@ export default function ObjectivesPage() {
                       >
                         الرواية
                       </label>
-                      <select
-                        id="goal-riwaya"
-                        className="block w-full min-w-0 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-base text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--foreground)]"
-                        value={riwayaId ?? ""}
-                        onChange={(event) => {
-                          const v = event.target.value;
-                          setRiwayaId(v ? Number(v) : null);
-                          setTariqId(null);
-                        }}
-                      >
-                        <option value="">— بدون —</option>
-                        {riwayaList.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.shortName} — {r.fullName}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <input
+                          id="goal-riwaya"
+                          type="text"
+                          autoComplete="off"
+                          dir="rtl"
+                          placeholder="ابحث أو اختر رواية..."
+                          className="block w-full min-w-0 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-base text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--foreground)] placeholder:text-[var(--muted)]"
+                          value={riwayaQuery}
+                          onFocus={() => setRiwayaOpen(true)}
+                          onBlur={() =>
+                            window.setTimeout(() => setRiwayaOpen(false), 150)
+                          }
+                          onChange={(event) => {
+                            const v = event.target.value;
+                            setRiwayaQuery(v);
+                            setRiwayaOpen(true);
+                            if (v.trim() === "") {
+                              setRiwayaId(null);
+                              setTariqId(null);
+                              setTariqList([]);
+                              setWajhId(null);
+                              setWajhList([]);
+                            }
+                          }}
+                        />
+                        {riwayaOpen ? (() => {
+                          const q = riwayaQuery.trim().toLowerCase();
+                          const base = q
+                            ? riwayaList.filter(
+                                (r) =>
+                                  r.shortName.toLowerCase().includes(q) ||
+                                  r.fullName.toLowerCase().includes(q),
+                              )
+                            : riwayaList;
+                          const hasCountInfo = riwayaList.some(
+                            (r) => typeof r.turuqCount === "number",
+                          );
+                          const available = hasCountInfo
+                            ? base.filter((r) => (r.turuqCount ?? 0) > 0)
+                            : base;
+                          const unavailable = hasCountInfo
+                            ? base.filter((r) => (r.turuqCount ?? 0) === 0)
+                            : [];
+
+                          const selectRiwaya = (r: {
+                            id: number;
+                            shortName: string;
+                            fullName: string;
+                          }) => {
+                            if (r.id !== riwayaId) {
+                              setTariqId(null);
+                              setTariqList([]);
+                              setWajhId(null);
+                              setWajhList([]);
+                            }
+                            setRiwayaId(r.id);
+                            setRiwayaQuery(`${r.shortName} — ${r.fullName}`);
+                            setRiwayaOpen(false);
+                          };
+
+                          return (
+                            <ul
+                              role="listbox"
+                              className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--background)] shadow-lg"
+                            >
+                              <li
+                                role="option"
+                                aria-selected={riwayaId === null}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setRiwayaId(null);
+                                  setRiwayaQuery("");
+                                  setTariqId(null);
+                                  setTariqList([]);
+                                  setWajhId(null);
+                                  setWajhList([]);
+                                  setRiwayaOpen(false);
+                                }}
+                                className="cursor-pointer px-3 py-2 text-sm text-[var(--muted)] hover:bg-[var(--surface)]"
+                              >
+                                — بدون —
+                              </li>
+
+                              {available.length > 0 ? (
+                                <li className="px-3 pb-1 pt-2 text-xs font-semibold text-[var(--muted)]">
+                                  متوفرة
+                                </li>
+                              ) : null}
+                              {available.map((r) => (
+                                <li
+                                  key={r.id}
+                                  role="option"
+                                  aria-selected={riwayaId === r.id}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => selectRiwaya(r)}
+                                  className="cursor-pointer px-3 py-2 text-sm font-bold text-[var(--foreground)] hover:bg-[var(--surface)]"
+                                >
+                                  {r.shortName} — {r.fullName}
+                                </li>
+                              ))}
+
+                              {unavailable.length > 0 ? (
+                                <li className="px-3 pb-1 pt-2 text-xs font-semibold text-[var(--muted)]">
+                                  غير متوفرة
+                                </li>
+                              ) : null}
+                              {unavailable.map((r) => (
+                                <li
+                                  key={r.id}
+                                  role="option"
+                                  aria-selected={riwayaId === r.id}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => selectRiwaya(r)}
+                                  className="cursor-pointer px-3 py-2 text-sm text-[var(--muted)] hover:bg-[var(--surface)]"
+                                >
+                                  {r.shortName} — {r.fullName}
+                                </li>
+                              ))}
+                            </ul>
+                          );
+                        })() : null}
+                      </div>
                     </div>
 
                     <div className="min-w-0 space-y-1.5">
@@ -771,6 +877,8 @@ export default function ObjectivesPage() {
                         onChange={(event) => {
                           const v = event.target.value;
                           setTariqId(v ? Number(v) : null);
+                          setWajhId(null);
+                          setWajhList([]);
                         }}
                         disabled={riwayaId === null || tariqList.length === 0}
                       >
@@ -778,6 +886,32 @@ export default function ObjectivesPage() {
                         {tariqList.map((t) => (
                           <option key={t.id} value={t.id}>
                             {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="min-w-0 space-y-1.5">
+                      <label
+                        htmlFor="goal-wajh"
+                        className="block text-sm font-medium"
+                      >
+                        الوجه
+                      </label>
+                      <select
+                        id="goal-wajh"
+                        className="block w-full min-w-0 rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-base text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--foreground)] disabled:opacity-50"
+                        value={wajhId ?? ""}
+                        onChange={(event) => {
+                          const v = event.target.value;
+                          setWajhId(v ? Number(v) : null);
+                        }}
+                        disabled={tariqId === null || wajhList.length === 0}
+                      >
+                        <option value="">— بدون —</option>
+                        {wajhList.map((w) => (
+                          <option key={w.id} value={w.id}>
+                            {w.name}
                           </option>
                         ))}
                       </select>
@@ -822,6 +956,35 @@ export default function ObjectivesPage() {
                     </div>
                   ) : null}
                 </div>
+
+                {formError ? (
+                  <p className="text-sm leading-6 text-red-600 dark:text-red-400" role="alert">
+                    {formError}
+                  </p>
+                ) : null}
+
+                <div className="flex flex-col gap-2 border-t border-[var(--border)] pt-4 sm:flex-row">
+                  <button
+                    type="submit"
+                    className={buttonClass()}
+                    disabled={saving}
+                  >
+                    {saving ? "جارٍ الحفظ..." : "حفظ الهدف"}
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--border)] px-4 py-3 text-sm font-medium"
+                    disabled={saving}
+                    onClick={() => {
+                      setFormOpen(false);
+                      setFormError(null);
+                    }}
+                  >
+                    إلغاء
+                  </button>
+                </div>
+
+
               </form>
             </section>
           ) : null}
@@ -939,6 +1102,24 @@ export default function ObjectivesPage() {
                           {formatNumber(goal.frequencyCount)}{" "}
                           {labelFor(PERIODS, goal.frequencyPeriod)}
                         </p>
+                        {goal.riwaya?.shortName ? (
+                          <p>
+                            <span className="text-[var(--muted)]">الرواية: </span>
+                            {goal.riwaya.shortName}
+                          </p>
+                        ) : null}
+                        {goal.tariq?.name ? (
+                          <p>
+                            <span className="text-[var(--muted)]">الطريق: </span>
+                            {goal.tariq.name}
+                          </p>
+                        ) : null}
+                        {goal.wajh?.name ? (
+                          <p>
+                            <span className="text-[var(--muted)]">الوجه: </span>
+                            {goal.wajh.name}
+                          </p>
+                        ) : null}
                         <p>
                           <span className="text-[var(--muted)]">البداية: </span>
                           {formatDate(goal.startDate)}

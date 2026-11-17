@@ -14,6 +14,7 @@ import {
   type StatisticsGroupBy,
   type StatisticsRange,
   type StatisticsResult,
+  type StatisticsAxisBreakdownItem,
   type StatisticsResultStatus,
   type StatisticsTraceStatus,
 } from "./statistics-types";
@@ -168,6 +169,66 @@ function createZeroRecord<T extends string>(
   keys: readonly T[],
 ): Record<T, number> {
   return Object.fromEntries(keys.map((key) => [key, 0])) as Record<T, number>;
+}
+
+function buildStringBreakdown(
+  traces: readonly StatisticsAyahTraceRecord[],
+  getKey: (trace: StatisticsAyahTraceRecord) => string | null,
+  getLabel: (trace: StatisticsAyahTraceRecord) => string,
+): StatisticsAxisBreakdownItem[] {
+  type Mutable = {
+    key: string;
+    label: string;
+    traceCount: number;
+    ayahIds: Set<number>;
+    validatedAyahIds: Set<number>;
+    byAction: Partial<Record<StatisticsAction, number>>;
+  };
+
+  const groups = new Map<string, Mutable>();
+
+  for (const trace of traces) {
+    const rawKey = getKey(trace);
+    const key = rawKey ?? "__unknown__";
+    const label = rawKey === null ? "غير محدد" : getLabel(trace);
+
+    let item = groups.get(key);
+
+    if (!item) {
+      item = {
+        key,
+        label,
+        traceCount: 0,
+        ayahIds: new Set<number>(),
+        validatedAyahIds: new Set<number>(),
+        byAction: {},
+      };
+      groups.set(key, item);
+    }
+
+    item.traceCount += 1;
+    item.ayahIds.add(trace.ayahId);
+
+    if (isValidated(trace.status)) {
+      item.validatedAyahIds.add(trace.ayahId);
+    }
+
+    item.byAction[trace.action] = (item.byAction[trace.action] ?? 0) + 1;
+  }
+
+  return [...groups.values()]
+    .sort(
+      (a, b) =>
+        b.traceCount - a.traceCount || a.label.localeCompare(b.label, "ar"),
+    )
+    .map((item) => ({
+      key: item.key,
+      label: item.label,
+      traceCount: item.traceCount,
+      uniqueAyahCount: item.ayahIds.size,
+      validatedUniqueAyahCount: item.validatedAyahIds.size,
+      byAction: item.byAction,
+    }));
 }
 
 export function calculateStatistics(
@@ -377,6 +438,40 @@ export function calculateStatistics(
       byPage: buildBreakdown(
         traces,
         (trace) => (trace.pageNumber > 0 ? trace.pageNumber : null),
+      ),
+    },
+    byAxis: {
+      byRiwaya: buildStringBreakdown(
+        traces,
+        (trace) => (trace.riwayaId !== null ? `riwaya:${trace.riwayaId}` : null),
+        (trace) => trace.riwayaName ?? "غير محدد",
+      ),
+      byTariq: buildStringBreakdown(
+        traces,
+        (trace) => (trace.tariqId !== null ? `tariq:${trace.tariqId}` : null),
+        (trace) => trace.tariqName ?? "غير محدد",
+      ),
+      byWajh: buildStringBreakdown(
+        traces,
+        (trace) => (trace.wajhId !== null ? `wajh:${trace.wajhId}` : null),
+        (trace) => trace.wajhName ?? "غير محدد",
+      ),
+      byCombination: buildStringBreakdown(
+        traces,
+        (trace) => {
+          const parts: string[] = [];
+          if (trace.riwayaId !== null) parts.push(`r${trace.riwayaId}`);
+          if (trace.tariqId !== null) parts.push(`t${trace.tariqId}`);
+          if (trace.wajhId !== null) parts.push(`w${trace.wajhId}`);
+          return parts.length > 0 ? parts.join("-") : null;
+        },
+        (trace) => {
+          const parts: string[] = [];
+          if (trace.riwayaName) parts.push(trace.riwayaName);
+          if (trace.tariqName) parts.push(trace.tariqName);
+          if (trace.wajhName) parts.push(trace.wajhName);
+          return parts.length > 0 ? parts.join(" / ") : "غير محدد";
+        },
       ),
     },
   };

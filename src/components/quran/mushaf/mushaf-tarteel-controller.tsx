@@ -507,11 +507,53 @@ export function MushafTarteelController({
           if (blob.size > 0) {
             const ayahs = detectedAyahsRef.current;
             setDetectedAyahs(ayahs);
+
+            // Tri + dédup par (surah, ayah) : le tableau brut est dans l'ordre
+            // d'apparition des mots reconnus, pas dans l'ordre des ayahs.
+            // Sans tri, endAyah pouvait être < startAyah (ex. 3 au lieu de 5).
+            // `ayahs` est dans l'ordre de détection, avec :
+            //   - parfois des re-matches tardifs d'ayahs précoces
+            //   - parfois des faux positifs d'autres sourates (bruit)
+            // Stratégie : on fixe la sourate = celle du PREMIER ayah détecté
+            // (fiable pour le début, vérifié empiriquement), et on borne la
+            // fin au MAX des ayahs de cette seule sourate. Le bruit des
+            // autres sourates est ignoré, et la fin ne régresse plus.
+            const validAyahs = ayahs.filter(
+              (a) =>
+                Number.isInteger(a.surahNumber) &&
+                a.surahNumber > 0 &&
+                Number.isInteger(a.ayahNumber) &&
+                a.ayahNumber > 0,
+            );
+
+            const firstRaw = validAyahs[0];
+            const surahNum = firstRaw?.surahNumber ?? 1;
+            const sameSurahAyahNums = validAyahs
+              .filter((a) => a.surahNumber === surahNum)
+              .map((a) => a.ayahNumber);
+
+            const startAyah = sameSurahAyahNums.length
+              ? Math.min(...sameSurahAyahNums)
+              : (firstRaw?.ayahNumber ?? 1);
+            const endAyah = sameSurahAyahNums.length
+              ? Math.max(...sameSurahAyahNums)
+              : startAyah;
+
+            if (process.env.NODE_ENV === "development") {
+              console.info("[TARTEEL-RANGE]", {
+                raw: ayahs.map((a) => `${a.surahNumber}:${a.ayahNumber}`),
+                retainedSurah: surahNum,
+                sameSurahAyahs: sameSurahAyahNums,
+                startAyah,
+                endAyah,
+              });
+            }
+
             setEditableRange({
-              startSurah: ayahs[0]?.surahNumber ?? 1,
-              startAyah: ayahs[0]?.ayahNumber ?? 1,
-              endSurah: ayahs[ayahs.length - 1]?.surahNumber ?? 1,
-              endAyah: ayahs[ayahs.length - 1]?.ayahNumber ?? 1,
+              startSurah: surahNum,
+              startAyah,
+              endSurah: surahNum,
+              endAyah,
             });
             setPendingAudio({
               blob,
@@ -975,6 +1017,12 @@ export function MushafTarteelController({
           learnerId,
           action: mode ?? "tarteel1",
           riwayaId,
+          ...(mode === "tarteel2" && tarteel2SelectionRef.current?.tariqId
+            ? { tariqId: tarteel2SelectionRef.current.tariqId }
+            : {}),
+          ...(mode === "tarteel2" && tarteel2SelectionRef.current?.wajhId
+            ? { wajhId: tarteel2SelectionRef.current.wajhId }
+            : {}),
           ayahIds,
         }),
       });

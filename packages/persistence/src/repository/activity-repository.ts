@@ -26,6 +26,7 @@ export class ActivityRepository {
     notes?: string;
     riwayaId?: number;
     tariqId?: number;
+    wajhId?: number;
   }): Promise<Activity> {
     return prisma.activity.create({
       data: {
@@ -38,6 +39,7 @@ export class ActivityRepository {
         notes: input.notes,
         riwayaId: input.riwayaId,
         tariqId: input.tariqId,
+        wajhId: input.wajhId,
       },
     });
   }

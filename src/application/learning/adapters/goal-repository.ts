@@ -33,6 +33,16 @@ function mapGoal(goal: NonNullable<PersistenceGoal>): LearningGoal {
     startDate: goal.startDate,
     endDate: goal.endDate,
     status: goal.status as LearningGoalStatus,
+    riwayaId: (goal as { riwayaId?: number | null }).riwayaId ?? null,
+    tariqId: (goal as { tariqId?: number | null }).tariqId ?? null,
+    wajhId: (goal as { wajhId?: number | null }).wajhId ?? null,
+    riwaya:
+      (goal as { riwaya?: { id: number; shortName: string; fullName: string } | null })
+        .riwaya ?? null,
+    tariq:
+      (goal as { tariq?: { id: number; name: string } | null }).tariq ?? null,
+    wajh:
+      (goal as { wajh?: { id: number; name: string } | null }).wajh ?? null,
   };
 }
 

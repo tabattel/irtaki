@@ -33,6 +33,12 @@ export type StatisticsAyahTraceRow = {
     action: StatisticsAction;
     startedAt: Date;
     endedAt: Date | null;
+    riwayaId: number | null;
+    tariqId: number | null;
+    wajhId: number | null;
+    riwaya: { id: number; shortName: string; fullName: string } | null;
+    tariq: { id: number; name: string } | null;
+    wajh: { id: number; name: string } | null;
     result: {
       createdAt: Date;
     } | null;
@@ -66,6 +72,9 @@ export type StatisticsServiceDependencies = {
 
 export type GetStatisticsInput = StatisticsRangeInput & {
   groupBy?: StatisticsGroupBy;
+  riwayaId?: number;
+  tariqId?: number;
+  wajhId?: number;
 };
 
 export function createStatisticsService(
@@ -102,11 +111,13 @@ export function createStatisticsService(
           learnerId,
           range.startAt,
           range.endAt,
+          { riwayaId: input.riwayaId, tariqId: input.tariqId, wajhId: input.wajhId },
         ),
         dependencies.statisticsRepository.findAyahTracesByLearnerIdInRange(
           learnerId,
           range.startAt,
           range.endAt,
+          { riwayaId: input.riwayaId, tariqId: input.tariqId, wajhId: input.wajhId },
         ),
       ]);
 
@@ -137,6 +148,12 @@ export function createStatisticsService(
         juz: trace.ayah.juz,
         // Dans les ressources importées, Ayah.hizb contient le numéro du rub'.
         rubNumber: trace.ayah.hizb,
+        riwayaId: trace.activity.riwayaId ?? null,
+        tariqId: trace.activity.tariqId ?? null,
+        wajhId: trace.activity.wajhId ?? null,
+        riwayaName: trace.activity.riwaya?.shortName ?? null,
+        tariqName: trace.activity.tariq?.name ?? null,
+        wajhName: trace.activity.wajh?.name ?? null,
       }));
 
       return calculateStatistics({

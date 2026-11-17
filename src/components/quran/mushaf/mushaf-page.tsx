@@ -917,6 +917,19 @@ export function MushafPage({
   const tarteelLastProcessedSequenceRef = useRef(-1);
   const tarteelLastProcessedTextRef = useRef("");
   const tarteelTrackerRef = useRef<TarteelTracker | null>(null);
+  // Accumulateur de session : tous les ayahs détectés depuis le début de
+  // la récitation. Chaque event renvoie la liste COMPLÈTE, pas seulement
+  // la fenêtre courante — sinon seuls les derniers ayahs arrivent au
+  // contrôleur quand la récitation ralentit ou s'arrête.
+  const tarteelDetectedAyahsRef = useRef<
+    Map<number, {
+      id: number;
+      surahNumber: number;
+      ayahNumber: number;
+      surahName: string;
+      text: string;
+    }>
+  >(new Map());
   const tarteelTrackerTargetsRef = useRef<unknown>(null);
   const tarteelPendingNavigationKeyRef = useRef<string | null>(null);
   const tarteelHighlightTimerRef = useRef<number | null>(null);
@@ -1121,6 +1134,7 @@ export function MushafPage({
         tarteelLastProcessedSequenceRef.current = -1;
         tarteelLastProcessedTextRef.current = "";
         tarteelCursorRef.current = 0;
+        tarteelDetectedAyahsRef.current.clear();
         tarteelPendingNavigationKeyRef.current = null;
       }
 
@@ -1192,6 +1206,70 @@ export function MushafPage({
             }
             return next ? { ...previous, [detail.mode]: next } : previous;
           });
+
+          // Accumulation + dispatch : la voie "tracked" est la source de
+          // vérité de la coloration verte. On doit donc émettre les ayahs
+          // détectés d'ici, sinon seuls les ayahs vus par la recherche
+          // suffixe (bloc "search" plus bas) arrivent au contrôleur — ce
+          // qui ratait la plupart des ayahs lors d'une récitation fluide.
+          {
+            const frameAyahs = tracked.matches
+              .map((match) => {
+                const target = globalTargets[match.index];
+                if (!target) return null;
+                const [surahNumber, ayahNumber] = target.key
+                  .split(":")
+                  .map(Number);
+                const ayah = globalAyahs.find(
+                  (item) =>
+                    item.surahNumber === surahNumber &&
+                    item.number === ayahNumber,
+                );
+                if (!ayah) return null;
+                return {
+                  id: ayah.id,
+                  surahNumber: ayah.surahNumber,
+                  ayahNumber: ayah.number,
+                  surahName:
+                    surahs.find((item) => item.number === ayah.surahNumber)
+                      ?.name ?? `سورة ${ayah.surahNumber}`,
+                  text: ayah.text,
+                };
+              })
+              .filter((ayah): ayah is NonNullable<typeof ayah> => ayah !== null);
+
+            for (const ayah of frameAyahs) {
+              tarteelDetectedAyahsRef.current.set(ayah.id, ayah);
+            }
+
+            const allDetectedAyahs = [
+              ...tarteelDetectedAyahsRef.current.values(),
+            ].sort(
+              (a, b) =>
+                a.surahNumber - b.surahNumber ||
+                a.ayahNumber - b.ayahNumber,
+            );
+
+            if (process.env.NODE_ENV === "development") {
+              console.info("[TARTEEL-ACCUM-TRACKED]", {
+                frame: frameAyahs.length,
+                total: allDetectedAyahs.length,
+                all: allDetectedAyahs.map(
+                  (a) => `${a.surahNumber}:${a.ayahNumber}`,
+                ),
+              });
+            }
+
+            window.dispatchEvent(
+              new CustomEvent("irtaki:tarteel-detected-ayahs", {
+                detail: {
+                  sessionId: detail.sessionId,
+                  mode: detail.mode,
+                  ayahs: allDetectedAyahs,
+                },
+              }),
+            );
+          }
 
           if (progressed) {
             tarteelCursorRef.current = tracked.nextCursor;
@@ -1354,7 +1432,7 @@ export function MushafPage({
       // Transmettre uniquement les ayahs issues d'un résultat final :
       // les transcriptions provisoires peuvent encore être corrigées.
       if (candidate.matches.length > 0) {
-        const detectedAyahs = candidate.matches
+        const frameAyahs = candidate.matches
           .map((match) => {
             const target = globalTargets[match.targetIndex];
             if (!target) return null;
@@ -1381,12 +1459,38 @@ export function MushafPage({
           })
           .filter((ayah): ayah is NonNullable<typeof ayah> => ayah !== null);
 
+        // Accumuler dans le ref de session (page-level), pas seulement la
+        // fenêtre courante : sans ça, un utilisateur qui s'arrête après
+        // avoir récité 6 ayahs n'en voyait que 1-2 dans la modale, car la
+        // fenêtre glissante ne contenait plus les ayahs précoces.
+        for (const ayah of frameAyahs) {
+          tarteelDetectedAyahsRef.current.set(ayah.id, ayah);
+        }
+
+        // Envoyer la liste COMPLÈTE (pas seulement la fenêtre).
+        const allDetectedAyahs = [...tarteelDetectedAyahsRef.current.values()]
+          .sort(
+            (a, b) =>
+              a.surahNumber - b.surahNumber ||
+              a.ayahNumber - b.ayahNumber,
+          );
+
+        if (process.env.NODE_ENV === "development") {
+          console.info("[TARTEEL-ACCUM]", {
+            frame: frameAyahs.length,
+            total: allDetectedAyahs.length,
+            all: allDetectedAyahs.map(
+              (a) => `${a.surahNumber}:${a.ayahNumber}`,
+            ),
+          });
+        }
+
         window.dispatchEvent(
           new CustomEvent("irtaki:tarteel-detected-ayahs", {
             detail: {
               sessionId: detail.sessionId,
               mode: detail.mode,
-              ayahs: detectedAyahs,
+              ayahs: allDetectedAyahs,
             },
           }),
         );

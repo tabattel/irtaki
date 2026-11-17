@@ -32,6 +32,7 @@ export type GoalAvgAggregateOutputType = {
   intervalDays: number | null
   riwayaId: number | null
   tariqId: number | null
+  wajhId: number | null
 }
 
 export type GoalSumAggregateOutputType = {
@@ -40,6 +41,7 @@ export type GoalSumAggregateOutputType = {
   intervalDays: number | null
   riwayaId: number | null
   tariqId: number | null
+  wajhId: number | null
 }
 
 export type GoalMinAggregateOutputType = {
@@ -62,6 +64,7 @@ export type GoalMinAggregateOutputType = {
   notificationTime: string | null
   riwayaId: number | null
   tariqId: number | null
+  wajhId: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -86,6 +89,7 @@ export type GoalMaxAggregateOutputType = {
   notificationTime: string | null
   riwayaId: number | null
   tariqId: number | null
+  wajhId: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -110,6 +114,7 @@ export type GoalCountAggregateOutputType = {
   notificationTime: number
   riwayaId: number
   tariqId: number
+  wajhId: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -122,6 +127,7 @@ export type GoalAvgAggregateInputType = {
   intervalDays?: true
   riwayaId?: true
   tariqId?: true
+  wajhId?: true
 }
 
 export type GoalSumAggregateInputType = {
@@ -130,6 +136,7 @@ export type GoalSumAggregateInputType = {
   intervalDays?: true
   riwayaId?: true
   tariqId?: true
+  wajhId?: true
 }
 
 export type GoalMinAggregateInputType = {
@@ -152,6 +159,7 @@ export type GoalMinAggregateInputType = {
   notificationTime?: true
   riwayaId?: true
   tariqId?: true
+  wajhId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -176,6 +184,7 @@ export type GoalMaxAggregateInputType = {
   notificationTime?: true
   riwayaId?: true
   tariqId?: true
+  wajhId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -200,6 +209,7 @@ export type GoalCountAggregateInputType = {
   notificationTime?: true
   riwayaId?: true
   tariqId?: true
+  wajhId?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -311,6 +321,7 @@ export type GoalGroupByOutputType = {
   notificationTime: string | null
   riwayaId: number | null
   tariqId: number | null
+  wajhId: number | null
   createdAt: Date
   updatedAt: Date
   _count: GoalCountAggregateOutputType | null
@@ -358,12 +369,14 @@ export type GoalWhereInput = {
   notificationTime?: Prisma.StringNullableFilter<"Goal"> | string | null
   riwayaId?: Prisma.IntNullableFilter<"Goal"> | number | null
   tariqId?: Prisma.IntNullableFilter<"Goal"> | number | null
+  wajhId?: Prisma.IntNullableFilter<"Goal"> | number | null
   createdAt?: Prisma.DateTimeFilter<"Goal"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Goal"> | Date | string
   learner?: Prisma.XOR<Prisma.LearnerScalarRelationFilter, Prisma.LearnerWhereInput>
   parentGoal?: Prisma.XOR<Prisma.GoalNullableScalarRelationFilter, Prisma.GoalWhereInput> | null
   riwaya?: Prisma.XOR<Prisma.RiwayaNullableScalarRelationFilter, Prisma.RiwayaWhereInput> | null
   tariq?: Prisma.XOR<Prisma.TariqNullableScalarRelationFilter, Prisma.TariqWhereInput> | null
+  wajh?: Prisma.XOR<Prisma.WajhNullableScalarRelationFilter, Prisma.WajhWhereInput> | null
   subGoals?: Prisma.GoalListRelationFilter
   target?: Prisma.XOR<Prisma.GoalTargetNullableScalarRelationFilter, Prisma.GoalTargetWhereInput> | null
   activities?: Prisma.ActivityListRelationFilter
@@ -390,12 +403,14 @@ export type GoalOrderByWithRelationInput = {
   notificationTime?: Prisma.SortOrderInput | Prisma.SortOrder
   riwayaId?: Prisma.SortOrderInput | Prisma.SortOrder
   tariqId?: Prisma.SortOrderInput | Prisma.SortOrder
+  wajhId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   learner?: Prisma.LearnerOrderByWithRelationInput
   parentGoal?: Prisma.GoalOrderByWithRelationInput
   riwaya?: Prisma.RiwayaOrderByWithRelationInput
   tariq?: Prisma.TariqOrderByWithRelationInput
+  wajh?: Prisma.WajhOrderByWithRelationInput
   subGoals?: Prisma.GoalOrderByRelationAggregateInput
   target?: Prisma.GoalTargetOrderByWithRelationInput
   activities?: Prisma.ActivityOrderByRelationAggregateInput
@@ -425,12 +440,14 @@ export type GoalWhereUniqueInput = Prisma.AtLeast<{
   notificationTime?: Prisma.StringNullableFilter<"Goal"> | string | null
   riwayaId?: Prisma.IntNullableFilter<"Goal"> | number | null
   tariqId?: Prisma.IntNullableFilter<"Goal"> | number | null
+  wajhId?: Prisma.IntNullableFilter<"Goal"> | number | null
   createdAt?: Prisma.DateTimeFilter<"Goal"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Goal"> | Date | string
   learner?: Prisma.XOR<Prisma.LearnerScalarRelationFilter, Prisma.LearnerWhereInput>
   parentGoal?: Prisma.XOR<Prisma.GoalNullableScalarRelationFilter, Prisma.GoalWhereInput> | null
   riwaya?: Prisma.XOR<Prisma.RiwayaNullableScalarRelationFilter, Prisma.RiwayaWhereInput> | null
   tariq?: Prisma.XOR<Prisma.TariqNullableScalarRelationFilter, Prisma.TariqWhereInput> | null
+  wajh?: Prisma.XOR<Prisma.WajhNullableScalarRelationFilter, Prisma.WajhWhereInput> | null
   subGoals?: Prisma.GoalListRelationFilter
   target?: Prisma.XOR<Prisma.GoalTargetNullableScalarRelationFilter, Prisma.GoalTargetWhereInput> | null
   activities?: Prisma.ActivityListRelationFilter
@@ -457,6 +474,7 @@ export type GoalOrderByWithAggregationInput = {
   notificationTime?: Prisma.SortOrderInput | Prisma.SortOrder
   riwayaId?: Prisma.SortOrderInput | Prisma.SortOrder
   tariqId?: Prisma.SortOrderInput | Prisma.SortOrder
+  wajhId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.GoalCountOrderByAggregateInput
@@ -489,6 +507,7 @@ export type GoalScalarWhereWithAggregatesInput = {
   notificationTime?: Prisma.StringNullableWithAggregatesFilter<"Goal"> | string | null
   riwayaId?: Prisma.IntNullableWithAggregatesFilter<"Goal"> | number | null
   tariqId?: Prisma.IntNullableWithAggregatesFilter<"Goal"> | number | null
+  wajhId?: Prisma.IntNullableWithAggregatesFilter<"Goal"> | number | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Goal"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Goal"> | Date | string
 }
@@ -515,6 +534,7 @@ export type GoalCreateInput = {
   parentGoal?: Prisma.GoalCreateNestedOneWithoutSubGoalsInput
   riwaya?: Prisma.RiwayaCreateNestedOneWithoutGoalsInput
   tariq?: Prisma.TariqCreateNestedOneWithoutGoalsInput
+  wajh?: Prisma.WajhCreateNestedOneWithoutGoalsInput
   subGoals?: Prisma.GoalCreateNestedManyWithoutParentGoalInput
   target?: Prisma.GoalTargetCreateNestedOneWithoutGoalInput
   activities?: Prisma.ActivityCreateNestedManyWithoutGoalInput
@@ -541,6 +561,7 @@ export type GoalUncheckedCreateInput = {
   notificationTime?: string | null
   riwayaId?: number | null
   tariqId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   subGoals?: Prisma.GoalUncheckedCreateNestedManyWithoutParentGoalInput
@@ -571,6 +592,7 @@ export type GoalUpdateInput = {
   parentGoal?: Prisma.GoalUpdateOneWithoutSubGoalsNestedInput
   riwaya?: Prisma.RiwayaUpdateOneWithoutGoalsNestedInput
   tariq?: Prisma.TariqUpdateOneWithoutGoalsNestedInput
+  wajh?: Prisma.WajhUpdateOneWithoutGoalsNestedInput
   subGoals?: Prisma.GoalUpdateManyWithoutParentGoalNestedInput
   target?: Prisma.GoalTargetUpdateOneWithoutGoalNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutGoalNestedInput
@@ -597,6 +619,7 @@ export type GoalUncheckedUpdateInput = {
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subGoals?: Prisma.GoalUncheckedUpdateManyWithoutParentGoalNestedInput
@@ -625,6 +648,7 @@ export type GoalCreateManyInput = {
   notificationTime?: string | null
   riwayaId?: number | null
   tariqId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -669,6 +693,7 @@ export type GoalUncheckedUpdateManyInput = {
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -708,6 +733,7 @@ export type GoalCountOrderByAggregateInput = {
   notificationTime?: Prisma.SortOrder
   riwayaId?: Prisma.SortOrder
   tariqId?: Prisma.SortOrder
+  wajhId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -718,6 +744,7 @@ export type GoalAvgOrderByAggregateInput = {
   intervalDays?: Prisma.SortOrder
   riwayaId?: Prisma.SortOrder
   tariqId?: Prisma.SortOrder
+  wajhId?: Prisma.SortOrder
 }
 
 export type GoalMaxOrderByAggregateInput = {
@@ -740,6 +767,7 @@ export type GoalMaxOrderByAggregateInput = {
   notificationTime?: Prisma.SortOrder
   riwayaId?: Prisma.SortOrder
   tariqId?: Prisma.SortOrder
+  wajhId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -764,6 +792,7 @@ export type GoalMinOrderByAggregateInput = {
   notificationTime?: Prisma.SortOrder
   riwayaId?: Prisma.SortOrder
   tariqId?: Prisma.SortOrder
+  wajhId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -774,6 +803,7 @@ export type GoalSumOrderByAggregateInput = {
   intervalDays?: Prisma.SortOrder
   riwayaId?: Prisma.SortOrder
   tariqId?: Prisma.SortOrder
+  wajhId?: Prisma.SortOrder
 }
 
 export type GoalScalarRelationFilter = {
@@ -862,6 +892,48 @@ export type GoalUncheckedUpdateManyWithoutTariqNestedInput = {
   connect?: Prisma.GoalWhereUniqueInput | Prisma.GoalWhereUniqueInput[]
   update?: Prisma.GoalUpdateWithWhereUniqueWithoutTariqInput | Prisma.GoalUpdateWithWhereUniqueWithoutTariqInput[]
   updateMany?: Prisma.GoalUpdateManyWithWhereWithoutTariqInput | Prisma.GoalUpdateManyWithWhereWithoutTariqInput[]
+  deleteMany?: Prisma.GoalScalarWhereInput | Prisma.GoalScalarWhereInput[]
+}
+
+export type GoalCreateNestedManyWithoutWajhInput = {
+  create?: Prisma.XOR<Prisma.GoalCreateWithoutWajhInput, Prisma.GoalUncheckedCreateWithoutWajhInput> | Prisma.GoalCreateWithoutWajhInput[] | Prisma.GoalUncheckedCreateWithoutWajhInput[]
+  connectOrCreate?: Prisma.GoalCreateOrConnectWithoutWajhInput | Prisma.GoalCreateOrConnectWithoutWajhInput[]
+  createMany?: Prisma.GoalCreateManyWajhInputEnvelope
+  connect?: Prisma.GoalWhereUniqueInput | Prisma.GoalWhereUniqueInput[]
+}
+
+export type GoalUncheckedCreateNestedManyWithoutWajhInput = {
+  create?: Prisma.XOR<Prisma.GoalCreateWithoutWajhInput, Prisma.GoalUncheckedCreateWithoutWajhInput> | Prisma.GoalCreateWithoutWajhInput[] | Prisma.GoalUncheckedCreateWithoutWajhInput[]
+  connectOrCreate?: Prisma.GoalCreateOrConnectWithoutWajhInput | Prisma.GoalCreateOrConnectWithoutWajhInput[]
+  createMany?: Prisma.GoalCreateManyWajhInputEnvelope
+  connect?: Prisma.GoalWhereUniqueInput | Prisma.GoalWhereUniqueInput[]
+}
+
+export type GoalUpdateManyWithoutWajhNestedInput = {
+  create?: Prisma.XOR<Prisma.GoalCreateWithoutWajhInput, Prisma.GoalUncheckedCreateWithoutWajhInput> | Prisma.GoalCreateWithoutWajhInput[] | Prisma.GoalUncheckedCreateWithoutWajhInput[]
+  connectOrCreate?: Prisma.GoalCreateOrConnectWithoutWajhInput | Prisma.GoalCreateOrConnectWithoutWajhInput[]
+  upsert?: Prisma.GoalUpsertWithWhereUniqueWithoutWajhInput | Prisma.GoalUpsertWithWhereUniqueWithoutWajhInput[]
+  createMany?: Prisma.GoalCreateManyWajhInputEnvelope
+  set?: Prisma.GoalWhereUniqueInput | Prisma.GoalWhereUniqueInput[]
+  disconnect?: Prisma.GoalWhereUniqueInput | Prisma.GoalWhereUniqueInput[]
+  delete?: Prisma.GoalWhereUniqueInput | Prisma.GoalWhereUniqueInput[]
+  connect?: Prisma.GoalWhereUniqueInput | Prisma.GoalWhereUniqueInput[]
+  update?: Prisma.GoalUpdateWithWhereUniqueWithoutWajhInput | Prisma.GoalUpdateWithWhereUniqueWithoutWajhInput[]
+  updateMany?: Prisma.GoalUpdateManyWithWhereWithoutWajhInput | Prisma.GoalUpdateManyWithWhereWithoutWajhInput[]
+  deleteMany?: Prisma.GoalScalarWhereInput | Prisma.GoalScalarWhereInput[]
+}
+
+export type GoalUncheckedUpdateManyWithoutWajhNestedInput = {
+  create?: Prisma.XOR<Prisma.GoalCreateWithoutWajhInput, Prisma.GoalUncheckedCreateWithoutWajhInput> | Prisma.GoalCreateWithoutWajhInput[] | Prisma.GoalUncheckedCreateWithoutWajhInput[]
+  connectOrCreate?: Prisma.GoalCreateOrConnectWithoutWajhInput | Prisma.GoalCreateOrConnectWithoutWajhInput[]
+  upsert?: Prisma.GoalUpsertWithWhereUniqueWithoutWajhInput | Prisma.GoalUpsertWithWhereUniqueWithoutWajhInput[]
+  createMany?: Prisma.GoalCreateManyWajhInputEnvelope
+  set?: Prisma.GoalWhereUniqueInput | Prisma.GoalWhereUniqueInput[]
+  disconnect?: Prisma.GoalWhereUniqueInput | Prisma.GoalWhereUniqueInput[]
+  delete?: Prisma.GoalWhereUniqueInput | Prisma.GoalWhereUniqueInput[]
+  connect?: Prisma.GoalWhereUniqueInput | Prisma.GoalWhereUniqueInput[]
+  update?: Prisma.GoalUpdateWithWhereUniqueWithoutWajhInput | Prisma.GoalUpdateWithWhereUniqueWithoutWajhInput[]
+  updateMany?: Prisma.GoalUpdateManyWithWhereWithoutWajhInput | Prisma.GoalUpdateManyWithWhereWithoutWajhInput[]
   deleteMany?: Prisma.GoalScalarWhereInput | Prisma.GoalScalarWhereInput[]
 }
 
@@ -1060,6 +1132,7 @@ export type GoalCreateWithoutRiwayaInput = {
   learner: Prisma.LearnerCreateNestedOneWithoutGoalsInput
   parentGoal?: Prisma.GoalCreateNestedOneWithoutSubGoalsInput
   tariq?: Prisma.TariqCreateNestedOneWithoutGoalsInput
+  wajh?: Prisma.WajhCreateNestedOneWithoutGoalsInput
   subGoals?: Prisma.GoalCreateNestedManyWithoutParentGoalInput
   target?: Prisma.GoalTargetCreateNestedOneWithoutGoalInput
   activities?: Prisma.ActivityCreateNestedManyWithoutGoalInput
@@ -1085,6 +1158,7 @@ export type GoalUncheckedCreateWithoutRiwayaInput = {
   notificationEnabled?: boolean
   notificationTime?: string | null
   tariqId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   subGoals?: Prisma.GoalUncheckedCreateNestedManyWithoutParentGoalInput
@@ -1142,6 +1216,7 @@ export type GoalScalarWhereInput = {
   notificationTime?: Prisma.StringNullableFilter<"Goal"> | string | null
   riwayaId?: Prisma.IntNullableFilter<"Goal"> | number | null
   tariqId?: Prisma.IntNullableFilter<"Goal"> | number | null
+  wajhId?: Prisma.IntNullableFilter<"Goal"> | number | null
   createdAt?: Prisma.DateTimeFilter<"Goal"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Goal"> | Date | string
 }
@@ -1167,6 +1242,7 @@ export type GoalCreateWithoutTariqInput = {
   learner: Prisma.LearnerCreateNestedOneWithoutGoalsInput
   parentGoal?: Prisma.GoalCreateNestedOneWithoutSubGoalsInput
   riwaya?: Prisma.RiwayaCreateNestedOneWithoutGoalsInput
+  wajh?: Prisma.WajhCreateNestedOneWithoutGoalsInput
   subGoals?: Prisma.GoalCreateNestedManyWithoutParentGoalInput
   target?: Prisma.GoalTargetCreateNestedOneWithoutGoalInput
   activities?: Prisma.ActivityCreateNestedManyWithoutGoalInput
@@ -1192,6 +1268,7 @@ export type GoalUncheckedCreateWithoutTariqInput = {
   notificationEnabled?: boolean
   notificationTime?: string | null
   riwayaId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   subGoals?: Prisma.GoalUncheckedCreateNestedManyWithoutParentGoalInput
@@ -1226,6 +1303,88 @@ export type GoalUpdateManyWithWhereWithoutTariqInput = {
   data: Prisma.XOR<Prisma.GoalUpdateManyMutationInput, Prisma.GoalUncheckedUpdateManyWithoutTariqInput>
 }
 
+export type GoalCreateWithoutWajhInput = {
+  id?: string
+  title: string
+  description?: string | null
+  action: $Enums.GoalAction
+  quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unit: $Enums.ProgressUnit
+  frequencyCount: number
+  frequencyPeriod: $Enums.FrequencyPeriod
+  intervalDays?: number | null
+  weekday?: $Enums.Weekday | null
+  startDate: Date | string
+  endDate?: Date | string | null
+  status?: $Enums.GoalStatus
+  notificationEnabled?: boolean
+  notificationTime?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  learner: Prisma.LearnerCreateNestedOneWithoutGoalsInput
+  parentGoal?: Prisma.GoalCreateNestedOneWithoutSubGoalsInput
+  riwaya?: Prisma.RiwayaCreateNestedOneWithoutGoalsInput
+  tariq?: Prisma.TariqCreateNestedOneWithoutGoalsInput
+  subGoals?: Prisma.GoalCreateNestedManyWithoutParentGoalInput
+  target?: Prisma.GoalTargetCreateNestedOneWithoutGoalInput
+  activities?: Prisma.ActivityCreateNestedManyWithoutGoalInput
+  progress?: Prisma.ProgressRecordCreateNestedManyWithoutGoalInput
+}
+
+export type GoalUncheckedCreateWithoutWajhInput = {
+  id?: string
+  learnerId: string
+  parentGoalId?: string | null
+  title: string
+  description?: string | null
+  action: $Enums.GoalAction
+  quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unit: $Enums.ProgressUnit
+  frequencyCount: number
+  frequencyPeriod: $Enums.FrequencyPeriod
+  intervalDays?: number | null
+  weekday?: $Enums.Weekday | null
+  startDate: Date | string
+  endDate?: Date | string | null
+  status?: $Enums.GoalStatus
+  notificationEnabled?: boolean
+  notificationTime?: string | null
+  riwayaId?: number | null
+  tariqId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  subGoals?: Prisma.GoalUncheckedCreateNestedManyWithoutParentGoalInput
+  target?: Prisma.GoalTargetUncheckedCreateNestedOneWithoutGoalInput
+  activities?: Prisma.ActivityUncheckedCreateNestedManyWithoutGoalInput
+  progress?: Prisma.ProgressRecordUncheckedCreateNestedManyWithoutGoalInput
+}
+
+export type GoalCreateOrConnectWithoutWajhInput = {
+  where: Prisma.GoalWhereUniqueInput
+  create: Prisma.XOR<Prisma.GoalCreateWithoutWajhInput, Prisma.GoalUncheckedCreateWithoutWajhInput>
+}
+
+export type GoalCreateManyWajhInputEnvelope = {
+  data: Prisma.GoalCreateManyWajhInput | Prisma.GoalCreateManyWajhInput[]
+  skipDuplicates?: boolean
+}
+
+export type GoalUpsertWithWhereUniqueWithoutWajhInput = {
+  where: Prisma.GoalWhereUniqueInput
+  update: Prisma.XOR<Prisma.GoalUpdateWithoutWajhInput, Prisma.GoalUncheckedUpdateWithoutWajhInput>
+  create: Prisma.XOR<Prisma.GoalCreateWithoutWajhInput, Prisma.GoalUncheckedCreateWithoutWajhInput>
+}
+
+export type GoalUpdateWithWhereUniqueWithoutWajhInput = {
+  where: Prisma.GoalWhereUniqueInput
+  data: Prisma.XOR<Prisma.GoalUpdateWithoutWajhInput, Prisma.GoalUncheckedUpdateWithoutWajhInput>
+}
+
+export type GoalUpdateManyWithWhereWithoutWajhInput = {
+  where: Prisma.GoalScalarWhereInput
+  data: Prisma.XOR<Prisma.GoalUpdateManyMutationInput, Prisma.GoalUncheckedUpdateManyWithoutWajhInput>
+}
+
 export type GoalCreateWithoutLearnerInput = {
   id?: string
   title: string
@@ -1247,6 +1406,7 @@ export type GoalCreateWithoutLearnerInput = {
   parentGoal?: Prisma.GoalCreateNestedOneWithoutSubGoalsInput
   riwaya?: Prisma.RiwayaCreateNestedOneWithoutGoalsInput
   tariq?: Prisma.TariqCreateNestedOneWithoutGoalsInput
+  wajh?: Prisma.WajhCreateNestedOneWithoutGoalsInput
   subGoals?: Prisma.GoalCreateNestedManyWithoutParentGoalInput
   target?: Prisma.GoalTargetCreateNestedOneWithoutGoalInput
   activities?: Prisma.ActivityCreateNestedManyWithoutGoalInput
@@ -1272,6 +1432,7 @@ export type GoalUncheckedCreateWithoutLearnerInput = {
   notificationTime?: string | null
   riwayaId?: number | null
   tariqId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   subGoals?: Prisma.GoalUncheckedCreateNestedManyWithoutParentGoalInput
@@ -1328,6 +1489,7 @@ export type GoalCreateWithoutSubGoalsInput = {
   parentGoal?: Prisma.GoalCreateNestedOneWithoutSubGoalsInput
   riwaya?: Prisma.RiwayaCreateNestedOneWithoutGoalsInput
   tariq?: Prisma.TariqCreateNestedOneWithoutGoalsInput
+  wajh?: Prisma.WajhCreateNestedOneWithoutGoalsInput
   target?: Prisma.GoalTargetCreateNestedOneWithoutGoalInput
   activities?: Prisma.ActivityCreateNestedManyWithoutGoalInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutGoalInput
@@ -1353,6 +1515,7 @@ export type GoalUncheckedCreateWithoutSubGoalsInput = {
   notificationTime?: string | null
   riwayaId?: number | null
   tariqId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   target?: Prisma.GoalTargetUncheckedCreateNestedOneWithoutGoalInput
@@ -1386,6 +1549,7 @@ export type GoalCreateWithoutParentGoalInput = {
   learner: Prisma.LearnerCreateNestedOneWithoutGoalsInput
   riwaya?: Prisma.RiwayaCreateNestedOneWithoutGoalsInput
   tariq?: Prisma.TariqCreateNestedOneWithoutGoalsInput
+  wajh?: Prisma.WajhCreateNestedOneWithoutGoalsInput
   subGoals?: Prisma.GoalCreateNestedManyWithoutParentGoalInput
   target?: Prisma.GoalTargetCreateNestedOneWithoutGoalInput
   activities?: Prisma.ActivityCreateNestedManyWithoutGoalInput
@@ -1411,6 +1575,7 @@ export type GoalUncheckedCreateWithoutParentGoalInput = {
   notificationTime?: string | null
   riwayaId?: number | null
   tariqId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   subGoals?: Prisma.GoalUncheckedCreateNestedManyWithoutParentGoalInput
@@ -1462,6 +1627,7 @@ export type GoalUpdateWithoutSubGoalsInput = {
   parentGoal?: Prisma.GoalUpdateOneWithoutSubGoalsNestedInput
   riwaya?: Prisma.RiwayaUpdateOneWithoutGoalsNestedInput
   tariq?: Prisma.TariqUpdateOneWithoutGoalsNestedInput
+  wajh?: Prisma.WajhUpdateOneWithoutGoalsNestedInput
   target?: Prisma.GoalTargetUpdateOneWithoutGoalNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutGoalNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutGoalNestedInput
@@ -1487,6 +1653,7 @@ export type GoalUncheckedUpdateWithoutSubGoalsInput = {
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   target?: Prisma.GoalTargetUncheckedUpdateOneWithoutGoalNestedInput
@@ -1532,6 +1699,7 @@ export type GoalCreateWithoutTargetInput = {
   parentGoal?: Prisma.GoalCreateNestedOneWithoutSubGoalsInput
   riwaya?: Prisma.RiwayaCreateNestedOneWithoutGoalsInput
   tariq?: Prisma.TariqCreateNestedOneWithoutGoalsInput
+  wajh?: Prisma.WajhCreateNestedOneWithoutGoalsInput
   subGoals?: Prisma.GoalCreateNestedManyWithoutParentGoalInput
   activities?: Prisma.ActivityCreateNestedManyWithoutGoalInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutGoalInput
@@ -1557,6 +1725,7 @@ export type GoalUncheckedCreateWithoutTargetInput = {
   notificationTime?: string | null
   riwayaId?: number | null
   tariqId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   subGoals?: Prisma.GoalUncheckedCreateNestedManyWithoutParentGoalInput
@@ -1602,6 +1771,7 @@ export type GoalUpdateWithoutTargetInput = {
   parentGoal?: Prisma.GoalUpdateOneWithoutSubGoalsNestedInput
   riwaya?: Prisma.RiwayaUpdateOneWithoutGoalsNestedInput
   tariq?: Prisma.TariqUpdateOneWithoutGoalsNestedInput
+  wajh?: Prisma.WajhUpdateOneWithoutGoalsNestedInput
   subGoals?: Prisma.GoalUpdateManyWithoutParentGoalNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutGoalNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutGoalNestedInput
@@ -1627,6 +1797,7 @@ export type GoalUncheckedUpdateWithoutTargetInput = {
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subGoals?: Prisma.GoalUncheckedUpdateManyWithoutParentGoalNestedInput
@@ -1656,6 +1827,7 @@ export type GoalCreateWithoutActivitiesInput = {
   parentGoal?: Prisma.GoalCreateNestedOneWithoutSubGoalsInput
   riwaya?: Prisma.RiwayaCreateNestedOneWithoutGoalsInput
   tariq?: Prisma.TariqCreateNestedOneWithoutGoalsInput
+  wajh?: Prisma.WajhCreateNestedOneWithoutGoalsInput
   subGoals?: Prisma.GoalCreateNestedManyWithoutParentGoalInput
   target?: Prisma.GoalTargetCreateNestedOneWithoutGoalInput
   progress?: Prisma.ProgressRecordCreateNestedManyWithoutGoalInput
@@ -1681,6 +1853,7 @@ export type GoalUncheckedCreateWithoutActivitiesInput = {
   notificationTime?: string | null
   riwayaId?: number | null
   tariqId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   subGoals?: Prisma.GoalUncheckedCreateNestedManyWithoutParentGoalInput
@@ -1726,6 +1899,7 @@ export type GoalUpdateWithoutActivitiesInput = {
   parentGoal?: Prisma.GoalUpdateOneWithoutSubGoalsNestedInput
   riwaya?: Prisma.RiwayaUpdateOneWithoutGoalsNestedInput
   tariq?: Prisma.TariqUpdateOneWithoutGoalsNestedInput
+  wajh?: Prisma.WajhUpdateOneWithoutGoalsNestedInput
   subGoals?: Prisma.GoalUpdateManyWithoutParentGoalNestedInput
   target?: Prisma.GoalTargetUpdateOneWithoutGoalNestedInput
   progress?: Prisma.ProgressRecordUpdateManyWithoutGoalNestedInput
@@ -1751,6 +1925,7 @@ export type GoalUncheckedUpdateWithoutActivitiesInput = {
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subGoals?: Prisma.GoalUncheckedUpdateManyWithoutParentGoalNestedInput
@@ -1780,6 +1955,7 @@ export type GoalCreateWithoutProgressInput = {
   parentGoal?: Prisma.GoalCreateNestedOneWithoutSubGoalsInput
   riwaya?: Prisma.RiwayaCreateNestedOneWithoutGoalsInput
   tariq?: Prisma.TariqCreateNestedOneWithoutGoalsInput
+  wajh?: Prisma.WajhCreateNestedOneWithoutGoalsInput
   subGoals?: Prisma.GoalCreateNestedManyWithoutParentGoalInput
   target?: Prisma.GoalTargetCreateNestedOneWithoutGoalInput
   activities?: Prisma.ActivityCreateNestedManyWithoutGoalInput
@@ -1805,6 +1981,7 @@ export type GoalUncheckedCreateWithoutProgressInput = {
   notificationTime?: string | null
   riwayaId?: number | null
   tariqId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
   subGoals?: Prisma.GoalUncheckedCreateNestedManyWithoutParentGoalInput
@@ -1850,6 +2027,7 @@ export type GoalUpdateWithoutProgressInput = {
   parentGoal?: Prisma.GoalUpdateOneWithoutSubGoalsNestedInput
   riwaya?: Prisma.RiwayaUpdateOneWithoutGoalsNestedInput
   tariq?: Prisma.TariqUpdateOneWithoutGoalsNestedInput
+  wajh?: Prisma.WajhUpdateOneWithoutGoalsNestedInput
   subGoals?: Prisma.GoalUpdateManyWithoutParentGoalNestedInput
   target?: Prisma.GoalTargetUpdateOneWithoutGoalNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutGoalNestedInput
@@ -1875,6 +2053,7 @@ export type GoalUncheckedUpdateWithoutProgressInput = {
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subGoals?: Prisma.GoalUncheckedUpdateManyWithoutParentGoalNestedInput
@@ -1901,6 +2080,7 @@ export type GoalCreateManyRiwayaInput = {
   notificationEnabled?: boolean
   notificationTime?: string | null
   tariqId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1926,6 +2106,7 @@ export type GoalUpdateWithoutRiwayaInput = {
   learner?: Prisma.LearnerUpdateOneRequiredWithoutGoalsNestedInput
   parentGoal?: Prisma.GoalUpdateOneWithoutSubGoalsNestedInput
   tariq?: Prisma.TariqUpdateOneWithoutGoalsNestedInput
+  wajh?: Prisma.WajhUpdateOneWithoutGoalsNestedInput
   subGoals?: Prisma.GoalUpdateManyWithoutParentGoalNestedInput
   target?: Prisma.GoalTargetUpdateOneWithoutGoalNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutGoalNestedInput
@@ -1951,6 +2132,7 @@ export type GoalUncheckedUpdateWithoutRiwayaInput = {
   notificationEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subGoals?: Prisma.GoalUncheckedUpdateManyWithoutParentGoalNestedInput
@@ -1978,6 +2160,7 @@ export type GoalUncheckedUpdateManyWithoutRiwayaInput = {
   notificationEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -2001,6 +2184,7 @@ export type GoalCreateManyTariqInput = {
   notificationEnabled?: boolean
   notificationTime?: string | null
   riwayaId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -2026,6 +2210,7 @@ export type GoalUpdateWithoutTariqInput = {
   learner?: Prisma.LearnerUpdateOneRequiredWithoutGoalsNestedInput
   parentGoal?: Prisma.GoalUpdateOneWithoutSubGoalsNestedInput
   riwaya?: Prisma.RiwayaUpdateOneWithoutGoalsNestedInput
+  wajh?: Prisma.WajhUpdateOneWithoutGoalsNestedInput
   subGoals?: Prisma.GoalUpdateManyWithoutParentGoalNestedInput
   target?: Prisma.GoalTargetUpdateOneWithoutGoalNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutGoalNestedInput
@@ -2051,6 +2236,7 @@ export type GoalUncheckedUpdateWithoutTariqInput = {
   notificationEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subGoals?: Prisma.GoalUncheckedUpdateManyWithoutParentGoalNestedInput
@@ -2078,6 +2264,111 @@ export type GoalUncheckedUpdateManyWithoutTariqInput = {
   notificationEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type GoalCreateManyWajhInput = {
+  id?: string
+  learnerId: string
+  parentGoalId?: string | null
+  title: string
+  description?: string | null
+  action: $Enums.GoalAction
+  quantity: runtime.Decimal | runtime.DecimalJsLike | number | string
+  unit: $Enums.ProgressUnit
+  frequencyCount: number
+  frequencyPeriod: $Enums.FrequencyPeriod
+  intervalDays?: number | null
+  weekday?: $Enums.Weekday | null
+  startDate: Date | string
+  endDate?: Date | string | null
+  status?: $Enums.GoalStatus
+  notificationEnabled?: boolean
+  notificationTime?: string | null
+  riwayaId?: number | null
+  tariqId?: number | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type GoalUpdateWithoutWajhInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  action?: Prisma.EnumGoalActionFieldUpdateOperationsInput | $Enums.GoalAction
+  quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unit?: Prisma.EnumProgressUnitFieldUpdateOperationsInput | $Enums.ProgressUnit
+  frequencyCount?: Prisma.IntFieldUpdateOperationsInput | number
+  frequencyPeriod?: Prisma.EnumFrequencyPeriodFieldUpdateOperationsInput | $Enums.FrequencyPeriod
+  intervalDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  weekday?: Prisma.NullableEnumWeekdayFieldUpdateOperationsInput | $Enums.Weekday | null
+  startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumGoalStatusFieldUpdateOperationsInput | $Enums.GoalStatus
+  notificationEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  learner?: Prisma.LearnerUpdateOneRequiredWithoutGoalsNestedInput
+  parentGoal?: Prisma.GoalUpdateOneWithoutSubGoalsNestedInput
+  riwaya?: Prisma.RiwayaUpdateOneWithoutGoalsNestedInput
+  tariq?: Prisma.TariqUpdateOneWithoutGoalsNestedInput
+  subGoals?: Prisma.GoalUpdateManyWithoutParentGoalNestedInput
+  target?: Prisma.GoalTargetUpdateOneWithoutGoalNestedInput
+  activities?: Prisma.ActivityUpdateManyWithoutGoalNestedInput
+  progress?: Prisma.ProgressRecordUpdateManyWithoutGoalNestedInput
+}
+
+export type GoalUncheckedUpdateWithoutWajhInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  learnerId?: Prisma.StringFieldUpdateOperationsInput | string
+  parentGoalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  action?: Prisma.EnumGoalActionFieldUpdateOperationsInput | $Enums.GoalAction
+  quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unit?: Prisma.EnumProgressUnitFieldUpdateOperationsInput | $Enums.ProgressUnit
+  frequencyCount?: Prisma.IntFieldUpdateOperationsInput | number
+  frequencyPeriod?: Prisma.EnumFrequencyPeriodFieldUpdateOperationsInput | $Enums.FrequencyPeriod
+  intervalDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  weekday?: Prisma.NullableEnumWeekdayFieldUpdateOperationsInput | $Enums.Weekday | null
+  startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumGoalStatusFieldUpdateOperationsInput | $Enums.GoalStatus
+  notificationEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  subGoals?: Prisma.GoalUncheckedUpdateManyWithoutParentGoalNestedInput
+  target?: Prisma.GoalTargetUncheckedUpdateOneWithoutGoalNestedInput
+  activities?: Prisma.ActivityUncheckedUpdateManyWithoutGoalNestedInput
+  progress?: Prisma.ProgressRecordUncheckedUpdateManyWithoutGoalNestedInput
+}
+
+export type GoalUncheckedUpdateManyWithoutWajhInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  learnerId?: Prisma.StringFieldUpdateOperationsInput | string
+  parentGoalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  action?: Prisma.EnumGoalActionFieldUpdateOperationsInput | $Enums.GoalAction
+  quantity?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  unit?: Prisma.EnumProgressUnitFieldUpdateOperationsInput | $Enums.ProgressUnit
+  frequencyCount?: Prisma.IntFieldUpdateOperationsInput | number
+  frequencyPeriod?: Prisma.EnumFrequencyPeriodFieldUpdateOperationsInput | $Enums.FrequencyPeriod
+  intervalDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  weekday?: Prisma.NullableEnumWeekdayFieldUpdateOperationsInput | $Enums.Weekday | null
+  startDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  endDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  status?: Prisma.EnumGoalStatusFieldUpdateOperationsInput | $Enums.GoalStatus
+  notificationEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -2101,6 +2392,7 @@ export type GoalCreateManyLearnerInput = {
   notificationTime?: string | null
   riwayaId?: number | null
   tariqId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -2126,6 +2418,7 @@ export type GoalUpdateWithoutLearnerInput = {
   parentGoal?: Prisma.GoalUpdateOneWithoutSubGoalsNestedInput
   riwaya?: Prisma.RiwayaUpdateOneWithoutGoalsNestedInput
   tariq?: Prisma.TariqUpdateOneWithoutGoalsNestedInput
+  wajh?: Prisma.WajhUpdateOneWithoutGoalsNestedInput
   subGoals?: Prisma.GoalUpdateManyWithoutParentGoalNestedInput
   target?: Prisma.GoalTargetUpdateOneWithoutGoalNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutGoalNestedInput
@@ -2151,6 +2444,7 @@ export type GoalUncheckedUpdateWithoutLearnerInput = {
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subGoals?: Prisma.GoalUncheckedUpdateManyWithoutParentGoalNestedInput
@@ -2178,6 +2472,7 @@ export type GoalUncheckedUpdateManyWithoutLearnerInput = {
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -2201,6 +2496,7 @@ export type GoalCreateManyParentGoalInput = {
   notificationTime?: string | null
   riwayaId?: number | null
   tariqId?: number | null
+  wajhId?: number | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -2226,6 +2522,7 @@ export type GoalUpdateWithoutParentGoalInput = {
   learner?: Prisma.LearnerUpdateOneRequiredWithoutGoalsNestedInput
   riwaya?: Prisma.RiwayaUpdateOneWithoutGoalsNestedInput
   tariq?: Prisma.TariqUpdateOneWithoutGoalsNestedInput
+  wajh?: Prisma.WajhUpdateOneWithoutGoalsNestedInput
   subGoals?: Prisma.GoalUpdateManyWithoutParentGoalNestedInput
   target?: Prisma.GoalTargetUpdateOneWithoutGoalNestedInput
   activities?: Prisma.ActivityUpdateManyWithoutGoalNestedInput
@@ -2251,6 +2548,7 @@ export type GoalUncheckedUpdateWithoutParentGoalInput = {
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subGoals?: Prisma.GoalUncheckedUpdateManyWithoutParentGoalNestedInput
@@ -2278,6 +2576,7 @@ export type GoalUncheckedUpdateManyWithoutParentGoalInput = {
   notificationTime?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riwayaId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   tariqId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  wajhId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -2351,12 +2650,14 @@ export type GoalSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   notificationTime?: boolean
   riwayaId?: boolean
   tariqId?: boolean
+  wajhId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   learner?: boolean | Prisma.LearnerDefaultArgs<ExtArgs>
   parentGoal?: boolean | Prisma.Goal$parentGoalArgs<ExtArgs>
   riwaya?: boolean | Prisma.Goal$riwayaArgs<ExtArgs>
   tariq?: boolean | Prisma.Goal$tariqArgs<ExtArgs>
+  wajh?: boolean | Prisma.Goal$wajhArgs<ExtArgs>
   subGoals?: boolean | Prisma.Goal$subGoalsArgs<ExtArgs>
   target?: boolean | Prisma.Goal$targetArgs<ExtArgs>
   activities?: boolean | Prisma.Goal$activitiesArgs<ExtArgs>
@@ -2384,12 +2685,14 @@ export type GoalSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   notificationTime?: boolean
   riwayaId?: boolean
   tariqId?: boolean
+  wajhId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   learner?: boolean | Prisma.LearnerDefaultArgs<ExtArgs>
   parentGoal?: boolean | Prisma.Goal$parentGoalArgs<ExtArgs>
   riwaya?: boolean | Prisma.Goal$riwayaArgs<ExtArgs>
   tariq?: boolean | Prisma.Goal$tariqArgs<ExtArgs>
+  wajh?: boolean | Prisma.Goal$wajhArgs<ExtArgs>
 }, ExtArgs["result"]["goal"]>
 
 export type GoalSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -2412,12 +2715,14 @@ export type GoalSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   notificationTime?: boolean
   riwayaId?: boolean
   tariqId?: boolean
+  wajhId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   learner?: boolean | Prisma.LearnerDefaultArgs<ExtArgs>
   parentGoal?: boolean | Prisma.Goal$parentGoalArgs<ExtArgs>
   riwaya?: boolean | Prisma.Goal$riwayaArgs<ExtArgs>
   tariq?: boolean | Prisma.Goal$tariqArgs<ExtArgs>
+  wajh?: boolean | Prisma.Goal$wajhArgs<ExtArgs>
 }, ExtArgs["result"]["goal"]>
 
 export type GoalSelectScalar = {
@@ -2440,16 +2745,18 @@ export type GoalSelectScalar = {
   notificationTime?: boolean
   riwayaId?: boolean
   tariqId?: boolean
+  wajhId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type GoalOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "learnerId" | "parentGoalId" | "title" | "description" | "action" | "quantity" | "unit" | "frequencyCount" | "frequencyPeriod" | "intervalDays" | "weekday" | "startDate" | "endDate" | "status" | "notificationEnabled" | "notificationTime" | "riwayaId" | "tariqId" | "createdAt" | "updatedAt", ExtArgs["result"]["goal"]>
+export type GoalOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "learnerId" | "parentGoalId" | "title" | "description" | "action" | "quantity" | "unit" | "frequencyCount" | "frequencyPeriod" | "intervalDays" | "weekday" | "startDate" | "endDate" | "status" | "notificationEnabled" | "notificationTime" | "riwayaId" | "tariqId" | "wajhId" | "createdAt" | "updatedAt", ExtArgs["result"]["goal"]>
 export type GoalInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   learner?: boolean | Prisma.LearnerDefaultArgs<ExtArgs>
   parentGoal?: boolean | Prisma.Goal$parentGoalArgs<ExtArgs>
   riwaya?: boolean | Prisma.Goal$riwayaArgs<ExtArgs>
   tariq?: boolean | Prisma.Goal$tariqArgs<ExtArgs>
+  wajh?: boolean | Prisma.Goal$wajhArgs<ExtArgs>
   subGoals?: boolean | Prisma.Goal$subGoalsArgs<ExtArgs>
   target?: boolean | Prisma.Goal$targetArgs<ExtArgs>
   activities?: boolean | Prisma.Goal$activitiesArgs<ExtArgs>
@@ -2461,12 +2768,14 @@ export type GoalIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   parentGoal?: boolean | Prisma.Goal$parentGoalArgs<ExtArgs>
   riwaya?: boolean | Prisma.Goal$riwayaArgs<ExtArgs>
   tariq?: boolean | Prisma.Goal$tariqArgs<ExtArgs>
+  wajh?: boolean | Prisma.Goal$wajhArgs<ExtArgs>
 }
 export type GoalIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   learner?: boolean | Prisma.LearnerDefaultArgs<ExtArgs>
   parentGoal?: boolean | Prisma.Goal$parentGoalArgs<ExtArgs>
   riwaya?: boolean | Prisma.Goal$riwayaArgs<ExtArgs>
   tariq?: boolean | Prisma.Goal$tariqArgs<ExtArgs>
+  wajh?: boolean | Prisma.Goal$wajhArgs<ExtArgs>
 }
 
 export type $GoalPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2476,6 +2785,7 @@ export type $GoalPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     parentGoal: Prisma.$GoalPayload<ExtArgs> | null
     riwaya: Prisma.$RiwayaPayload<ExtArgs> | null
     tariq: Prisma.$TariqPayload<ExtArgs> | null
+    wajh: Prisma.$WajhPayload<ExtArgs> | null
     subGoals: Prisma.$GoalPayload<ExtArgs>[]
     target: Prisma.$GoalTargetPayload<ExtArgs> | null
     activities: Prisma.$ActivityPayload<ExtArgs>[]
@@ -2501,6 +2811,7 @@ export type $GoalPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     notificationTime: string | null
     riwayaId: number | null
     tariqId: number | null
+    wajhId: number | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["goal"]>
@@ -2901,6 +3212,7 @@ export interface Prisma__GoalClient<T, Null = never, ExtArgs extends runtime.Typ
   parentGoal<T extends Prisma.Goal$parentGoalArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Goal$parentGoalArgs<ExtArgs>>): Prisma.Prisma__GoalClient<runtime.Types.Result.GetResult<Prisma.$GoalPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   riwaya<T extends Prisma.Goal$riwayaArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Goal$riwayaArgs<ExtArgs>>): Prisma.Prisma__RiwayaClient<runtime.Types.Result.GetResult<Prisma.$RiwayaPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   tariq<T extends Prisma.Goal$tariqArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Goal$tariqArgs<ExtArgs>>): Prisma.Prisma__TariqClient<runtime.Types.Result.GetResult<Prisma.$TariqPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  wajh<T extends Prisma.Goal$wajhArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Goal$wajhArgs<ExtArgs>>): Prisma.Prisma__WajhClient<runtime.Types.Result.GetResult<Prisma.$WajhPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   subGoals<T extends Prisma.Goal$subGoalsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Goal$subGoalsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$GoalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   target<T extends Prisma.Goal$targetArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Goal$targetArgs<ExtArgs>>): Prisma.Prisma__GoalTargetClient<runtime.Types.Result.GetResult<Prisma.$GoalTargetPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   activities<T extends Prisma.Goal$activitiesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Goal$activitiesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActivityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2953,6 +3265,7 @@ export interface GoalFieldRefs {
   readonly notificationTime: Prisma.FieldRef<"Goal", 'String'>
   readonly riwayaId: Prisma.FieldRef<"Goal", 'Int'>
   readonly tariqId: Prisma.FieldRef<"Goal", 'Int'>
+  readonly wajhId: Prisma.FieldRef<"Goal", 'Int'>
   readonly createdAt: Prisma.FieldRef<"Goal", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Goal", 'DateTime'>
 }
@@ -3410,6 +3723,25 @@ export type Goal$tariqArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs
    */
   include?: Prisma.TariqInclude<ExtArgs> | null
   where?: Prisma.TariqWhereInput
+}
+
+/**
+ * Goal.wajh
+ */
+export type Goal$wajhArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Wajh
+   */
+  select?: Prisma.WajhSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Wajh
+   */
+  omit?: Prisma.WajhOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WajhInclude<ExtArgs> | null
+  where?: Prisma.WajhWhereInput
 }
 
 /**
